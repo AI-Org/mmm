@@ -18,7 +18,7 @@ if __name__ == "__main__":
 
     # First the Gibbs init function
     # calling the first UDF of gibbs
-    d_array_agg_sql = gibbs_udfs.create_d_array_agg_sql()
+    # d_array_agg_sql = gibbs_init.create_d_array_agg_sql()
 
     print d_array_agg_sql
     sc.stop()

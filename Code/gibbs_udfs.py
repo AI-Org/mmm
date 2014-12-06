@@ -35,4 +35,21 @@ def matrix_add_diag_plr(matrix, value):
 def matrix_scalarmult_plr(matrix, value):
     return np.multiply(matrix, value)
 
+# Function to compute var-cov matrix for the pooled model, as defined in Equation 7.27 of Koop pp.156-157
+# beta_i is a float8[] matrix
+# beta_mu is another float8[] matrix
+def Vbeta_i_mu(beta_i, beta_mu):
+    beta_i_diff = np.subtract(beta_i, beta_mu)
+    Vbeta_i_mu = np.multiply(beta_i_diff, beta_i_diff.transpose())
+    return Vbeta_i_mu
+
+# Function to draw Vbeta_inv from Wishart dist'n, as shown in Equation (7.25) of Koop pp.156-157
+# rwish is random generation from the Wishart distribution from MCMCpack package
+# floating_num is Degrees of Freedom a scalar quantity i.e. v
+# float_matrix is Inverse scale matrix (p X p) i.e S (pXp)
+# The mean of a Wishart random variable with v degrees of freedom and inverse scale matrix S is vS.
+# rwish generates one random draw from the distribution
+def Vbeta_inv_draw(floating_num, float_matrix):
+    # import a lib MCMCpack and return rwish(arg1,arg2)
+
 
