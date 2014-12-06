@@ -2,6 +2,10 @@ from numpy import matrix
 from numpy import median
 import numpy as np
 
+import numpy.random as npr
+from numpy.linalg import inv, cholesky
+from scipy.stats import chi2
+
 # Function takes recObj is of the form of [key, <Iterable of all values tuples>]
 # returns matrix from recIter objects and returns the shape of the matrix
 def createMatrix(recObj):
@@ -43,6 +47,27 @@ def Vbeta_i_mu(beta_i, beta_mu):
     Vbeta_i_mu = np.multiply(beta_i_diff, beta_i_diff.transpose())
     return Vbeta_i_mu
 
+## Same usage as mentioned by the funciton Vbeta_inv_draw
+## usage wishartrand(nu, phi)
+## where nu is degree of freedom
+## phi is the matrix
+## taken from
+## https://gist.github.com/jfrelinger/2638485
+def wishartrand(nu, phi):
+    dim = phi.shape[0]
+    chol = cholesky(phi)
+    #nu = nu+dim - 1
+    #nu = nu + 1 - np.arange(1,dim+1)
+    foo = np.zeros((dim,dim))
+    
+    for i in range(dim):
+        for j in range(i+1):
+            if i == j:
+                foo[i,j] = np.sqrt(chi2.rvs(nu-(i+1)+1))
+            else:
+                foo[i,j]  = npr.normal(0,1)
+    return np.dot(chol, np.dot(foo, np.dot(foo.T, chol.T)))
+
 # Function to draw Vbeta_inv from Wishart dist'n, as shown in Equation (7.25) of Koop pp.156-157
 # rwish is random generation from the Wishart distribution from MCMCpack package
 # floating_num is Degrees of Freedom a scalar quantity i.e. v
@@ -51,5 +76,25 @@ def Vbeta_i_mu(beta_i, beta_mu):
 # rwish generates one random draw from the distribution
 def Vbeta_inv_draw(floating_num, float_matrix):
     # import a lib MCMCpack and return rwish(arg1,arg2)
+    return wishartrand(floating_num, float_matrix)
 
+# Function to compute mean pooled coefficient vector to use in drawing a new pooled coefficient vector.  
+# This function allows for user-specified priors on the coefficients.  
+# For use at highest level of the hierarchy.  (7.27) of Koop pp.157.
+def beta_mu_prior(arg1, arg2, arg3, arg4, arg5):
+    return (arg1)
+
+
+# beta_draws are samples from mvrnorm or multivariate normal distribution.
+# it relies on MASS library in the original implementation However, we will be using
+# numpy and its random package to perform the same operation
+def beta_draw(mean, cov):
+    return np.random.multivariate_normal(mean, cov, 1)
+
+# Function to compute Vbeta_i, as defined in Equation (7.25) of Koop pp.156.   
+# Only computed at lowest level of the hierarchy (i.e. the level that "mixes" directly with the data, namely X'X).
+def Vbeta_i(val, mat1, mat2):
+    return 
+
+    
 
