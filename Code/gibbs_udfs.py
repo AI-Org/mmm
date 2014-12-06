@@ -41,7 +41,7 @@ def matrix_scalarmult_plr(matrix, value):
 
 # Function to compute var-cov matrix for the pooled model, as defined in Equation 7.27 of Koop pp.156-157
 # beta_i is a float8[] matrix or numpy.array or numpy.matrix
-# beta_mu is another float8[] matrix or numpy.array or numpy.matrix
+# beta_mu is anpther float8[] matrix or numpy.array or numpy.matrix
 # according to Koop pp. 157 sigma(Beta_i) is a k-vector containing the sums of the elements of Beta_i
 # hance we convert beta_i_diff to mat before multiplying
 def Vbeta_i_mu(beta_i, beta_mu):
@@ -67,7 +67,7 @@ def wishartrand(nu, phi):
             if i == j:
                 foo[i,j] = np.sqrt(chi2.rvs(nu-(i+1)+1))
             else:
-                foo[i,j]  = npr.normal(0,1)
+                foo[i,j]  = npr.nprmal(0,1)
     return np.dot(chol, np.dot(foo, np.dot(foo.T, chol.T)))
 
 # Function to draw Vbeta_inv from Wishart dist'n, as shown in Equation (7.25) of Koop pp.156-157
@@ -91,11 +91,11 @@ def beta_mu_prior(arg1, arg2, arg3, arg4, arg5):
     return np.dot(arg1, mat3)
 
 
-# beta_draws are samples from mvrnorm or multivariate normal distribution.
+# beta_draws are samples from mvrnprm or multivariate normal distribution.
 # it relies on MASS library in the original implementation However, we will be using
 # numpy and its random package to perform the same operation
 def beta_draw(mean, cov):
-    return np.random.multivariate_normal(mean, cov, 1)
+    return np.random.multivariate_nprmal(mean, cov, 1)
 
 # Function to compute Vbeta_i, as defined in Equation (7.25) of Koop pp.156.   
 # Only computed at lowest level of the hierarchy (i.e. the level that "mixes" directly with the data, namely X'X).
@@ -104,7 +104,6 @@ def Vbeta_i(mat1, mat2, mat3):
     mat1_r = np.dot(mat1, mat2)
     matr = np.add(mat1_r, mat3)
     return np.linalg.inv(matr)   
-#    return np.add(np.dot(val, mat1), mat2) 
 
 # Function to compute beta_i_mean, as defined in (7.25) of Koop pp.156.
 # Only computed at lowest level of the hierarchy (i.e. the level that "mixes" directly with the data, namely X'y).
@@ -126,7 +125,7 @@ def h_draw(m, v):
 # Function to draw random array sample of p elements from the uniform(-1,1) dist'n
 # numpy.random.uniform(low=0.0, high=1.0, size=None)
 def initial_vals_random(p):
-    retusn np.random.uniform(-1,1,p)
+    return np.random.uniform(-1,1,p)
 
     
 
