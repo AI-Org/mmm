@@ -40,11 +40,13 @@ def matrix_scalarmult_plr(matrix, value):
     return np.multiply(matrix, value)
 
 # Function to compute var-cov matrix for the pooled model, as defined in Equation 7.27 of Koop pp.156-157
-# beta_i is a float8[] matrix
-# beta_mu is another float8[] matrix
+# beta_i is a float8[] matrix or numpy.array or numpy.matrix
+# beta_mu is another float8[] matrix or numpy.array or numpy.matrix
+# according to Koop pp. 157 sigma(Beta_i) is a k-vector containing the sums of the elements of Beta_i
+# hance we convert beta_i_diff to mat before multiplying
 def Vbeta_i_mu(beta_i, beta_mu):
     beta_i_diff = np.subtract(beta_i, beta_mu)
-    Vbeta_i_mu = np.multiply(beta_i_diff, beta_i_diff.transpose())
+    Vbeta_i_mu = np.multiply(beta_i_diff, np.mat(beta_i_diff).transpose())
     return Vbeta_i_mu
 
 ## Same usage as mentioned by the funciton Vbeta_inv_draw
