@@ -99,8 +99,12 @@ def beta_draw(mean, cov):
 
 # Function to compute Vbeta_i, as defined in Equation (7.25) of Koop pp.156.   
 # Only computed at lowest level of the hierarchy (i.e. the level that "mixes" directly with the data, namely X'X).
-def Vbeta_i(val, mat1, mat2):
-    return np.add(np.dot(val, mat1), mat2) 
+# The solve(mat1*%*mat2 + mat3) is finding the inverse of A where A = mat1 %*% mat2 + mat3
+def Vbeta_i(mat1, mat2, mat3):
+    mat1_r = np.dot(mat1, mat2)
+    matr = np.add(mat1_r, mat3)
+    return np.linalg.inv(matr)   
+#    return np.add(np.dot(val, mat1), mat2) 
 
 # Function to compute beta_i_mean, as defined in (7.25) of Koop pp.156.
 # Only computed at lowest level of the hierarchy (i.e. the level that "mixes" directly with the data, namely X'y).
