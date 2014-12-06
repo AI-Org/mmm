@@ -110,7 +110,7 @@ def Vbeta_i(mat1, mat2, mat3):
 def beta_i_mean(mat1, value, mat2, mat3, mat4):
     mat_r1 = np.dot(np.matrix(mat3), np.matrix(mat4))
     mat_r2 = np.dot(value, mat2)
-    mat_r3 = np.dot(mat1, mat_r2)
+    mat_r3 = np.dot(mat1, np.add(mat_r2, mat_r1))
     return mat_r3
 
 # Function to draw h from gamma dist'n, as defined in (7.28) of Koop pp.157. 
@@ -119,7 +119,7 @@ def beta_i_mean(mat1, value, mat2, mat3, mat4):
 def h_draw(m, v):
     shape_g = v/2
     rate_g = v / (2 * m)
-    scale_g = 1/ rate
+    scale_g = 1/ rate_g
     return np.random.gamma(shape_g, scale_g, 1 )
      
 # Function to draw random array sample of p elements from the uniform(-1,1) dist'n
