@@ -49,7 +49,7 @@ def Vbeta_i_mu(beta_i, beta_mu):
     Vbeta_i_mu = np.multiply(beta_i_diff, np.mat(beta_i_diff).transpose())
     return Vbeta_i_mu
 
-## Same usage as mentioned by the funciton Vbeta_inv_draw
+## Same usage as mentioned by the function Vbeta_inv_draw
 ## usage wishartrand(nu, phi)
 ## where nu is degree of freedom
 ## phi is the matrix
@@ -72,19 +72,23 @@ def wishartrand(nu, phi):
 
 # Function to draw Vbeta_inv from Wishart dist'n, as shown in Equation (7.25) of Koop pp.156-157
 # rwish is random generation from the Wishart distribution from MCMCpack package
-# floating_num is Degrees of Freedom a scalar quantity i.e. v
-# float_matrix is Inverse scale matrix (p X p) i.e S (pXp)
+#  nu is Degrees of Freedom a scalar quantity i.e. v
+#  phi is Inverse scale matrix (p X p) i.e S (pXp)
 # The mean of a Wishart random variable with v degrees of freedom and inverse scale matrix S is vS.
 # rwish generates one random draw from the distribution
-def Vbeta_inv_draw(floating_num, float_matrix):
+def Vbeta_inv_draw(nu, phi):
     # import a lib MCMCpack and return rwish(arg1,arg2)
-    return wishartrand(floating_num, float_matrix)
+    return wishartrand(nu, phi)
 
 # Function to compute mean pooled coefficient vector to use in drawing a new pooled coefficient vector.  
 # This function allows for user-specified priors on the coefficients.  
 # For use at highest level of the hierarchy.  (7.27) of Koop pp.157.
 def beta_mu_prior(arg1, arg2, arg3, arg4, arg5):
-    return (arg1)
+    #beta_mu<- arg1%*%(arg2%*%arg3+as.matrix(arg4*arg5))
+    mat1 = np.dot(np.mat(arg4),np.mat(arg5))
+    mat2 = np.dot(arg2, arg3)
+    mat3 = np.add(mat1, mat2)
+    return np.dot(arg1, mat3)
 
 
 # beta_draws are samples from mvrnorm or multivariate normal distribution.
@@ -96,7 +100,29 @@ def beta_draw(mean, cov):
 # Function to compute Vbeta_i, as defined in Equation (7.25) of Koop pp.156.   
 # Only computed at lowest level of the hierarchy (i.e. the level that "mixes" directly with the data, namely X'X).
 def Vbeta_i(val, mat1, mat2):
-    return 
+    return np.add(np.dot(val, mat1), mat2) 
+
+# Function to compute beta_i_mean, as defined in (7.25) of Koop pp.156.
+# Only computed at lowest level of the hierarchy (i.e. the level that "mixes" directly with the data, namely X'y).
+def beta_i_mean(mat1, value, mat2, mat3, mat4):
+    mat_r1 = np.dot(np.matrix(mat3), np.matrix(mat4))
+    mat_r2 = np.dot(value, mat2)
+    mat_r3 = np.dot(mat1, mat_r2)
+    return mat_r3
+
+# Function to draw h from gamma dist'n, as defined in (7.28) of Koop pp.157. 
+# rate is an alternate way to specify the scale, shape of the gamma distribution
+# numpy.random.gamma(shape, scale=1.0, size=None) is equivalent to rgamma(n, shape, rate = 1, scale = 1/rate)
+def h_draw(m, v):
+    shape_g = v/2
+    rate_g = v / (2 * m)
+    scale_g = 1/ rate
+    return np.random.gamma(shape_g, scale_g, 1 )
+     
+# Function to draw random array sample of p elements from the uniform(-1,1) dist'n
+# numpy.random.uniform(low=0.0, high=1.0, size=None)
+def initial_vals_random(p):
+    retusn np.random.uniform(-1,1,p)
 
     
 
