@@ -15,4 +15,7 @@ if __name__ == "__main__":
     map((lambda (x,y): (x, (list(y[0]), (list(y[1]))))), sorted(x.cogroup(y).collect()))
     
     print "Use of KeyBy"
-    z = sc.parallelize(zip(range(0,5), range(0,5), range(0,5), range(6,10), range(11,15))).keyBy(lambda x: x*x)
+    z = sc.parallelize(zip(range(0,5), range(0,5), range(0,5), range(6,10), range(11,15)))
+    keyBy = z.keyBy(lambda (x,y,z,e,d): (x,y,z))
+    #[((0, 0, 0), (0, 0, 0, 6, 11))]
+    print keyBy.take(1)
