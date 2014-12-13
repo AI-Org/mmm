@@ -20,7 +20,7 @@ if __name__ == '__main__':
     model_name = "m1"
     file = sys.argv[1] if len(sys.argv) > 1 else "d_small.csv"
     source_RDD = sc.textFile(file).flatMap(lambda x:x.split(','))
-    sourceRDD_KEYMAP = source_RDD.map(lambda x: ((x(1),x(2)),x))
+    sourceRDD_KEYMAP = source_RDD.map(lambda x: (x(1),x))
     print source_RDD.take(1)
     print sourceRDD_KEYMAP.take(1)
     print np.add(1,2)
