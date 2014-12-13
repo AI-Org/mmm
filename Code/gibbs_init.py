@@ -16,8 +16,8 @@ def create_x_matrix_y_array(recObj):
     recIter = recObj[1]    
     
     mat = numpy.matrix([r for r in recIter])
-    x_matrix = mat[:,5:18]
-    y_array = mat[:,4]
+    x_matrix = mat[:,5:18].astype(float)
+    y_array = mat[:,4].astype(float)
     return (keys, x_matrix, y_array)   
 
     
@@ -28,18 +28,14 @@ def create_xtx_matrix_xty(obj):
     keys = obj[0]
     x_matrix = obj[1] 
     x_matrix_t = numpy.transpose(x_matrix)
-    return x_matrix_t  
-    
-    xt_x = numpy.multiply(x_matrix_t, x_matrix)
-    return numpy.matrix(xt_x)    
-    
+
+    xt_x = x_matrix_t * x_matrix
+       
     y_matrix = obj[2]
-    xt_y = numpy.multiply(x_matrix_t, y_matrix)
+    xt_y = x_matrix_t * y_matrix
+    
     return (keys, xt_x, xt_y)
-    
-    
-    
-        
+      
 
 def gibbs_init(model_name, source_RDD, hierarchy_level1, hierarchy_level2, p, df1, y_var, x_var_array, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals):
     text_output = 'Done: Gibbs Sampler for model model_name is initialized.  Proceed to run updates of the sampler by using the gibbs() function.  All objects associated with this model are named with a model_name prefix.'

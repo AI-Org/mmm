@@ -2,6 +2,7 @@ import sys
 import re
 
 from pyspark import SparkContext
+import gibbs_init as gi
 
 def parseData(data):
     columns = re.split(",", data)
@@ -25,7 +26,7 @@ if __name__ == "__main__":
     print keyBy_groupby_h2_h1.take(1)
     # First the Gibbs init function
     
-    gibbs_init_test(sc, d, keyBy_groupby_h2_h1)
+    gi.gibbs_init_test(sc, d, keyBy_groupby_h2_h1)
     # calling the first UDF of gibbs
     # d_array_agg_sql = gibbs_init.create_d_array_agg_sql()
 
