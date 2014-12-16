@@ -26,7 +26,8 @@ if __name__ == "__main__":
     print keyBy_groupby_h2_h1.take(1)
     # First the Gibbs init function
     
-    gi.gibbs_init_test(sc, d, keyBy_groupby_h2_h1)
+    ols_or_random = sys.argv[2] if len(sys.argv) > 2 else "ols"    
+    gi.gibbs_init_test(sc, d, keyBy_groupby_h2_h1, ols_or_random)
     # calling the first UDF of gibbs
     # d_array_agg_sql = gibbs_init.create_d_array_agg_sql()
 
