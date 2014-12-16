@@ -108,12 +108,12 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
         print "Coefficients for LL after keyby H2", m1_ols_beta_j.collect()
         
         m1_ols_beta_j = keyBy_h2.map(get_ols_initialvals_beta_i_j)
-        
         print "Coefficients for LL after keyby H2", m1_ols_beta_j.collect()
     
     if(initial_vals == "random"):
         print "Draw random array samples of p elements from the uniform(-1,1) dist'n"
         p_var = p
+
         m1_ols_beta_i = m1_d_array_agg.map(get_random_initialvals_beta_i).groupByKey()
         
         m1_ols_beta_j = keyBy_h2.map(get_random_initialvals_beta_j).groupByKey()
