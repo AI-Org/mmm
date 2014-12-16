@@ -92,6 +92,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals):
         print "Coefficients for LL after keyby H2", m1_ols_beta_j.collect()
     
     if(initial_vals == "random"):
+        print "random"
         
         
    
