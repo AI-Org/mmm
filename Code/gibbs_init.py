@@ -83,11 +83,11 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals):
     
     if(initial_vals == "ols"):
     # Compute OLS estimates for reference
-        m1_ols_beta_j = get_ols_beta_i_j(m1_d_array_agg)
+        m1_ols_beta_j = m1_d_array_agg.map(get_ols_beta_i_j)
         print "Coefficients for LL after keyby H2", m1_ols_beta_j.collect()
         
         keyBy_h2 = d.keyBy(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2)).map(create_x_matrix_y_array)
-        m1_ols_beta_j = get_ols_beta_i_j(keyBy_h2)
+        m1_ols_beta_j = keyBy_h2.map(get_ols_beta_i_j)
         
         print "Coefficients for LL after keyby H2", m1_ols_beta_j.collect()
     
