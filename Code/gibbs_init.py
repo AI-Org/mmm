@@ -22,7 +22,7 @@ def create_x_matrix_y_array(recObj):
     y_array = mat[:,4].astype(float)
     hierarchy_level2 =  mat[:,2]
     hierarchy_level1 = mat[:,1]
-    return (keys, x_matrix, y_array, hierarchy_level2, hierarchy_level1)   
+    return (keys, x_matrix, y_array, hierarchy_level2[1,0], hierarchy_level1[1,0])   
 
     
 def create_xtx_matrix_xty(obj):
@@ -51,12 +51,22 @@ def get_d_count_grpby_level2(obj):
     return keyBy_h2_week
     # return keyBy_h2.map(lambda (x,iter): (x, sum(1 for _ in set(iter))))
 
-def get_ols_initialvals_beta_i_j(obj):
+def get_ols_initialvals_beta_i(obj):
     from sklearn import linear_model
     regr = linear_model.LinearRegression()
+    # fit x_array, y_array
     regr.fit(obj[1], obj[2])
     print('Coefficients: \n', regr.coef_)
-    return (obj[0], regr.coef_)
+    return (obj[3], obj[4], regr.coef_)
+
+def get_ols_initialvals_beta_j(obj):
+    from sklearn import linear_model
+    regr = linear_model.LinearRegression()
+    # fit x_array, y_array
+    regr.fit(obj[1], obj[2])
+    print('Coefficients: \n', regr.coef_)
+    #hierarchy_level2 = a matrix obj[3] of same values in hierarchy_level2
+    return (obj[3], regr.coef_)
     
 def get_random_initialvals_beta_i(obj):
     coeff = gu.initial_vals_random(p_var)
@@ -104,10 +114,10 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
       
     if(initial_vals == "ols"):
     # Compute OLS estimates for reference
-        m1_ols_beta_i = m1_d_array_agg.map(get_ols_initialvals_beta_i_j)
-        print "Coefficients for LL after keyby H2", m1_ols_beta_j.collect()
+        m1_ols_beta_i = m1_d_array_agg.map(get_ols_initialvals_beta_i)
+        print "Coefficients for LL after keyby H2", m1_ols_beta_i.collect()
         
-        m1_ols_beta_j = keyBy_h2.map(get_ols_initialvals_beta_i_j)
+        m1_ols_beta_j = keyBy_h2.map(get_ols_initialvals_beta_j)
         print "Coefficients for LL after keyby H2", m1_ols_beta_j.collect()
     
     if(initial_vals == "random"):
@@ -118,6 +128,15 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
         
         m1_ols_beta_j = keyBy_h2.map(get_random_initialvals_beta_j).groupByKey()
         
+    #-- Using the above initial values of the coefficients and drawn values of priors, 
+    #   compute initial value of coefficient var-cov matrix (Vbeta_i_mu) 
+    #   FOR EACH group i, with group j coefficients as priors, and 
+    #   then sum then to get back J matrices
+    # computing _Vbeta_j_mu
+    join_i_j = 
+    
+    #m1_Vbeta_j_mu = 
+    
     
         
     
