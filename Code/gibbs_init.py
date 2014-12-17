@@ -202,8 +202,8 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     print " m1_Vbeta_j_mu ", m1_Vbeta_j_mu.count() # the actual values are 500 I am getting 135 values
     
     ###-- Draw Vbeta_inv and compute resulting sigmabeta using the above functions for each j
-    m1_Vbeta_j_mu_pinv = m1_Vbeta_j_mu.map(get_m1_Vbeta_j_mu_pinv).keyBy((seq, hierarchy_level2, Vbeta_inv_j_draw) : (hierarchy_level2)).groupByKey()
-    m1_d_childcount_groupBy_h2 = m1_d_childcount.keyBy((seq, hierarchy_level2, Vbeta_inv_j_draw) : hierarchy_level2).groupByKey()
+    m1_Vbeta_j_mu_pinv = m1_Vbeta_j_mu.map(get_m1_Vbeta_j_mu_pinv).keyBy(lambda (seq, hierarchy_level2, Vbeta_inv_j_draw) : (hierarchy_level2)).groupByKey()
+    m1_d_childcount_groupBy_h2 = m1_d_childcount.keyBy(lambda (seq, hierarchy_level2, Vbeta_inv_j_draw) : hierarchy_level2).groupByKey()
     #  here vals are iter, h2,
     #  y[0][0] = iter or seq from m1_Vbeta_j_mu_pinv
     #  y[0][1] = h2 from in m1_Vbeta_j_mu_pinv 
