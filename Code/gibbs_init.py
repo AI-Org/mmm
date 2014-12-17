@@ -1,11 +1,11 @@
 import numpy as np
 from pyspark import SparkContext
 import sys
-import gibbs_udf as gu
+import gibbs_udfs as gu
 
 #'p_var' = Number of explanatory variables in the model, including the intercept term.
 p_var = 14
-accum = sc.accumulator(0) 
+accum = 0 
 df1_var = 15   
 coef_precision_prior_array_var = [1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 
@@ -161,7 +161,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     # think of h2 as department and h1 as the stores 
     # the following computes the number of stores in each department
     m1_d_childcount = get_d_childcount(d)
-    print "d_child_counts are : ", m1_d_childcount.collect()
+    print "d_child_counts are : ", m1_d_childcount.count()
     
     # since the number of weeks of data for each deparment_name-tiers is different.
     # we wll precompute this quantity for each department_name-tier
@@ -174,10 +174,10 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     if(initial_vals == "ols"):
     # Compute OLS estimates for reference
         m1_ols_beta_i = m1_d_array_agg.map(get_ols_initialvals_beta_i).keyBy(lambda (h2,h1,coff): (h2, h1))
-        print "Coefficients for LL after keyby H2", m1_ols_beta_i.collect()
+        print "Coefficients for LL after keyby H2", m1_ols_beta_i.count()
         
         m1_ols_beta_j = keyBy_h2.map(get_ols_initialvals_beta_j).keyBy(lambda (h2,coff): (h2))
-        print "Coefficients for LL after keyby H2", m1_ols_beta_j.collect()
+        print "Coefficients for LL after keyby H2", m1_ols_beta_j.count()
     
     if(initial_vals == "random"):
         print "Draw random array samples of p elements from the uniform(-1,1) dist'n"
@@ -210,6 +210,8 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     #  y[1][1] = n1 from m1_d_childcount_groupBy_h2, 
     #  y[0][2] = Vbeta_inv_j_draw from m1_Vbeta_j_mu_pinv, np_pin()
     m1_Vbeta_inv_Sigmabeta_j_draw = map(lambda (x,y): (x, y[0][0], y[0][1], y[1][1] , y[0][2], np_pinv(y[0][2], y[1][1], coef_precision_prior_array_var)), sorted(m1_Vbeta_j_mu_pinv.cogroup(m1_d_childcount_groupBy_h2)))
+    print "m1_Vbeta_inv_Sigmabeta_j_draw: ", m1_Vbeta_inv_Sigmabeta_j_draw.take(1)
+        
     
     # exp with cogroup 
     join_coefi_coefj = map(lambda (x, y): (x, (list(y[0]), list(y[1]))),
