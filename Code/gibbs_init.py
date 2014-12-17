@@ -210,7 +210,8 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     #  y[1][1] = n1 from m1_d_childcount_groupBy_h2, 
     #  y[0][2] = Vbeta_inv_j_draw from m1_Vbeta_j_mu_pinv, np_pin()
     m1_Vbeta_inv_Sigmabeta_j_draw = map(lambda (x,y): (x, y[0][0], y[0][1], y[1][1] , y[0][2], np_pinv(y[0][2], y[1][1], coef_precision_prior_array_var)), sorted(m1_Vbeta_j_mu_pinv.cogroup(m1_d_childcount_groupBy_h2)))
-    print "m1_Vbeta_inv_Sigmabeta_j_draw: ", m1_Vbeta_inv_Sigmabeta_j_draw.take(1)
+    print "m1_Vbeta_inv_Sigmabeta_j_draw Take 1: ", m1_Vbeta_inv_Sigmabeta_j_draw.take(1)
+    print "m1_Vbeta_inv_Sigmabeta_j_draw Count: ", m1_Vbeta_inv_Sigmabeta_j_draw.count()
         
     
     # exp with cogroup 
