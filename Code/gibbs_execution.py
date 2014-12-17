@@ -28,6 +28,10 @@ if __name__ == "__main__":
     
     ols_or_random = sys.argv[2] if len(sys.argv) > 2 else "ols" 
     p = sys.argv[3] if len(sys.argv) > 3 else 14  # todo convert sysarhs to int
+    # df1 = defree of freedom 
+    df1 = sys.argv[4] if len(sys.argv) > 4 else 15
+    # coef_precision_prior_array = Priors for coefficient covariances at the upper-most level of the hierarchy. 
+    coef_precision_prior_array = sys.argv[5] if len(sys.argv) > 5 else [1,1,1,1,1,1,1,1,1,1,1,1,1,1]
     gi.gibbs_init_test(sc, d, keyBy_groupby_h2_h1, ols_or_random, p)
     # calling the first UDF of gibbs
     # d_array_agg_sql = gibbs_init.create_d_array_agg_sql()

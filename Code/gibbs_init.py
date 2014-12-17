@@ -6,7 +6,9 @@ import gibbs_udf as gu
 #'p_var' = Number of explanatory variables in the model, including the intercept term.
 p_var = 14
 accum = sc.accumulator(0) 
-   
+df1_var = 15   
+coef_precision_prior_array_var = [1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+
 def create_x_matrix_y_array(recObj):
     """
        Take an iterable of records, where the key corresponds to a certain age group
@@ -115,9 +117,26 @@ def get_Vbeta_j_mu(obj):
  
     Vbeta_i_mu_sum = sum(Vbeta_i_mu_ar)   
     Vbeta_j_mu = gu.matrix_add_diag_plr(Vbeta_i_mu_sum, p_var)
-    
+    # iter, hierarchy_level2, Vbeta_j_mu
     return accum, keys, Vbeta_j_mu 
+
+def get_m1_Vbeta_j_mu_pinv(obj):
+    import numpy as np
+    global df1_var
+    seq = obj[0]
+    hierarchy_level2 = obj[1]
+    Vbeta_j_mu = obj[2]
     
+    # Vbeta_inv_draw(nu, phi) where nu is df1_var & for phi matrix we have
+    phi = np.linalg.pinv(gu.matrix_scalarmult_plr(Vbeta_j_mu, df1_var)) 
+    Vbeta_inv_j_draw = gu.Vbeta_inv_draw(df1_var, phi)
+    return (seq, hierarchy_level2, Vbeta_inv_j_draw)
+    
+def np_pinv(Vbeta_inv_j_draw, n1, coef_precision_prior_array):
+    import numpy as np
+    temp = gu.matrix_scalarmult_plr(Vbeta_inv_j_draw, n1)
+    temp_add = gu.matrix_scalarmult_plr(temp, gu.matrix_diag_plr(coef_precision_prior_array))
+    return np.linalg.pinv(temp_add)    
 
 def gibbs_init(model_name, source_RDD, hierarchy_level1, hierarchy_level2, p, df1, y_var, x_var_array, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals):
     text_output = 'Done: Gibbs Sampler for model model_name is initialized.  Proceed to run updates of the sampler by using the gibbs() function.  All objects associated with this model are named with a model_name prefix.'
@@ -127,6 +146,7 @@ def gibbs_init(model_name, source_RDD, hierarchy_level1, hierarchy_level2, p, df
 def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
 #if __name__ == '__main__':
     global p_var
+    global coef_precision_prior_array_var
     # sc = SparkContext(appName="gibbs_init")
     # of the form keys, x_array, y_array
     m1_d_array_agg = keyBy_groupby_h2_h1.map(create_x_matrix_y_array)
@@ -140,8 +160,8 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     # computing the number of hierarchy_level2 nodes for each of the hierarchy_level1 node
     # think of h2 as department and h1 as the stores 
     # the following computes the number of stores in each department
-    key_pairs = get_d_childcount(d)
-    print "d_child_counts are : ", key_pairs.collect()
+    m1_d_childcount = get_d_childcount(d)
+    print "d_child_counts are : ", m1_d_childcount.collect()
     
     # since the number of weeks of data for each deparment_name-tiers is different.
     # we wll precompute this quantity for each department_name-tier
@@ -178,10 +198,18 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     joined_i_j_rdd = sc.parallelize(joined_i_j).keyBy(lambda (hierarchy_level2, hierarchy_level1, values_array_i, values_array_j): (hierarchy_level2)).groupByKey()
     # joined_i_j_rdd.take(1) :  (u'"5"', <pyspark.resultiterable.ResultIterable object at 0x117be50>) similarly 5 others
     m1_Vbeta_j_mu = joined_i_j_rdd.map(get_Vbeta_j_mu)
+    
     print " m1_Vbeta_j_mu ", m1_Vbeta_j_mu.count() # the actual values are 500 I am getting 135 values
     
-    ### Draw Vbeta_inv and compute resulting sigmabeta using the above functions for each j
-    
+    ###-- Draw Vbeta_inv and compute resulting sigmabeta using the above functions for each j
+    m1_Vbeta_j_mu_pinv = m1_Vbeta_j_mu.map(get_m1_Vbeta_j_mu_pinv).keyBy(hierarchy_level2).groupByKey()
+    m1_d_childcount_groupBy_h2 = m1_d_childcount.keyBy(hierarchy_level2).groupByKey()
+    #  here vals are iter, h2,
+    #  y[0][0] = iter or seq from m1_Vbeta_j_mu_pinv
+    #  y[0][1] = h2 from in m1_Vbeta_j_mu_pinv 
+    #  y[1][1] = n1 from m1_d_childcount_groupBy_h2, 
+    #  y[0][2] = Vbeta_inv_j_draw from m1_Vbeta_j_mu_pinv, np_pin()
+    m1_Vbeta_inv_Sigmabeta_j_draw = map(lambda (x,y): (x, y[0][0], y[0][1], y[1][1] , y[0][2], np_pinv(y[0][2], y[1][1], coef_precision_prior_array_var)), sorted(m1_Vbeta_j_mu_pinv.cogroup(m1_d_childcount_groupBy_h2)))
     
     # exp with cogroup 
     join_coefi_coefj = map(lambda (x, y): (x, (list(y[0]), list(y[1]))),
