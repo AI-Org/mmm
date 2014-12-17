@@ -5,7 +5,8 @@ import gibbs_udf as gu
 
 #'p_var' = Number of explanatory variables in the model, including the intercept term.
 p_var = 14
-    
+accum = sc.accumulator(0) 
+   
 def create_x_matrix_y_array(recObj):
     """
        Take an iterable of records, where the key corresponds to a certain age group
@@ -78,7 +79,34 @@ def get_random_initialvals_beta_j(obj):
     coeff = gu.initial_vals_random(p_var)
     #hierarchy_level2 = obj[3]
     #hierarchy_level1 = obj[4]
-    return (obj[3], coeff)    
+    return (obj[3], coeff) 
+
+def create_join_by_h2_only(t1,t2):
+    # t1 is a list of ((u'"1"', u'"B8"'), (u'"1"', u'"B8"', array([[  7.16677290e-01,   4.15236265e-01,   7.02316511e-02,
+    # t2 is a list of (u'"5"', (u'"5"', array([[ 0.86596322,  0.29811589,  0.29083844
+    joined = []
+    for rec1 in t1:
+        keys = rec1[0]
+        hierarchy_level2 = keys[0]
+        hierarchy_level1 = keys[1]
+        values_array_i = rec1[1][2]
+        for rec2 in t2:
+            hierarchy_level2_rec2 = rec2[0]
+            values_array_j = rec2[1][1]
+            if(hierarchy_level2 == hierarchy_level2_rec2):
+                tup = (hierarchy_level2, hierarchy_level1, values_array_i, values_array_j)
+                joined.append(tup)
+    return joined
+    
+def get_Vbeta_j_mu(obj):
+    global accum;
+    keys = obj[0]
+    values_array_i = obj[1][2]
+    values_array_j = obj[1][3]
+    accum += 1
+    Vbeta_j_mu = gu.matrix_add_diag_plr(sum(Vbeta_i_mu(values_array_i, values_array_j)), p_var)
+    return accum, keys, Vbeta_j_mu 
+    
 
 def gibbs_init(model_name, source_RDD, hierarchy_level1, hierarchy_level2, p, df1, y_var, x_var_array, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals):
     text_output = 'Done: Gibbs Sampler for model model_name is initialized.  Proceed to run updates of the sampler by using the gibbs() function.  All objects associated with this model are named with a model_name prefix.'
@@ -114,27 +142,38 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
       
     if(initial_vals == "ols"):
     # Compute OLS estimates for reference
-        m1_ols_beta_i = m1_d_array_agg.map(get_ols_initialvals_beta_i)
+        m1_ols_beta_i = m1_d_array_agg.map(get_ols_initialvals_beta_i).keyBy(lambda (h2,h1,coff): (h2, h1))
         print "Coefficients for LL after keyby H2", m1_ols_beta_i.collect()
         
-        m1_ols_beta_j = keyBy_h2.map(get_ols_initialvals_beta_j)
+        m1_ols_beta_j = keyBy_h2.map(get_ols_initialvals_beta_j).keyBy(lambda (h2,coff): (h2))
         print "Coefficients for LL after keyby H2", m1_ols_beta_j.collect()
     
     if(initial_vals == "random"):
         print "Draw random array samples of p elements from the uniform(-1,1) dist'n"
         p_var = p
 
-        m1_ols_beta_i = m1_d_array_agg.map(get_random_initialvals_beta_i).groupByKey()
+        m1_ols_beta_i = m1_d_array_agg.map(get_random_initialvals_beta_i).keyBy(lambda (h2,h1,coff): (h2, h1))
         
-        m1_ols_beta_j = keyBy_h2.map(get_random_initialvals_beta_j).groupByKey()
+        m1_ols_beta_j = keyBy_h2.map(get_random_initialvals_beta_j).keyBy(lambda (h2,coff): (h2))
         
     #-- Using the above initial values of the coefficients and drawn values of priors, 
     #   compute initial value of coefficient var-cov matrix (Vbeta_i_mu) 
     #   FOR EACH group i, with group j coefficients as priors, and 
     #   then sum then to get back J matrices
     # computing _Vbeta_j_mu
-    join_i_j = 
+        
+    joined_i_j = create_join_by_h2_only(m1_ols_beta_i.collect(), m1_ols_beta_j.collect())
+    joined_i_j_rdd = sc.parallelize(joined_i_j).keyBy(lambda (x,y,d,s): (x,y))
+    m1_Vbeta_j_mu = joined_i_j_rdd.map(get_Vbeta_j_mu)
+    print " m1_Vbeta_j_mu ", m1_Vbeta_j_mu.count() # the actual values are 500 I am getting 135 values
     
+    
+    # exp with cogroup 
+    join_coefi_coefj = map(lambda (x, y): (x, (list(y[0]), list(y[1]))),
+        sorted(m1_ols_beta_i.cogroup(m1_ols_beta_j).collect()))
+    join_coefi_coefj = m1_ols_beta_i.cogroup(m1_ols_beta_j)
+    
+    len(join_coefi_coefj)
     #m1_Vbeta_j_mu = 
     
     
