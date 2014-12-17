@@ -69,7 +69,7 @@ def wishartrand(nu, phi):
             if i == j:
                 foo[i,j] = np.sqrt(chi2.rvs(nu-(i+1)+1))
             else:
-                foo[i,j]  = npr.nprmal(0,1)
+                foo[i,j]  = npr.normal(0,1)
     return np.dot(chol, np.dot(foo, np.dot(foo.T, chol.T)))
 
 # Function to draw Vbeta_inv from Wishart dist'n, as shown in Equation (7.25) of Koop pp.156-157
