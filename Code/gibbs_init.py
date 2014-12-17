@@ -41,6 +41,7 @@ def create_xtx_matrix_xty(obj):
 
 def get_d_childcount(obj):     
     keyBy_h2_to_h1 = obj.map(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2, hierarchy_level1)).groupByKey()
+    # returns DS with key hierarchy_level2 and value <hierarchy_level2, n1>
     return keyBy_h2_to_h1.map(lambda (x,iter): (x, sum(1 for _ in set(iter))))
 
 def get_d_count_grpby_level2(obj): 
@@ -197,7 +198,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     
     ###-- Draw Vbeta_inv and compute resulting sigmabeta using the above functions for each j
     m1_Vbeta_j_mu_pinv = m1_Vbeta_j_mu.map(get_m1_Vbeta_j_mu_pinv).keyBy(lambda (seq, hierarchy_level2, Vbeta_inv_j_draw) : (hierarchy_level2)).groupByKey()
-    m1_d_childcount_groupBy_h2 = m1_d_childcount.keyBy(lambda (seq, hierarchy_level2, Vbeta_inv_j_draw) : hierarchy_level2).groupByKey()
+    m1_d_childcount_groupBy_h2 = m1_d_childcount.keyBy(lambda (hierarchy_level2, n1) : hierarchy_level2).groupByKey()
     #  here vals are iter, h2,
     #  y[0][0] = iter or seq from m1_Vbeta_j_mu_pinv
     #  y[0][1] = h2 from in m1_Vbeta_j_mu_pinv 
@@ -206,15 +207,17 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     m1_Vbeta_inv_Sigmabeta_j_draw = map(lambda (x,y): (x, y[0][0], y[0][1], y[1][1] , y[0][2], np_pinv(y[0][2], y[1][1], coef_precision_prior_array_var)), sorted(m1_Vbeta_j_mu_pinv.cogroup(m1_d_childcount_groupBy_h2).collect()))
     print "m1_Vbeta_inv_Sigmabeta_j_draw Take 1: ", m1_Vbeta_inv_Sigmabeta_j_draw.take(1)
     print "m1_Vbeta_inv_Sigmabeta_j_draw Count: ", m1_Vbeta_inv_Sigmabeta_j_draw.count()
-        
+    
+    
+    
     
     
     # exp with cogroup 
-    join_coefi_coefj = map(lambda (x, y): (x, (list(y[0]), list(y[1]))),
-        sorted(m1_ols_beta_i.cogroup(m1_ols_beta_j).collect()))
-    join_coefi_coefj = m1_ols_beta_i.cogroup(m1_ols_beta_j)
+    #join_coefi_coefj = map(lambda (x, y): (x, (list(y[0]), list(y[1]))),
+    #   sorted(m1_ols_beta_i.cogroup(m1_ols_beta_j).collect()))
+    #join_coefi_coefj = m1_ols_beta_i.cogroup(m1_ols_beta_j)
     
-    len(join_coefi_coefj)
+    #len(join_coefi_coefj)
     #m1_Vbeta_j_mu = 
     
     
