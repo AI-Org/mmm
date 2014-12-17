@@ -100,11 +100,22 @@ def create_join_by_h2_only(t1,t2):
     
 def get_Vbeta_j_mu(obj):
     global accum;
-    keys = obj[0]
-    values_array_i = obj[1][2]
-    values_array_j = obj[1][3]
     accum += 1
-    Vbeta_j_mu = gu.matrix_add_diag_plr(sum(Vbeta_i_mu(values_array_i, values_array_j)), p_var)
+    
+    keys = obj[0] # hierarchy_level2
+    
+    # now Obj1 is an ResultIterable object pointing to a collection of arrays
+    # where each array has a structure like <h2,h1,coef_i,coef_j>
+    result_list = list(obj[1])  
+    Vbeta_i_mu_ar = []
+    for r in result_list: 
+        values_array_i = r[2]
+        values_array_j = r[3]
+        Vbeta_i_mu_ar.append(gu.Vbeta_i_mu(values_array_i, values_array_j))       
+ 
+    Vbeta_i_mu_sum = sum(Vbeta_i_mu_ar)   
+    Vbeta_j_mu = gu.matrix_add_diag_plr(Vbeta_i_mu_sum, p_var)
+    
     return accum, keys, Vbeta_j_mu 
     
 
@@ -163,9 +174,13 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     # computing _Vbeta_j_mu
         
     joined_i_j = create_join_by_h2_only(m1_ols_beta_i.collect(), m1_ols_beta_j.collect())
-    joined_i_j_rdd = sc.parallelize(joined_i_j).keyBy(lambda (x,y,d,s): (x,y))
+    # keyBy and groupBy will reduce the rows from 135 to 5 since there are only 5 hierarchy_level2's
+    joined_i_j_rdd = sc.parallelize(joined_i_j).keyBy(lambda (hierarchy_level2, hierarchy_level1, values_array_i, values_array_j): (hierarchy_level2)).groupByKey()
+    # joined_i_j_rdd.take(1) :  (u'"5"', <pyspark.resultiterable.ResultIterable object at 0x117be50>) similarly 5 others
     m1_Vbeta_j_mu = joined_i_j_rdd.map(get_Vbeta_j_mu)
     print " m1_Vbeta_j_mu ", m1_Vbeta_j_mu.count() # the actual values are 500 I am getting 135 values
+    
+    ### Draw Vbeta_inv and compute resulting sigmabeta using the above functions for each j
     
     
     # exp with cogroup 
