@@ -128,12 +128,17 @@ def get_Vbeta_j_mu(obj):
 
 def get_m1_Vbeta_j_mu_pinv(obj):
     import numpy as np
+    import nearPD as npd
     global df1_var
     seq = obj[0]
     hierarchy_level2 = obj[1]
     Vbeta_j_mu = obj[2]
     # Vbeta_inv_draw(nu, phi) where nu is df1_var & for phi matrix we have
-    phi = np.linalg.pinv(gu.matrix_scalarmult_plr(Vbeta_j_mu, df1_var)) 
+    a = gu.matrix_scalarmult_plr(Vbeta_j_mu, df1_var)
+    phi = np.linalg.pinv(a) 
+    # is phi is not positive definiate matrix than compute a nearPD for it
+    if np.allclose(a, np.dot(a, np.dot(phi, a))) != True:
+        phi = npd.nearPD(phi)
     Vbeta_inv_j_draw = gu.Vbeta_inv_draw(df1_var, phi)
     return (seq, hierarchy_level2, Vbeta_inv_j_draw)
 

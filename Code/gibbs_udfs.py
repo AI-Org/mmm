@@ -83,7 +83,7 @@ def Vbeta_i_mu(beta_i, beta_mu):
 def Vbeta_inv_draw(nu, phi):
     # import a lib MCMCpack and return rwish(arg1,arg2)
     import wishart as rwish
-    wishart = rwish.Wishart(3)
+    wishart = rwish.Wishart(nu)
     wishart.dof = nu
     wishart.scale = phi
     return wishart.sample()
