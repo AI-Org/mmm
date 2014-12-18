@@ -2,6 +2,7 @@ import numpy as np
 from pyspark import SparkContext
 import sys
 import gibbs_udfs as gu
+import nearPD as npd
 
 #'p_var' = Number of explanatory variables in the model, including the intercept term.
 p_var = 14
