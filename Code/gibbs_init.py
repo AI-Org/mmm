@@ -8,7 +8,7 @@ import nearPD as npd
 p_var = 14
 accum = 0
 df1_var = 15
-coef_precision_prior_array_var = [1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+coef_precision_prior_array_var = [1,1,1,1,1,1,1,1,1,1,1,1,1]
 
 def create_x_matrix_y_array(recObj):
     """
@@ -154,13 +154,22 @@ def get_m1_Vbeta_inv_Sigmabeta_j_draw(lst):
     global coef_precision_prior_array_var
     #y[0][0], y[0][1], y[1][1] , y[0][2], np_pinv(y[0][2], y[1][1], coef_precision_prior_array_var)
     #or seq from m1_Vbeta_j_mu_pinv
-    iter = lst[0][0] 
+    iter = 0 
     #from in m1_Vbeta_j_mu_pinv
-    h2 = lst[0][1] 
+    h2 = "" 
     # from m1_d_childcount_groupBy_h2,
-    n1 = lst[1][1]
+    n1 = 1
     #  Vbeta_inv_j_draw =  from m1_Vbeta_j_mu_pinv, np_pin()
-    Vbeta_inv_j_draw = lst[0][2]
+    Vbeta_inv_j_draw = None
+    for r in lst[0]:
+	for j in r:
+	    iter = j[0]
+	    h2 = j[1]
+	    Vbeta_inv_j_draw = j[2]
+    for r in lst[1]:
+	for j in r:
+	    print "n1: ", j[1]
+	    n1 = j[1]
     
     return (iter, h2, n1, Vbeta_inv_j_draw, np_pinv(Vbeta_inv_j_draw, n1, coef_precision_prior_array_var))
 
@@ -211,7 +220,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     #   FOR EACH group i, with group j coefficients as priors, and
     #   then sum then to get back J matrices
     # computing _Vbeta_j_mu
-
+      
     joined_i_j = create_join_by_h2_only(m1_ols_beta_i.collect(), m1_ols_beta_j.collect())
     # keyBy and groupBy will reduce the rows from 135 to 5 since there are only 5 hierarchy_level2's
     joined_i_j_rdd = sc.parallelize(joined_i_j).keyBy(lambda (hierarchy_level2, hierarchy_level1, values_array_i, values_array_j): (hierarchy_level2)).groupByKey()
@@ -220,7 +229,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     ## checked get_Vbeta_j_mu & appears correct one,
     ## Data Structure m1_Vbeta_j_mu is symmetric along diagonal and have same dimensions as the one in SQL.
     m1_Vbeta_j_mu = joined_i_j_rdd.map(get_Vbeta_j_mu)
-
+     
     print " m1_Vbeta_j_mu ", m1_Vbeta_j_mu.count() # the actual values are 500 I am getting 135 values
     print " m1_Vbeta_j_mu ", m1_Vbeta_j_mu.take(1)
     ###-- Draw Vbeta_inv and compute resulting sigmabeta using the above functions for each j
@@ -234,7 +243,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     definite positive using nearPD in python
     """
     m1_Vbeta_j_mu_pinv = m1_Vbeta_j_mu.map(get_m1_Vbeta_j_mu_pinv).keyBy(lambda (seq, hierarchy_level2, Vbeta_inv_j_draw) : (hierarchy_level2)).groupByKey()
-
+     
     m1_d_childcount_groupBy_h2 = m1_d_childcount.keyBy(lambda (hierarchy_level2, n1) : hierarchy_level2).groupByKey()
     #  here vals are iter, h2,
     #  y[0][0] = iter or seq from m1_Vbeta_j_mu_pinv
@@ -243,22 +252,22 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     #  y[0][2] = Vbeta_inv_j_draw from m1_Vbeta_j_mu_pinv, np_pin()
     #  error 'ResultIterable' object does not support indexing
     #  map(lambda (x,y): (x, sum(fun(list(y)))), joined_i_j_rdd.take(1))
-    m1_Vbeta_inv_Sigmabeta_j_draw = map(lambda (x,y): (x, get_m1_Vbeta_inv_Sigmabeta_j_draw(list(y))), sorted(m1_Vbeta_j_mu_pinv.cogroup(m1_d_childcount_groupBy_h2).collect()))
-    print "m1_Vbeta_inv_Sigmabeta_j_draw Take 1: ", m1_Vbeta_inv_Sigmabeta_j_draw.take(1)
-    print "m1_Vbeta_inv_Sigmabeta_j_draw Count: ", m1_Vbeta_inv_Sigmabeta_j_draw.count()
-
+    joined_Vbeta_i_j = sorted(m1_Vbeta_j_mu_pinv.cogroup(m1_d_childcount_groupBy_h2).collect())
+    print " cogroup counts: ", len(joined_Vbeta_i_j)
+    print " Vbeta_i_j cogroup take 1", joined_Vbeta_i_j[1]
+    #print "map ", map(lambda (x,y): (x, (y for y in list(y[0]))), joined_Vbeta_i_j)
+    m1_Vbeta_inv_Sigmabeta_j_draw = map(lambda (x,y): (x, get_m1_Vbeta_inv_Sigmabeta_j_draw(list(y))), joined_Vbeta_i_j) 
+    print " m1_Vbeta_inv_Sigmabeta_j_draw Take 1: ", m1_Vbeta_inv_Sigmabeta_j_draw[1]
+    print " m1_Vbeta_inv_Sigmabeta_j_draw Count: ", len(m1_Vbeta_inv_Sigmabeta_j_draw)
+      
     """
     7 more DS after that """
-
-
-
-
-
+     
     # exp with cogroup
     #join_coefi_coefj = map(lambda (x, y): (x, (list(y[0]), list(y[1]))),
     #   sorted(m1_ols_beta_i.cogroup(m1_ols_beta_j).collect()))
     #join_coefi_coefj = m1_ols_beta_i.cogroup(m1_ols_beta_j)
-
+     
     #len(join_coefi_coefj)
     #m1_Vbeta_j_mu =
 

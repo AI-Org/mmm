@@ -37,6 +37,7 @@ def matrix_add_diag_plr(matrix, value):
 
 # Function to multiply a scalar to a matrix
 def matrix_scalarmult_plr(matrix, value):
+    print "multiply matrix : ", matrix ," with value ", value
     return np.multiply(matrix, value)
 
 # Function to compute var-cov matrix for the pooled model, as defined in Equation 7.27 of Koop pp.156-157
