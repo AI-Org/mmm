@@ -27,11 +27,12 @@ def wishartrand(nu, phi):
     
 if __name__ == '__main__':
     npr.seed(1)
-    nu = 5
+    nu = 14
     a = np.array([[1,0.5,0],[0.5,1,0],[0,0,1]])
+    print wishartrand(nu, a)
     #print invwishartrand(nu,a)
-    x = np.array([ invwishartrand(nu,a) for i in range(20000)])
-    nux = np.array([invwishartrand_prec(nu,a) for i in range(20000)])
-    print x.shape
-    print np.mean(x,0),"\n", inv(np.mean(nux,0))
+    #x = np.array([ invwishartrand(nu,a) for i in range(20000)])
+    #nux = np.array([invwishartrand_prec(nu,a) for i in range(20000)])
+    #print x.shape
+    #print np.mean(x,0),"\n", inv(np.mean(nux,0))
     #print inv(a)/(nu-a.shape[0]-1)

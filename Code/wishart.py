@@ -12,7 +12,7 @@
 
 import math
 import random
-import numpy
+import numpy as np
 import numpy.linalg
 import numpy.random
 import scipy.special
@@ -93,8 +93,16 @@ class Wishart:
     for r in xrange(d):
       if r!=0: a[r,:r] = numpy.random.normal(size=(r,))
       a[r,r] = math.sqrt(random.gammavariate(0.5*(self.dof-d+1),2.0))
-    return numpy.dot(numpy.dot(numpy.dot(self.cholesky,a),a.T),self.cholesky.T)
+    result_draw = numpy.dot(numpy.dot(numpy.dot(self.cholesky,a),a.T),self.cholesky.T)
+    print "result_draw" , result_draw
+    return result_draw
 
 
   def __str__(self):
     return '{dof:%f, scale:%s}'%(self.dof, str(self.scale))
+    
+if __name__ == '__main__':
+   wishart = Wishart(3)
+   wishart.dof = 14
+   wishart.scale = a = np.array([[1,0.5,0],[0.5,1,0],[0,0,1]])
+   print "wishart draw", wishart.sample()     

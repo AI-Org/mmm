@@ -99,22 +99,27 @@ def create_join_by_h2_only(t1,t2):
                 joined.append(tup)
     return joined
 
+# funciton used to compute an appended list of coeff_i and coeff_j for the same 
+# hierarchical level. Used in get_Vbeta_j_mu
+def get_Vbeta_i_mu_coeff_i_coeff_j(result_Iterable_list):
+    Vbeta_i_mu_ar = []
+    for r in result_list_r:
+        values_array_i = r[2]
+        values_array_j = r[3]
+        Vbeta_i_mu_ar.append(gu.Vbeta_i_mu(values_array_i, values_array_j))
+    return Vbeta_i_mu_ar
+
     
 def get_Vbeta_j_mu(obj):
     global accum;
     accum += 1
-    
     keys = obj[0] # hierarchy_level2
-    
     # now Obj1 is an ResultIterable object pointing to a collection of arrays
     # where each array has a structure like <h2,h1,coef_i,coef_j>
-    result_list = list(obj[1])  
-    Vbeta_i_mu_ar = []
-    for r in result_list: 
-        values_array_i = r[2]
-        values_array_j = r[3]
-        Vbeta_i_mu_ar.append(gu.Vbeta_i_mu(values_array_i, values_array_j))       
- 
+    result_Iterable_list = list(obj[1])  
+    Vbeta_i_mu_ar = get_Vbeta_i_mu_coeff_i_coeff_j(result_Iterable_list)       
+    # one can also obtain Vbeta_i_mu_sum as  map(lambda (x,y): (x, sum(fun(list(y)))), joined_i_j_rdd.take(1))
+    # corresponding to each one of the h2 level
     Vbeta_i_mu_sum = sum(Vbeta_i_mu_ar)   
     Vbeta_j_mu = gu.matrix_add_diag_plr(Vbeta_i_mu_sum, p_var)
     # iter, hierarchy_level2, Vbeta_j_mu
@@ -127,7 +132,6 @@ def get_m1_Vbeta_j_mu_pinv(obj):
     seq = obj[0]
     hierarchy_level2 = obj[1]
     Vbeta_j_mu = obj[2]
-    
     # Vbeta_inv_draw(nu, phi) where nu is df1_var & for phi matrix we have
     phi = np.linalg.pinv(gu.matrix_scalarmult_plr(Vbeta_j_mu, df1_var)) 
     Vbeta_inv_j_draw = gu.Vbeta_inv_draw(df1_var, phi)
@@ -192,18 +196,32 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     # keyBy and groupBy will reduce the rows from 135 to 5 since there are only 5 hierarchy_level2's
     joined_i_j_rdd = sc.parallelize(joined_i_j).keyBy(lambda (hierarchy_level2, hierarchy_level1, values_array_i, values_array_j): (hierarchy_level2)).groupByKey()
     # joined_i_j_rdd.take(1) :  (u'"5"', <pyspark.resultiterable.ResultIterable object at 0x117be50>) similarly 5 others
+    # CHECKPOINT for get_Vbeta_j_mu
+    ## checked get_Vbeta_j_mu & appears correct one, 
+    ## Data Structure m1_Vbeta_j_mu is symmetric along diagonal and have same dimensions as the one in SQL.
     m1_Vbeta_j_mu = joined_i_j_rdd.map(get_Vbeta_j_mu)
     
     print " m1_Vbeta_j_mu ", m1_Vbeta_j_mu.count() # the actual values are 500 I am getting 135 values
-    
+    print " m1_Vbeta_j_mu ", m1_Vbeta_j_mu.take(1)
     ###-- Draw Vbeta_inv and compute resulting sigmabeta using the above functions for each j
+    """
+    Errorsome on "matrix is not positive definite." raised by 
+    File "gibbs_init.py", line 133, in get_m1_Vbeta_j_mu_pinv
+    Vbeta_inv_j_draw = gu.Vbeta_inv_draw(df1_var, phi)
+    File "gibbs_udfs.py", line 84, in Vbeta_inv_draw
+    return wishartrand(nu, phi)
+    CHECKPOINT for get_Vbeta_j_mu
+    """
     m1_Vbeta_j_mu_pinv = m1_Vbeta_j_mu.map(get_m1_Vbeta_j_mu_pinv).keyBy(lambda (seq, hierarchy_level2, Vbeta_inv_j_draw) : (hierarchy_level2)).groupByKey()
+    """
+    7 more DS after that """    
     m1_d_childcount_groupBy_h2 = m1_d_childcount.keyBy(lambda (hierarchy_level2, n1) : hierarchy_level2).groupByKey()
     #  here vals are iter, h2,
     #  y[0][0] = iter or seq from m1_Vbeta_j_mu_pinv
     #  y[0][1] = h2 from in m1_Vbeta_j_mu_pinv 
     #  y[1][1] = n1 from m1_d_childcount_groupBy_h2, 
     #  y[0][2] = Vbeta_inv_j_draw from m1_Vbeta_j_mu_pinv, np_pin()
+    
     m1_Vbeta_inv_Sigmabeta_j_draw = map(lambda (x,y): (x, y[0][0], y[0][1], y[1][1] , y[0][2], np_pinv(y[0][2], y[1][1], coef_precision_prior_array_var)), sorted(m1_Vbeta_j_mu_pinv.cogroup(m1_d_childcount_groupBy_h2).collect()))
     print "m1_Vbeta_inv_Sigmabeta_j_draw Take 1: ", m1_Vbeta_inv_Sigmabeta_j_draw.take(1)
     print "m1_Vbeta_inv_Sigmabeta_j_draw Count: ", m1_Vbeta_inv_Sigmabeta_j_draw.count()
