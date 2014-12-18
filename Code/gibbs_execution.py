@@ -3,7 +3,7 @@ import re
 
 from pyspark import SparkContext
 import gibbs_init as gi
-
+# run as spark-submit --py-files gibbs_init.py,gibbs_udfs.py,wishart.py,nearPD.py gibbs_execution.py
 def parseData(data):
     columns = re.split(",", data)
     return columns
