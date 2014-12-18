@@ -215,11 +215,11 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     Vbeta_inv_j_draw = gu.Vbeta_inv_draw(df1_var, phi)
     File "gibbs_udfs.py", line 84, in Vbeta_inv_draw
     return wishartrand(nu, phi)
-    CHECKPOINT for get_Vbeta_j_mu
+    CHECKPOINT for get_Vbeta_j_mu ## changed one of the phi matrixs into
+    definite positive using nearPD in python
     """
     m1_Vbeta_j_mu_pinv = m1_Vbeta_j_mu.map(get_m1_Vbeta_j_mu_pinv).keyBy(lambda (seq, hierarchy_level2, Vbeta_inv_j_draw) : (hierarchy_level2)).groupByKey()
-    """
-    7 more DS after that """    
+       
     m1_d_childcount_groupBy_h2 = m1_d_childcount.keyBy(lambda (hierarchy_level2, n1) : hierarchy_level2).groupByKey()
     #  here vals are iter, h2,
     #  y[0][0] = iter or seq from m1_Vbeta_j_mu_pinv
@@ -230,6 +230,9 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     m1_Vbeta_inv_Sigmabeta_j_draw = map(lambda (x,y): (x, y[0][0], y[0][1], y[1][1] , y[0][2], np_pinv(y[0][2], y[1][1], coef_precision_prior_array_var)), sorted(m1_Vbeta_j_mu_pinv.cogroup(m1_d_childcount_groupBy_h2).collect()))
     print "m1_Vbeta_inv_Sigmabeta_j_draw Take 1: ", m1_Vbeta_inv_Sigmabeta_j_draw.take(1)
     print "m1_Vbeta_inv_Sigmabeta_j_draw Count: ", m1_Vbeta_inv_Sigmabeta_j_draw.count()
+    
+    """
+    7 more DS after that """ 
     
     
     
