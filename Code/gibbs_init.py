@@ -103,7 +103,7 @@ def create_join_by_h2_only(t1,t2):
 # hierarchical level. Used in get_Vbeta_j_mu
 def get_Vbeta_i_mu_coeff_i_coeff_j(result_Iterable_list):
     Vbeta_i_mu_ar = []
-    for r in result_list_r:
+    for r in result_Iterable_list:
         values_array_i = r[2]
         values_array_j = r[3]
         Vbeta_i_mu_ar.append(gu.Vbeta_i_mu(values_array_i, values_array_j))

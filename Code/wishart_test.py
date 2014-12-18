@@ -25,11 +25,11 @@ def wishartrand(nu, phi):
     return np.dot(chol, np.dot(foo, np.dot(foo.T, chol.T)))
     
     
-if __name__ == '__main__':
-    npr.seed(1)
-    nu = 14
-    a = np.array([[1,0.5,0],[0.5,1,0],[0,0,1]])
-    print wishartrand(nu, a)
+#if __name__ == '__main__':
+#    npr.seed(1)
+#    nu = 14
+#    a = np.array([[1,0.5,0],[0.5,1,0],[0,0,1]])
+#    print wishartrand(nu, a)
     #print invwishartrand(nu,a)
     #x = np.array([ invwishartrand(nu,a) for i in range(20000)])
     #nux = np.array([invwishartrand_prec(nu,a) for i in range(20000)])

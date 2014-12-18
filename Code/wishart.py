@@ -101,8 +101,8 @@ class Wishart:
   def __str__(self):
     return '{dof:%f, scale:%s}'%(self.dof, str(self.scale))
     
-if __name__ == '__main__':
-   wishart = Wishart(3)
-   wishart.dof = 14
-   wishart.scale = a = np.array([[1,0.5,0],[0.5,1,0],[0,0,1]])
-   print "wishart draw", wishart.sample()     
+#if __name__ == '__main__':
+#   wishart = Wishart(3)
+#   wishart.dof = 14
+#   wishart.scale = a = np.array([[1,0.5,0],[0.5,1,0],[0,0,1]])
+#   print "wishart draw", wishart.sample()     
