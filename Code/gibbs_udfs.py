@@ -114,7 +114,7 @@ def beta_mu_prior(Sigmabeta_j, Vbeta_inv_j_draw, sum_coef_j, coef_means_prior_ar
 def beta_draw(mean, cov):
     # mean should be a 1 D array of means of variables
     # cov should be 2 D array of 
-    return np.random.multivariate_normal(mean, cov, 1)
+    return np.random.multivariate_normal(np.matrix(mean).getA1(), cov, 1)
 
 # Function to compute Vbeta_i, as defined in Equation (7.25) of Koop pp.156.   
 # Only computed at lowest level of the hierarchy (i.e. the level that "mixes" directly with the data, namely X'X).

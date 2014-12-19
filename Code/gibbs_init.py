@@ -218,7 +218,7 @@ def get_beta_draw(obj):
     for r in obj[1][1]:
         for j in r:
             Sigmabeta_j = j[4]
-    return (iteri, key, gu.beta_draw(beta_mu_j.getA1(), Sigmabeta_j.getA1()))
+    return (iteri, key, gu.beta_draw(beta_mu_j, Sigmabeta_j))
 
 def gibbs_init(model_name, source_RDD, hierarchy_level1, hierarchy_level2, p, df1, y_var, x_var_array, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals):
     text_output = 'Done: Gibbs Sampler for model model_name is initialized.  Proceed to run updates of the sampler by using the gibbs() function.  All objects associated with this model are named with a model_name prefix.'
@@ -326,7 +326,9 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     ## extracts iter, hierarchy_level2 and beta_draw(beta_mu_j, Sigmabeta_j)
     joined_m1_beta_mu_j_with_m1_Vbeta_inv_Sigmabeta_j_draw_rdd = m1_beta_mu_j.cogroup(m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2)
     m1_beta_mu_j_draw = joined_m1_beta_mu_j_with_m1_Vbeta_inv_Sigmabeta_j_draw_rdd.map(get_beta_draw).keyBy(lambda (iter, hierarchy_level2, beta_mu_j_draw): hierarchy_level2)
+    # count of 5    
     print "count m1_beta_mu_j_draw", m1_beta_mu_j_draw.count()
+    # take 1 of <h2> => (iter, h2, beta_mu_j_draw)    
     print "take 1 m1_beta_mu_j_draw", m1_beta_mu_j_draw.take(1)
     
     """
