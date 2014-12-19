@@ -8,7 +8,11 @@ import nearPD as npd
 p_var = 14
 accum = 0
 df1_var = 15
+# both Arrays below has one less element. Looks like there was a one in row or
+# column somewhere in the computations that was missed out. I was to proceed without any
+# corrections at this point of time and revisit this problem again.
 coef_precision_prior_array_var = [1,1,1,1,1,1,1,1,1,1,1,1,1]
+coef_means_prior_array_var = [0,0,0,0,0,0,0,0,0,0,0,0,0]
 
 def create_x_matrix_y_array(recObj):
     """
@@ -174,6 +178,23 @@ def get_m1_Vbeta_inv_Sigmabeta_j_draw(lst):
     return (iter, h2, n1, Vbeta_inv_j_draw, np_pinv(Vbeta_inv_j_draw, n1, coef_precision_prior_array_var))
 
 
+def get_substructure_beta_mu_j(obj):
+    global coef_precision_prior_array_var, coef_means_prior_array_var
+    # (k, (W1, W2)) 
+    # where W1 is a resultIterator having iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j
+    # and W2 is another resultIterator having hierarchy_level2 & sum_coef_j
+    iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j, sum_coef_j = None
+    for r in obj[1][0]:
+        iter = r[0]
+        hierarchy_level2 = r[1]
+        n1 = r[2]
+        Vbeta_inv_j_draw = r[3]
+    for r in obj[1][1]:
+        sum_coef_j = r[1]
+    beta_mu_j = gu.beta_mu_prior(Sigmabeta_j, Vbeta_inv_j_draw, sum_coef_j, coef_means_prior_array_var, coef_precision_prior_array_var)
+    return (iter, hierarchy_level2, beta_mu_j)
+
+
 def gibbs_init(model_name, source_RDD, hierarchy_level1, hierarchy_level2, p, df1, y_var, x_var_array, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals):
     text_output = 'Done: Gibbs Sampler for model model_name is initialized.  Proceed to run updates of the sampler by using the gibbs() function.  All objects associated with this model are named with a model_name prefix.'
     return text_output
@@ -259,9 +280,22 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     m1_Vbeta_inv_Sigmabeta_j_draw = map(lambda (x,y): (x, get_m1_Vbeta_inv_Sigmabeta_j_draw(list(y))), joined_Vbeta_i_j) 
     print " m1_Vbeta_inv_Sigmabeta_j_draw Take 1: ", m1_Vbeta_inv_Sigmabeta_j_draw[1]
     print " m1_Vbeta_inv_Sigmabeta_j_draw Count: ", len(m1_Vbeta_inv_Sigmabeta_j_draw)
-      
+    m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2 = sc.parallelize(m1_Vbeta_inv_Sigmabeta_j_draw).keyBy(lambda (iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j): (hierarchy_level2)).groupByKey() 
     """
-    7 more DS after that """
+    6 more DS after that """
+    
+    
+    ##-- Compute mean pooled coefficient vector to use in drawing a new pooled coefficient vector.  
+    ##-- Get back one coefficient vector for each j (i.e. J  coefficient vectors are returned).
+    ## computing _beta_mu_j
+    ## for computing _beta_mu_j we first will modify m1_ols_beta_i or _initialvals_beta_i to get sum_coef_j 
+    ## and then  we will join it with m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2
+    m1_ols_beta_i_sum_coef_j = m1_ols_beta_i.map(lambda (x,y): (x[0], y[2])).keyBy(lambda (h2, coeff): h2).groupByKey().map(lambda (x,y): (x, sum(y))).keyBy(lambda (h2, sum_coef_j): h2)
+    joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j = sorted(m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2.cogroup(m1_ols_beta_i_sum_coef_j))
+    m1_beta_mu_j = joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j.map(get_substructure_beta_mu_j).keyBy(lambda (iter, hierarchy_level2, beta_mu_j):hierarchy_level2)
+    
+    print "counts of m1_beta_mu_j ", m1_beta_mu_j.count()
+    
      
     # exp with cogroup
     #join_coefi_coefj = map(lambda (x, y): (x, (list(y[0]), list(y[1]))),
