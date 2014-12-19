@@ -247,6 +247,8 @@ def gibbs_init(model_name, source_RDD, hierarchy_level1, hierarchy_level2, p, df
     text_output = 'Done: Gibbs Sampler for model model_name is initialized.  Proceed to run updates of the sampler by using the gibbs() function.  All objects associated with this model are named with a model_name prefix.'
     return text_output
 
+def add(x,y):
+    return (x+y)
 
 def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     #if __name__ == '__main__':
@@ -368,31 +370,15 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     # count of 5    
     #print "count joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw ", joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw.count()
     #print "take 1 m1_beta_mu_j_draw", joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw.take(1)
-    m1_Vbeta_i = joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw.map(lambda (x,y):get_Vbeta_i(y))
-    print "count m1_Vbeta_i", m1_Vbeta_i.count()
-    print "take 1 m1_Vbeta_i", m1_Vbeta_i.take(1)
+    m1_Vbeta_i = joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw.map(lambda (x,y):(x,get_Vbeta_i(y)))
+    #print "count m1_Vbeta_i", m1_Vbeta_i.count()
+    #print "take 1 m1_Vbeta_i", m1_Vbeta_i.take(1)
     
     """
     3 more DS after that """    
+    m1_Vbeta_i_keyby_h2_h1 = sc.parallelize(m1_Vbeta_i.values().reduce(add)).keyBy(lambda (i, hierarchy_level2, hierarchy_level1, Vbeta_i): (hierarchy_level2, hierarchy_level1))
+    print "m1_Vbeta_i_keyby_h2_h1 count ", m1_Vbeta_i_keyby_h2_h1.count()
+    print "m1_Vbeta_i_keyby_h2_h1 take ", m1_Vbeta_i_keyby_h2_h1.take(1)
     
     
-    # exp with cogroup
-    #join_coefi_coefj = map(lambda (x, y): (x, (list(y[0]), list(y[1]))),
-    #   sorted(m1_ols_beta_i.cogroup(m1_ols_beta_j).collect()))
-    #join_coefi_coefj = m1_ols_beta_i.cogroup(m1_ols_beta_j)
      
-    #len(join_coefi_coefj)
-    #m1_Vbeta_j_mu =
-
-
-
-
-
-
-
-
-
-
-
-
-
