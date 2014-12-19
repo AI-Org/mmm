@@ -149,7 +149,7 @@ def get_m1_Vbeta_j_mu_pinv(obj):
     return (seq, hierarchy_level2, Vbeta_inv_j_draw)
 
 
-def np_pinv(Vbeta_inv_j_draw, n1, coef_precision_prior_array):
+def pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, n1, coef_precision_prior_array):
     import numpy as np
     temp = gu.matrix_scalarmult_plr(Vbeta_inv_j_draw, n1)
     temp_add = gu.matrix_scalarmult_plr(temp, gu.matrix_diag_plr(coef_precision_prior_array))
@@ -157,14 +157,14 @@ def np_pinv(Vbeta_inv_j_draw, n1, coef_precision_prior_array):
     
 def get_m1_Vbeta_inv_Sigmabeta_j_draw(lst):
     global coef_precision_prior_array_var
-    #y[0][0], y[0][1], y[1][1] , y[0][2], np_pinv(y[0][2], y[1][1], coef_precision_prior_array_var)
+    #y[0][0], y[0][1], y[1][1] , y[0][2], pinv_Vbeta_inv_Sigmabeta_j_draw(y[0][2], y[1][1], coef_precision_prior_array_var)
     #or seq from m1_Vbeta_j_mu_pinv
     iter = 0 
     #from in m1_Vbeta_j_mu_pinv
     h2 = "" 
     # from m1_d_childcount_groupBy_h2,
     n1 = 1
-    #  Vbeta_inv_j_draw =  from m1_Vbeta_j_mu_pinv, np_pin()
+    #  Vbeta_inv_j_draw =  from m1_Vbeta_j_mu_pinv, pinv_Vbeta_inv_Sigmabeta_j_draw()
     Vbeta_inv_j_draw = None
     for r in lst[0]:
 	for j in r:
@@ -176,7 +176,7 @@ def get_m1_Vbeta_inv_Sigmabeta_j_draw(lst):
 	    print "n1: ", j[1]
 	    n1 = j[1]
     
-    return (iter, h2, n1, Vbeta_inv_j_draw, np_pinv(Vbeta_inv_j_draw, n1, coef_precision_prior_array_var))
+    return (iter, h2, n1, Vbeta_inv_j_draw, pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, n1, coef_precision_prior_array_var))
 
 
 def get_substructure_beta_mu_j(obj):
@@ -219,6 +219,31 @@ def get_beta_draw(obj):
         for j in r:
             Sigmabeta_j = j[4]
     return (iteri, key, gu.beta_draw(beta_mu_j, Sigmabeta_j))
+    
+def pinv_Vbeta_i(xtx, Vbeta_inv_j_draw):
+    return gu.matrix_add_plr(gu.matrix_scalarmult_plr(xtx, 1), Vbeta_inv_j_draw)    
+    
+def get_Vbeta_i(obj):
+    key = obj[0]
+    # key is hierarchy_level2 and 
+    # cogrouped_iterable_object is <W1,W2>
+    # obj[1] where W1 is a ResultIterable having obj[1][0]=hierarchy_level2, obj[1][1]=hierarchy_level1, xtx, xty
+    # where W2 is a ResultIterable having iter, hierarchy_level2, beta_mu_j
+    for r in obj[1][1]:
+        Vbeta_inv_j_draw = r[1]
+    rows = []
+    count = 1
+    for r in obj[1][0]:
+        for j in r:
+            hierarchy_level2 = j[0]
+            hierarchy_level1 = j[1]
+            xtx = j[2]
+            Vbeta_i = pinv_Vbeta_i(xtx, Vbeta_inv_j_draw)
+            row = (count, hierarchy_level2, hierarchy_level1, Vbeta_i)
+            count += 1
+            rows.append(row)
+    return (key,rows)
+            
 
 def gibbs_init(model_name, source_RDD, hierarchy_level1, hierarchy_level2, p, df1, y_var, x_var_array, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals):
     text_output = 'Done: Gibbs Sampler for model model_name is initialized.  Proceed to run updates of the sampler by using the gibbs() function.  All objects associated with this model are named with a model_name prefix.'
@@ -295,7 +320,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     #  y[0][0] = iter or seq from m1_Vbeta_j_mu_pinv
     #  y[0][1] = h2 from in m1_Vbeta_j_mu_pinv
     #  y[1][1] = n1 from m1_d_childcount_groupBy_h2,
-    #  y[0][2] = Vbeta_inv_j_draw from m1_Vbeta_j_mu_pinv, np_pin()
+    #  y[0][2] = Vbeta_inv_j_draw from m1_Vbeta_j_mu_pinv, pinv_Vbeta_inv_Sigmabeta_j_draw()
     #  error 'ResultIterable' object does not support indexing
     #  map(lambda (x,y): (x, sum(fun(list(y)))), joined_i_j_rdd.take(1))
     joined_Vbeta_i_j = sorted(m1_Vbeta_j_mu_pinv.cogroup(m1_d_childcount_groupBy_h2).collect())
@@ -327,18 +352,23 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     joined_m1_beta_mu_j_with_m1_Vbeta_inv_Sigmabeta_j_draw_rdd = m1_beta_mu_j.cogroup(m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2)
     m1_beta_mu_j_draw = joined_m1_beta_mu_j_with_m1_Vbeta_inv_Sigmabeta_j_draw_rdd.map(get_beta_draw).keyBy(lambda (iter, hierarchy_level2, beta_mu_j_draw): hierarchy_level2)
     # count of 5    
-    print "count m1_beta_mu_j_draw", m1_beta_mu_j_draw.count()
+    #print "count m1_beta_mu_j_draw", m1_beta_mu_j_draw.count()
     # take 1 of <h2> => (iter, h2, beta_mu_j_draw)    
-    print "take 1 m1_beta_mu_j_draw", m1_beta_mu_j_draw.take(1)
+    #print "take 1 m1_beta_mu_j_draw", m1_beta_mu_j_draw.take(1)
     
     """
     4 more DS after that """
     ## -- Compute Vbeta_i
     ## Uses a join of m1_d_array_agg_constants & m1_Vbeta_inv_Sigmabeta_j_draw
     ## m1_d_array_agg_constants is RDD of tuples h2,h1,xtx,xty
-    ## m1_Vbeta_inv_Sigmabeta_j_draw is RDD of (key, Value):(h2 => (iter, hierarchy_level2, beta_mu_j_draw))
-        
-    
+    ## m1_Vbeta_inv_Sigmabeta_j_draw is RDD of (key, Value)::(h2 => (iter, hierarchy_level2, beta_mu_j_draw))
+    m1_d_array_agg_constants_key_by_h2 = m1_d_array_agg_constants.keyBy(lambda (h2,h1,xtx,xty): h2)
+    joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw = m1_d_array_agg_constants_key_by_h2.cogroup(m1_Vbeta_inv_Sigmabeta_j_draw)
+    # count of 5    
+    print "count m1_beta_mu_j_draw", joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw.count()
+    # take 1 of <h2> => (iter, h2, beta_mu_j_draw)    
+    print "take 1 m1_beta_mu_j_draw", joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw.take(1)
+    m1_Vbeta_i = joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw.map(get_Vbeta_i)
     # exp with cogroup
     #join_coefi_coefj = map(lambda (x, y): (x, (list(y[0]), list(y[1]))),
     #   sorted(m1_ols_beta_i.cogroup(m1_ols_beta_j).collect()))
