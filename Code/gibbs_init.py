@@ -60,7 +60,6 @@ def get_ols_initialvals_beta_i(obj):
     regr = linear_model.LinearRegression()
     # fit x_array, y_array
     regr.fit(obj[1], obj[2])
-    print('Coefficients: \n', regr.coef_)
     return (obj[3], obj[4], regr.coef_)
 
 
@@ -69,7 +68,6 @@ def get_ols_initialvals_beta_j(obj):
     regr = linear_model.LinearRegression()
     # fit x_array, y_array
     regr.fit(obj[1], obj[2])
-    print('Coefficients: \n', regr.coef_)
     #hierarchy_level2 = a matrix obj[3] of same values in hierarchy_level2
     return (obj[3], regr.coef_)
 
@@ -173,7 +171,6 @@ def get_m1_Vbeta_inv_Sigmabeta_j_draw(lst):
 	    Vbeta_inv_j_draw = j[2]
     for r in lst[1]:
 	for j in r:
-	    print "n1: ", j[1]
 	    n1 = j[1]
     
     return (iter, h2, n1, Vbeta_inv_j_draw, pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, n1, coef_precision_prior_array_var))
@@ -216,33 +213,34 @@ def get_beta_draw(obj):
         iteri = j[0]
         beta_mu_j = j[2]
     for r in obj[1][1]:
-        for j in r:
-            Sigmabeta_j = j[4]
+        Sigmabeta_j = r[4]
     return (iteri, key, gu.beta_draw(beta_mu_j, Sigmabeta_j))
     
 def pinv_Vbeta_i(xtx, Vbeta_inv_j_draw):
     return gu.matrix_add_plr(gu.matrix_scalarmult_plr(xtx, 1), Vbeta_inv_j_draw)    
+    #return (type(xtx), type(Vbeta_inv_j_draw))
     
 def get_Vbeta_i(obj):
-    key = obj[0]
     # key is hierarchy_level2 and 
     # cogrouped_iterable_object is <W1,W2>
-    # obj[1] where W1 is a ResultIterable having obj[1][0]=hierarchy_level2, obj[1][1]=hierarchy_level1, xtx, xty
     # where W2 is a ResultIterable having hierarchy_level2 => (iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j))
-    for r in obj[1][1]:
+    for r in obj[1]:
+        h2 = r[1]
         Vbeta_inv_j_draw = r[3]
     rows = []
     count = 1
-    for r in obj[1][0]:
-        for j in r:
-            hierarchy_level2 = j[0]
-            hierarchy_level1 = j[1]
-            xtx = j[2]
-            Vbeta_i = pinv_Vbeta_i(xtx, Vbeta_inv_j_draw)
-            row = (count, hierarchy_level2, hierarchy_level1, Vbeta_i)
-            count += 1
-            rows.append(row)
-    return (key,rows)
+    # obj[0] where W1 is a ResultIterable having obj[1][0]=hierarchy_level2, obj[1][1]=hierarchy_level1, xtx, xty
+    for r in obj[0]:
+        hierarchy_level2 = r[0]
+        if hierarchy_level2 != h2:
+            raise NameError('Index not correct'+str)
+        hierarchy_level1 =r[1]
+        xtx = r[2]
+        Vbeta_i = pinv_Vbeta_i(xtx, Vbeta_inv_j_draw)
+        row = (count, hierarchy_level2, hierarchy_level1, Vbeta_i)
+        count += 1
+        rows.append(row)
+    return (rows)
             
 
 def gibbs_init(model_name, source_RDD, hierarchy_level1, hierarchy_level2, p, df1, y_var, x_var_array, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals):
@@ -260,7 +258,8 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     #  we need to make use of X'X and X'y
     #  m1_d_array_agg_constants : list of tuples of (h2, h1, xtx, xty)
     m1_d_array_agg_constants = m1_d_array_agg.map(create_xtx_matrix_xty)
-    #print m1_d_array_agg_constants.take(1)
+    # print "m1_d_array_agg_constants take ",m1_d_array_agg_constants.take(1)
+    # print "m1_d_array_agg_constants count",m1_d_array_agg_constants.count()
     # Compute the childcount at each hierarchy level
     # computing the number of hierarchy_level2 nodes for each of the hierarchy_level1 node
     # think of h2 as department and h1 as the stores
@@ -283,7 +282,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     # in case the initial_vals are defined as "random" we compute the exact same
     # data structures using deviates from Uniform distribution
     if(initial_vals == "random"):
-        print "Draw random array samples of p elements from the uniform(-1,1) dist'n"
+        #print "Draw random array samples of p elements from the uniform(-1,1) dist'n"
         p_var = p
         m1_ols_beta_i = m1_d_array_agg.map(get_random_initialvals_beta_i).keyBy(lambda (h2,h1,coff): (h2, h1))
         m1_ols_beta_j = keyBy_h2.map(get_random_initialvals_beta_j).keyBy(lambda (h2,coff): (h2))
@@ -352,21 +351,24 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     joined_m1_beta_mu_j_with_m1_Vbeta_inv_Sigmabeta_j_draw_rdd = m1_beta_mu_j.cogroup(m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2)
     m1_beta_mu_j_draw = joined_m1_beta_mu_j_with_m1_Vbeta_inv_Sigmabeta_j_draw_rdd.map(get_beta_draw).keyBy(lambda (iter, hierarchy_level2, beta_mu_j_draw): hierarchy_level2)
     # count of 5    
-    print "count m1_beta_mu_j_draw", m1_beta_mu_j_draw.count()
+    #print "count m1_beta_mu_j_draw", m1_beta_mu_j_draw.count()
     # take 1 of <h2> => (iter, h2, beta_mu_j_draw)    
-    print "take 1 m1_beta_mu_j_draw", m1_beta_mu_j_draw.take(1)
+    #print "take 1 m1_beta_mu_j_draw", m1_beta_mu_j_draw.take(1)
     
     ## -- Compute Vbeta_i
     ## Uses a join of m1_d_array_agg_constants & m1_Vbeta_inv_Sigmabeta_j_draw
     ## m1_d_array_agg_constants is RDD of tuples h2,h1,xtx,xty
     ## m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2 is RDD of (key, Value)::(h2 => (iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j))
-    m1_d_array_agg_constants_key_by_h2 = m1_d_array_agg_constants.keyBy(lambda (h2, h1, xtx, xty): h2)
+    m1_d_array_agg_constants_key_by_h2 = m1_d_array_agg_constants.keyBy(lambda (h2, h1, xtx, xty): (h2))
+    #print "table 1 :",m1_d_array_agg_constants_key_by_h2.take(1)
+    #print "table 1 count :",m1_d_array_agg_constants_key_by_h2.count()
+    #print "table 2: ", m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2.take(1)
+    #print "table 2 count 135: ",m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2.count()
     joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw = m1_d_array_agg_constants_key_by_h2.cogroup(m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2)
     # count of 5    
-    print "count m1_beta_mu_j_draw", joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw.count()
-    # take 1 of <h2> => (iter, h2, beta_mu_j_draw)    
-    print "take 1 m1_beta_mu_j_draw", joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw.take(1)
-    m1_Vbeta_i = joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw.map(get_Vbeta_i)
+    #print "count joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw ", joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw.count()
+    #print "take 1 m1_beta_mu_j_draw", joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw.take(1)
+    m1_Vbeta_i = joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw.map(lambda (x,y):get_Vbeta_i(y))
     print "count m1_Vbeta_i", m1_Vbeta_i.count()
     print "take 1 m1_Vbeta_i", m1_Vbeta_i.take(1)
     
