@@ -290,7 +290,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     ## for computing _beta_mu_j we first will modify m1_ols_beta_i or _initialvals_beta_i to get sum_coef_j 
     ## and then  we will join it with m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2
     m1_ols_beta_i_sum_coef_j = m1_ols_beta_i.map(lambda (x,y): (x[0], y[2])).keyBy(lambda (h2, coeff): h2).reduceByKey(gu.matrix_add_plr)
-    joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j = sorted(m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2.cogroup(m1_ols_beta_i_sum_coef_j))
+    joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j = m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2.cogroup(m1_ols_beta_i_sum_coef_j)
     m1_beta_mu_j = joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j.map(get_substructure_beta_mu_j).keyBy(lambda (iter, hierarchy_level2, beta_mu_j):hierarchy_level2)
     
     print "counts of m1_beta_mu_j ", m1_beta_mu_j.count()
