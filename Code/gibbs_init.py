@@ -183,16 +183,16 @@ def get_substructure_beta_mu_j(obj):
     # (k, (W1, W2)) 
     # where W1 is a resultIterator having iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j
     # and W2 is another resultIterator having hierarchy_level2 & sum_coef_j
-    iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j, sum_coef_j = None
+    iteri, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j, sum_coef_j = None
     for r in obj[1][0]:
-        iter = r[0]
+        iteri = r[0]
         hierarchy_level2 = r[1]
         n1 = r[2]
         Vbeta_inv_j_draw = r[3]
     for r in obj[1][1]:
         sum_coef_j = r[1]
     beta_mu_j = gu.beta_mu_prior(Sigmabeta_j, Vbeta_inv_j_draw, sum_coef_j, coef_means_prior_array_var, coef_precision_prior_array_var)
-    return (iter, hierarchy_level2, beta_mu_j)
+    return (iteri, hierarchy_level2, beta_mu_j)
 
 
 def gibbs_init(model_name, source_RDD, hierarchy_level1, hierarchy_level2, p, df1, y_var, x_var_array, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals):
@@ -215,20 +215,20 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     # think of h2 as department and h1 as the stores
     # the following computes the number of stores in each department
     m1_d_childcount = get_d_childcount(d)
-    print "d_child_counts are : ", m1_d_childcount.count()
+    #print "d_child_counts are : ", m1_d_childcount.count()
     # since the number of weeks of data for each deparment_name-tiers is different.
     # we wll precompute this quantity for each department_name-tier
     m1_d_count_grpby_level2 = get_d_count_grpby_level2(d)
-    print "Available data for each department_name-tiers", m1_d_count_grpby_level2.countByKey()
+    #print "Available data for each department_name-tiers", m1_d_count_grpby_level2.countByKey()
     # structure to compute maps by h2 as key only at m1_d_array_agg levels
     keyBy_h2 = d.keyBy(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2)).groupByKey().map(create_x_matrix_y_array)
     if(initial_vals == "ols"):
         # Compute OLS estimates for reference
         m1_ols_beta_i = m1_d_array_agg.map(get_ols_initialvals_beta_i).keyBy(lambda (h2,h1,coff): (h2, h1))
-        print "Coefficients for LL after keyby H2", m1_ols_beta_i.count()
+        #print "Coefficients for LL after keyby H2", m1_ols_beta_i.count()
         # similarly we compute the m1_ols_beta_j which uses the RDD mapped upon only hierarchy_level2
         m1_ols_beta_j = keyBy_h2.map(get_ols_initialvals_beta_j).keyBy(lambda (h2,coff): (h2))
-        print "Coefficients for LL after keyby H2", m1_ols_beta_j.count()
+        #print "Coefficients for LL after keyby H2", m1_ols_beta_j.count()
     # in case the initial_vals are defined as "random" we compute the exact same
     # data structures using deviates from Uniform distribution
     if(initial_vals == "random"):
@@ -251,8 +251,8 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     ## Data Structure m1_Vbeta_j_mu is symmetric along diagonal and have same dimensions as the one in SQL.
     m1_Vbeta_j_mu = joined_i_j_rdd.map(get_Vbeta_j_mu)
      
-    print " m1_Vbeta_j_mu ", m1_Vbeta_j_mu.count() # the actual values are 500 I am getting 135 values
-    print " m1_Vbeta_j_mu ", m1_Vbeta_j_mu.take(1)
+    #print " m1_Vbeta_j_mu count ", m1_Vbeta_j_mu.count() # the actual values are 500 I am getting 135 values
+    #print " m1_Vbeta_j_mu take 1", m1_Vbeta_j_mu.take(1)
     ###-- Draw Vbeta_inv and compute resulting sigmabeta using the above functions for each j
     """
     Errorsome on "matrix is not positive definite." raised by
@@ -263,8 +263,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     CHECKPOINT for get_Vbeta_j_mu ## changed one of the phi matrixs into
     definite positive using nearPD in python
     """
-    m1_Vbeta_j_mu_pinv = m1_Vbeta_j_mu.map(get_m1_Vbeta_j_mu_pinv).keyBy(lambda (seq, hierarchy_level2, Vbeta_inv_j_draw) : (hierarchy_level2)).groupByKey()
-     
+    m1_Vbeta_j_mu_pinv = m1_Vbeta_j_mu.map(get_m1_Vbeta_j_mu_pinv).keyBy(lambda (seq, hierarchy_level2, Vbeta_inv_j_draw) : (hierarchy_level2)).groupByKey() 
     m1_d_childcount_groupBy_h2 = m1_d_childcount.keyBy(lambda (hierarchy_level2, n1) : hierarchy_level2).groupByKey()
     #  here vals are iter, h2,
     #  y[0][0] = iter or seq from m1_Vbeta_j_mu_pinv
@@ -274,12 +273,12 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     #  error 'ResultIterable' object does not support indexing
     #  map(lambda (x,y): (x, sum(fun(list(y)))), joined_i_j_rdd.take(1))
     joined_Vbeta_i_j = sorted(m1_Vbeta_j_mu_pinv.cogroup(m1_d_childcount_groupBy_h2).collect())
-    print " cogroup counts: ", len(joined_Vbeta_i_j)
-    print " Vbeta_i_j cogroup take 1", joined_Vbeta_i_j[1]
+    #print " cogroup counts: ", len(joined_Vbeta_i_j)
+    #print " Vbeta_i_j cogroup take 1", joined_Vbeta_i_j[1]
     #print "map ", map(lambda (x,y): (x, (y for y in list(y[0]))), joined_Vbeta_i_j)
-    m1_Vbeta_inv_Sigmabeta_j_draw = map(lambda (x,y): (x, get_m1_Vbeta_inv_Sigmabeta_j_draw(list(y))), joined_Vbeta_i_j) 
-    print " m1_Vbeta_inv_Sigmabeta_j_draw Take 1: ", m1_Vbeta_inv_Sigmabeta_j_draw[1]
-    print " m1_Vbeta_inv_Sigmabeta_j_draw Count: ", len(m1_Vbeta_inv_Sigmabeta_j_draw)
+    m1_Vbeta_inv_Sigmabeta_j_draw = map(lambda (x,y): get_m1_Vbeta_inv_Sigmabeta_j_draw(list(y)), joined_Vbeta_i_j) 
+    #print " m1_Vbeta_inv_Sigmabeta_j_draw Take 1: ", m1_Vbeta_inv_Sigmabeta_j_draw[1]
+    #print " m1_Vbeta_inv_Sigmabeta_j_draw Count: ", len(m1_Vbeta_inv_Sigmabeta_j_draw)
     m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2 = sc.parallelize(m1_Vbeta_inv_Sigmabeta_j_draw).keyBy(lambda (iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j): (hierarchy_level2)).groupByKey() 
     """
     6 more DS after that """
@@ -290,7 +289,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     ## computing _beta_mu_j
     ## for computing _beta_mu_j we first will modify m1_ols_beta_i or _initialvals_beta_i to get sum_coef_j 
     ## and then  we will join it with m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2
-    m1_ols_beta_i_sum_coef_j = m1_ols_beta_i.map(lambda (x,y): (x[0], y[2])).keyBy(lambda (h2, coeff): h2).groupByKey().map(lambda (x,y): (x, sum(y))).keyBy(lambda (h2, sum_coef_j): h2)
+    m1_ols_beta_i_sum_coef_j = m1_ols_beta_i.map(lambda (x,y): (x[0], y[2])).keyBy(lambda (h2, coeff): h2).reduceByKey(gu.matrix_add_plr)
     joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j = sorted(m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2.cogroup(m1_ols_beta_i_sum_coef_j))
     m1_beta_mu_j = joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j.map(get_substructure_beta_mu_j).keyBy(lambda (iter, hierarchy_level2, beta_mu_j):hierarchy_level2)
     
