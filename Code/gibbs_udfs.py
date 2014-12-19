@@ -93,12 +93,17 @@ def Vbeta_inv_draw(nu, phi):
 # This function allows for user-specified priors on the coefficients.  
 # For use at highest level of the hierarchy.  (7.27) of Koop pp.157.
 
-def beta_mu_prior(arg1, arg2, arg3, arg4, arg5):
+def beta_mu_prior(Sigmabeta_j, Vbeta_inv_j_draw, sum_coef_j, coef_means_prior_array, coef_precision_prior_array):
     #beta_mu<- arg1%*%(arg2%*%arg3+as.matrix(arg4*arg5))
-    mat1 = np.dot(arg4, arg5)
-    mat2 = np.dot(arg2, arg3)
-    mat3 = np.add(mat1, mat2)
-    return np.dot(arg1, mat3)
+    # used for computing the mean for beta_draws,
+    # should be of order size of variables i.e 13
+    # mat1 is a dot product of two arrays
+    mat1 = np.dot(coef_means_prior_array, coef_precision_prior_array)
+    #mat2 is a matrix multiplication product of inv_j_draw and sum_coeff_j
+    mat2 = np.dot(Vbeta_inv_j_draw, sum_coef_j)
+    mat3 = np.add(mat2, np.mat(mat1))
+    # NOTE : for the return value to be one D the sum_coef_j should be a 1 D matrix.
+    return np.dot(Sigmabeta_j, mat3)
 
 
 # beta_draws are samples from mvrnprm or multivariate normal distribution.
@@ -106,7 +111,9 @@ def beta_mu_prior(arg1, arg2, arg3, arg4, arg5):
 # numpy and its random package to perform the same operation
 
 def beta_draw(mean, cov):
-    return np.random.multivariate_nprmal(mean, cov, 1)
+    # mean should be a 1 D array of means of variables
+    # cov should be 2 D array of 
+    return np.random.multivariate_normal(mean, cov, 1)
 
 # Function to compute Vbeta_i, as defined in Equation (7.25) of Koop pp.156.   
 # Only computed at lowest level of the hierarchy (i.e. the level that "mixes" directly with the data, namely X'X).

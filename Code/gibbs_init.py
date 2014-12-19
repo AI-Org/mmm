@@ -42,7 +42,8 @@ def create_xtx_matrix_xty(obj):
     xt_x = x_matrix_t * x_matrix
     y_matrix = obj[2]
     xt_y = x_matrix_t * y_matrix
-    return (keys, xt_x, xt_y)
+    # h2, h1, xtx, xty
+    return (keys[0], keys[1], xt_x, xt_y)
 
 def get_d_childcount(obj):
     keyBy_h2_to_h1 = obj.map(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2, hierarchy_level1)).groupByKey()
@@ -202,23 +203,25 @@ def add_coeff_j(hierarchy_level2, iterable_object):
     array_list = []
     for r in iterable_object:
         array_list.append(r[1])
+    print "coeff array_list :", array_list
     sum_coef_j = sum(array_list)
+    print "coeff sum list : ",sum_coef_j 
     return (hierarchy_level2, sum_coef_j)
     
 
-def get_beta_draw(key, cogrouped_iterable_object):
+def get_beta_draw(obj):
+    key = obj[0]
     # key is hierarchy_level2 and 
     # cogrouped_iterable_object is <W1,W2>
     # where W1 is a ResultIterable having iter, hierarchy_level2, beta_mu_j
     # and W2 is another ResultIterable having iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j
-    for r in cogrouped_iterable_object[1][0]:
-        for j in r:
-            iteri = j[0]
-            beta_mu_j = j[2]
-    for r in cogrouped_iterable_object[1][1]:
+    for j in obj[1][0]:
+        iteri = j[0]
+        beta_mu_j = j[2]
+    for r in obj[1][1]:
         for j in r:
             Sigmabeta_j = j[4]
-    return (iteri, key, gu.beta_draw(beta_mu_j, Sigmabeta_j))
+    return (iteri, key, gu.beta_draw(beta_mu_j.getA1(), Sigmabeta_j.getA1()))
 
 def gibbs_init(model_name, source_RDD, hierarchy_level1, hierarchy_level2, p, df1, y_var, x_var_array, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals):
     text_output = 'Done: Gibbs Sampler for model model_name is initialized.  Proceed to run updates of the sampler by using the gibbs() function.  All objects associated with this model are named with a model_name prefix.'
@@ -233,6 +236,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     # of the form keys, x_array, y_array
     m1_d_array_agg = keyBy_groupby_h2_h1.map(create_x_matrix_y_array)
     #  we need to make use of X'X and X'y
+    #  m1_d_array_agg_constants : list of tuples of (h2, h1, xtx, xty)
     m1_d_array_agg_constants = m1_d_array_agg.map(create_xtx_matrix_xty)
     #print m1_d_array_agg_constants.take(1)
     # Compute the childcount at each hierarchy level
@@ -318,9 +322,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     # m1_beta_mu_j is  RDD keyed structure as hierarchy_level2=> (iter, hierarchy_level2, beta_mu_j)
     m1_beta_mu_j = joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j.map(get_substructure_beta_mu_j).keyBy(lambda (iter, hierarchy_level2, beta_mu_j): hierarchy_level2)
     #print "counts of m1_beta_mu_j ", m1_beta_mu_j.count() # number is 5 on both sides
-    
-    """
-    5 more DS after that """ 
+     
     ## -- Draw beta_mu from mvnorm dist'n.  Get back J vectors of beta_mu, one for each J.
     ## Simply creates a join on  m1_beta_mu_j and  m1_Vbeta_inv_Sigmabeta_j_draw (the RDD keyby h2 equivalent is m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2 )
     ## extracts iter, hierarchy_level2 and beta_draw(beta_mu_j, Sigmabeta_j)
@@ -328,6 +330,14 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     m1_beta_mu_j_draw = joined_m1_beta_mu_j_with_m1_Vbeta_inv_Sigmabeta_j_draw_rdd.map(get_beta_draw).keyBy(lambda (iter, hierarchy_level2, beta_mu_j_draw): hierarchy_level2)
     print "count m1_beta_mu_j_draw", m1_beta_mu_j_draw.count()
     print "take 1 m1_beta_mu_j_draw", m1_beta_mu_j_draw.take(1)
+    
+    """
+    4 more DS after that """
+    ## -- Compute Vbeta_i
+    ## Uses a join of m1_d_array_agg_constants & m1_Vbeta_inv_Sigmabeta_j_draw
+    ## m1_d_array_agg_constants is RDD of tuples h2,h1,xtx,xty
+    ## m1_Vbeta_inv_Sigmabeta_j_draw is RDD of (key, Value):(h2 => (iter, hierarchy_level2, beta_mu_j_draw))
+        
     
     # exp with cogroup
     #join_coefi_coefj = map(lambda (x, y): (x, (list(y[0]), list(y[1]))),
