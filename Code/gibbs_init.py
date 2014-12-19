@@ -194,6 +194,13 @@ def get_substructure_beta_mu_j(obj):
     beta_mu_j = gu.beta_mu_prior(Sigmabeta_j, Vbeta_inv_j_draw, sum_coef_j, coef_means_prior_array_var, coef_precision_prior_array_var)
     return (iteri, hierarchy_level2, beta_mu_j)
 
+def add_coeff_j(hierarchy_level2, iterable_object):
+    # where each iterable is like (hierarchy_level2, array[[]] of dim 1X13)
+    array_list = []
+    for r in iterable_object:
+        array_list.append(r[1])
+    sum_coef_j = sum(array_list)
+    return (hierarchy_level2, sum_coef_j)
 
 def gibbs_init(model_name, source_RDD, hierarchy_level1, hierarchy_level2, p, df1, y_var, x_var_array, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals):
     text_output = 'Done: Gibbs Sampler for model model_name is initialized.  Proceed to run updates of the sampler by using the gibbs() function.  All objects associated with this model are named with a model_name prefix.'
@@ -289,8 +296,10 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     ## computing _beta_mu_j
     ## for computing _beta_mu_j we first will modify m1_ols_beta_i or _initialvals_beta_i to get sum_coef_j 
     ## and then  we will join it with m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2
-    m1_ols_beta_i_sum_coef_j = m1_ols_beta_i.map(lambda (x,y): (x[0], y[2])).keyBy(lambda (h2, coeff): h2).reduceByKey(gu.matrix_add_plr)
+    m1_ols_beta_i_sum_coef_j = m1_ols_beta_i.map(lambda (x,y): (x[0], y[2])).keyBy(lambda (h2, coeff): h2).groupByKey().map(add_coeff_j)
+    print "Diagnostics m1_ols_beta_i_sum_coef_j ", m1_ols_beta_i_sum_coef_j.collect()    
     joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j = m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2.cogroup(m1_ols_beta_i_sum_coef_j)
+    print "joined_m1_Vbeta_inv ", joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j.take(1)    
     m1_beta_mu_j = joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j.map(get_substructure_beta_mu_j).keyBy(lambda (iter, hierarchy_level2, beta_mu_j):hierarchy_level2)
     
     print "counts of m1_beta_mu_j ", m1_beta_mu_j.count()

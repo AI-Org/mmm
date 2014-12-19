@@ -33,6 +33,8 @@ if __name__ == "__main__":
     # coef_precision_prior_array = Priors for coefficient covariances at the upper-most level of the hierarchy. 
     #coef_precision_prior_array = sys.argv[5] if len(sys.argv) > 5 else [1,1,1,1,1,1,1,1,1,1,1,1,1]
     coef_precision_prior_array = sys.argv[5] if len(sys.argv) > 5 else [1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+    #'coef_means_prior_array' = Priors for coefficient means at the upper-most level of the hierarchy. 
+    coef_means_prior_array = sys.argv[5] if len(sys.argv) > 5 else [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
     gi.gibbs_init_test(sc, d, keyBy_groupby_h2_h1, ols_or_random, p)
     # calling the first UDF of gibbs
     # d_array_agg_sql = gibbs_init.create_d_array_agg_sql()
