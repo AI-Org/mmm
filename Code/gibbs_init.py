@@ -186,12 +186,12 @@ def get_substructure_beta_mu_j(obj):
     # where W1 is a ResultIterable having iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j
     # and W2 is another ResultIterable having sum_coef_j
     for r in obj[1][0]:
-        for j in r:
-            iteri = j[0]
-            hierarchy_level2 = j[1]
-            n1 = j[2]
-            Vbeta_inv_j_draw = j[3]
-            Sigmabeta_j = j[4]
+        #for j in r:
+        iteri = r[0]
+        hierarchy_level2 = r[1]
+        n1 = r[2]
+        Vbeta_inv_j_draw = r[3]
+        Sigmabeta_j = r[4]
     for r in obj[1][1]:
         sum_coef_j = r[0]
     beta_mu_j = gu.beta_mu_prior(Sigmabeta_j, Vbeta_inv_j_draw, sum_coef_j, coef_means_prior_array_var, coef_precision_prior_array_var)
@@ -228,9 +228,9 @@ def get_Vbeta_i(obj):
     # key is hierarchy_level2 and 
     # cogrouped_iterable_object is <W1,W2>
     # obj[1] where W1 is a ResultIterable having obj[1][0]=hierarchy_level2, obj[1][1]=hierarchy_level1, xtx, xty
-    # where W2 is a ResultIterable having iter, hierarchy_level2, beta_mu_j
+    # where W2 is a ResultIterable having hierarchy_level2 => (iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j))
     for r in obj[1][1]:
-        Vbeta_inv_j_draw = r[1]
+        Vbeta_inv_j_draw = r[3]
     rows = []
     count = 1
     for r in obj[1][0]:
@@ -330,7 +330,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     m1_Vbeta_inv_Sigmabeta_j_draw = map(lambda (x,y): get_m1_Vbeta_inv_Sigmabeta_j_draw(list(y)), joined_Vbeta_i_j) 
     #print " m1_Vbeta_inv_Sigmabeta_j_draw Take 1: ", m1_Vbeta_inv_Sigmabeta_j_draw[1]
     #print " m1_Vbeta_inv_Sigmabeta_j_draw Count: ", len(m1_Vbeta_inv_Sigmabeta_j_draw)
-    m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2 = sc.parallelize(m1_Vbeta_inv_Sigmabeta_j_draw).keyBy(lambda (iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j): (hierarchy_level2)).groupByKey() 
+    m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2 = sc.parallelize(m1_Vbeta_inv_Sigmabeta_j_draw).keyBy(lambda (iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j): (hierarchy_level2)) 
     
     ##-- Compute mean pooled coefficient vector to use in drawing a new pooled coefficient vector.  
     ##-- Get back one coefficient vector for each j (i.e. J  coefficient vectors are returned).
@@ -352,23 +352,28 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     joined_m1_beta_mu_j_with_m1_Vbeta_inv_Sigmabeta_j_draw_rdd = m1_beta_mu_j.cogroup(m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2)
     m1_beta_mu_j_draw = joined_m1_beta_mu_j_with_m1_Vbeta_inv_Sigmabeta_j_draw_rdd.map(get_beta_draw).keyBy(lambda (iter, hierarchy_level2, beta_mu_j_draw): hierarchy_level2)
     # count of 5    
-    #print "count m1_beta_mu_j_draw", m1_beta_mu_j_draw.count()
+    print "count m1_beta_mu_j_draw", m1_beta_mu_j_draw.count()
     # take 1 of <h2> => (iter, h2, beta_mu_j_draw)    
-    #print "take 1 m1_beta_mu_j_draw", m1_beta_mu_j_draw.take(1)
+    print "take 1 m1_beta_mu_j_draw", m1_beta_mu_j_draw.take(1)
     
-    """
-    4 more DS after that """
     ## -- Compute Vbeta_i
     ## Uses a join of m1_d_array_agg_constants & m1_Vbeta_inv_Sigmabeta_j_draw
     ## m1_d_array_agg_constants is RDD of tuples h2,h1,xtx,xty
-    ## m1_Vbeta_inv_Sigmabeta_j_draw is RDD of (key, Value)::(h2 => (iter, hierarchy_level2, beta_mu_j_draw))
-    m1_d_array_agg_constants_key_by_h2 = m1_d_array_agg_constants.keyBy(lambda (h2,h1,xtx,xty): h2)
-    joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw = m1_d_array_agg_constants_key_by_h2.cogroup(m1_Vbeta_inv_Sigmabeta_j_draw)
+    ## m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2 is RDD of (key, Value)::(h2 => (iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j))
+    m1_d_array_agg_constants_key_by_h2 = m1_d_array_agg_constants.keyBy(lambda (h2, h1, xtx, xty): h2)
+    joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw = m1_d_array_agg_constants_key_by_h2.cogroup(m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2)
     # count of 5    
     print "count m1_beta_mu_j_draw", joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw.count()
     # take 1 of <h2> => (iter, h2, beta_mu_j_draw)    
     print "take 1 m1_beta_mu_j_draw", joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw.take(1)
     m1_Vbeta_i = joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw.map(get_Vbeta_i)
+    print "count m1_Vbeta_i", m1_Vbeta_i.count()
+    print "take 1 m1_Vbeta_i", m1_Vbeta_i.take(1)
+    
+    """
+    3 more DS after that """    
+    
+    
     # exp with cogroup
     #join_coefi_coefj = map(lambda (x, y): (x, (list(y[0]), list(y[1]))),
     #   sorted(m1_ols_beta_i.cogroup(m1_ols_beta_j).collect()))
