@@ -100,6 +100,7 @@ def beta_mu_prior(Sigmabeta_j, Vbeta_inv_j_draw, sum_coef_j, coef_means_prior_ar
     # mat1 is a dot product of two arrays
     mat1 = np.dot(coef_means_prior_array, coef_precision_prior_array)
     #mat2 is a matrix multiplication product of inv_j_draw and sum_coeff_j
+    #sum_coef_j = sum_coef_j.reshape(13,1)
     mat2 = np.dot(Vbeta_inv_j_draw, sum_coef_j)
     mat3 = np.add(mat2, np.mat(mat1))
     # NOTE : for the return value to be one D the sum_coef_j should be a 1 D matrix.

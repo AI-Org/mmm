@@ -193,8 +193,7 @@ def get_substructure_beta_mu_j(obj):
             Vbeta_inv_j_draw = j[3]
             Sigmabeta_j = j[4]
     for r in obj[1][1]:
-        for j in r:
-            sum_coef_j = j[1]
+        sum_coef_j = r[1]
     beta_mu_j = gu.beta_mu_prior(Sigmabeta_j, Vbeta_inv_j_draw, sum_coef_j, coef_means_prior_array_var, coef_precision_prior_array_var)
     return (iteri, hierarchy_level2, beta_mu_j)
 
@@ -203,9 +202,7 @@ def add_coeff_j(hierarchy_level2, iterable_object):
     array_list = []
     for r in iterable_object:
         array_list.append(r[1])
-    print "coeff array_list :", array_list
-    sum_coef_j = sum(array_list)
-    print "coeff sum list : ",sum_coef_j 
+    sum_coef_j = sum(array_list) 
     return (hierarchy_level2, sum_coef_j)
     
 
