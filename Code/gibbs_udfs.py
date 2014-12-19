@@ -95,7 +95,7 @@ def Vbeta_inv_draw(nu, phi):
 
 def beta_mu_prior(arg1, arg2, arg3, arg4, arg5):
     #beta_mu<- arg1%*%(arg2%*%arg3+as.matrix(arg4*arg5))
-    mat1 = np.dot(np.mat(arg4),np.mat(arg5))
+    mat1 = np.dot(arg4, arg5)
     mat2 = np.dot(arg2, arg3)
     mat3 = np.add(mat1, mat2)
     return np.dot(arg1, mat3)

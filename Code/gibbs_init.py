@@ -181,16 +181,19 @@ def get_m1_Vbeta_inv_Sigmabeta_j_draw(lst):
 def get_substructure_beta_mu_j(obj):
     global coef_precision_prior_array_var, coef_means_prior_array_var
     # (k, (W1, W2)) 
-    # where W1 is a resultIterator having iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j
-    # and W2 is another resultIterator having hierarchy_level2 & sum_coef_j
-    iteri, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j, sum_coef_j = None
+    #  k = hierarchy_level2
+    # where W1 is a ResultIterable having iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j
+    # and W2 is another ResultIterable having hierarchy_level2 & sum_coef_j
     for r in obj[1][0]:
-        iteri = r[0]
-        hierarchy_level2 = r[1]
-        n1 = r[2]
-        Vbeta_inv_j_draw = r[3]
+        for j in r:
+            iteri = j[0]
+            hierarchy_level2 = j[1]
+            n1 = j[2]
+            Vbeta_inv_j_draw = j[3]
+            Sigmabeta_j = j[4]
     for r in obj[1][1]:
-        sum_coef_j = r[1]
+        for j in r:
+            sum_coef_j = j[1]
     beta_mu_j = gu.beta_mu_prior(Sigmabeta_j, Vbeta_inv_j_draw, sum_coef_j, coef_means_prior_array_var, coef_precision_prior_array_var)
     return (iteri, hierarchy_level2, beta_mu_j)
 
@@ -201,6 +204,21 @@ def add_coeff_j(hierarchy_level2, iterable_object):
         array_list.append(r[1])
     sum_coef_j = sum(array_list)
     return (hierarchy_level2, sum_coef_j)
+    
+
+def get_beta_draw(key, cogrouped_iterable_object):
+    # key is hierarchy_level2 and 
+    # cogrouped_iterable_object is <W1,W2>
+    # where W1 is a ResultIterable having iter, hierarchy_level2, beta_mu_j
+    # and W2 is another ResultIterable having iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j
+    for r in cogrouped_iterable_object[1][0]:
+        for j in r:
+            iteri = j[0]
+            beta_mu_j = j[2]
+    for r in cogrouped_iterable_object[1][1]:
+        for j in r:
+            Sigmabeta_j = j[4]
+    return (iteri, key, gu.beta_draw(beta_mu_j, Sigmabeta_j))
 
 def gibbs_init(model_name, source_RDD, hierarchy_level1, hierarchy_level2, p, df1, y_var, x_var_array, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals):
     text_output = 'Done: Gibbs Sampler for model model_name is initialized.  Proceed to run updates of the sampler by using the gibbs() function.  All objects associated with this model are named with a model_name prefix.'
@@ -287,24 +305,30 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     #print " m1_Vbeta_inv_Sigmabeta_j_draw Take 1: ", m1_Vbeta_inv_Sigmabeta_j_draw[1]
     #print " m1_Vbeta_inv_Sigmabeta_j_draw Count: ", len(m1_Vbeta_inv_Sigmabeta_j_draw)
     m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2 = sc.parallelize(m1_Vbeta_inv_Sigmabeta_j_draw).keyBy(lambda (iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j): (hierarchy_level2)).groupByKey() 
-    """
-    6 more DS after that """
-    
     
     ##-- Compute mean pooled coefficient vector to use in drawing a new pooled coefficient vector.  
     ##-- Get back one coefficient vector for each j (i.e. J  coefficient vectors are returned).
     ## computing _beta_mu_j
     ## for computing _beta_mu_j we first will modify m1_ols_beta_i or _initialvals_beta_i to get sum_coef_j 
     ## and then  we will join it with m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2
-    m1_ols_beta_i_sum_coef_j = m1_ols_beta_i.map(lambda (x,y): (x[0], y[2])).keyBy(lambda (h2, coeff): h2).groupByKey().map(add_coeff_j)
-    print "Diagnostics m1_ols_beta_i_sum_coef_j ", m1_ols_beta_i_sum_coef_j.collect()    
+    m1_ols_beta_i_sum_coef_j = m1_ols_beta_i.map(lambda (x,y): (x[0], y[2])).keyBy(lambda (h2, coeff): h2).groupByKey().map(lambda (key, value) : add_coeff_j(key,value))
+    #print "Diagnostics m1_ols_beta_i_sum_coef_j ", m1_ols_beta_i_sum_coef_j.collect()    
     joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j = m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2.cogroup(m1_ols_beta_i_sum_coef_j)
-    print "joined_m1_Vbeta_inv ", joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j.take(1)    
-    m1_beta_mu_j = joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j.map(get_substructure_beta_mu_j).keyBy(lambda (iter, hierarchy_level2, beta_mu_j):hierarchy_level2)
+    #print "joined_m1_Vbeta_inv ", joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j.take(1)  
+    # m1_beta_mu_j is  RDD keyed structure as hierarchy_level2=> (iter, hierarchy_level2, beta_mu_j)
+    m1_beta_mu_j = joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j.map(get_substructure_beta_mu_j).keyBy(lambda (iter, hierarchy_level2, beta_mu_j): hierarchy_level2)
+    #print "counts of m1_beta_mu_j ", m1_beta_mu_j.count() # number is 5 on both sides
     
-    print "counts of m1_beta_mu_j ", m1_beta_mu_j.count()
+    """
+    5 more DS after that """ 
+    ## -- Draw beta_mu from mvnorm dist'n.  Get back J vectors of beta_mu, one for each J.
+    ## Simply creates a join on  m1_beta_mu_j and  m1_Vbeta_inv_Sigmabeta_j_draw (the RDD keyby h2 equivalent is m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2 )
+    ## extracts iter, hierarchy_level2 and beta_draw(beta_mu_j, Sigmabeta_j)
+    joined_m1_beta_mu_j_with_m1_Vbeta_inv_Sigmabeta_j_draw_rdd = m1_beta_mu_j.cogroup(m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2)
+    m1_beta_mu_j_draw = joined_m1_beta_mu_j_with_m1_Vbeta_inv_Sigmabeta_j_draw_rdd.map(get_beta_draw).keyBy(lambda (iter, hierarchy_level2, beta_mu_j_draw): hierarchy_level2)
+    print "count m1_beta_mu_j_draw", m1_beta_mu_j_draw.count()
+    print "take 1 m1_beta_mu_j_draw", m1_beta_mu_j_draw.take(1)
     
-     
     # exp with cogroup
     #join_coefi_coefj = map(lambda (x, y): (x, (list(y[0]), list(y[1]))),
     #   sorted(m1_ols_beta_i.cogroup(m1_ols_beta_j).collect()))
