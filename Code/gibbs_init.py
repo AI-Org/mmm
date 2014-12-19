@@ -184,7 +184,7 @@ def get_substructure_beta_mu_j(obj):
     # (k, (W1, W2)) 
     #  k = hierarchy_level2
     # where W1 is a ResultIterable having iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j
-    # and W2 is another ResultIterable having hierarchy_level2 & sum_coef_j
+    # and W2 is another ResultIterable having sum_coef_j
     for r in obj[1][0]:
         for j in r:
             iteri = j[0]
@@ -193,7 +193,7 @@ def get_substructure_beta_mu_j(obj):
             Vbeta_inv_j_draw = j[3]
             Sigmabeta_j = j[4]
     for r in obj[1][1]:
-        sum_coef_j = r[1]
+        sum_coef_j = r[0]
     beta_mu_j = gu.beta_mu_prior(Sigmabeta_j, Vbeta_inv_j_draw, sum_coef_j, coef_means_prior_array_var, coef_precision_prior_array_var)
     return (iteri, hierarchy_level2, beta_mu_j)
 
@@ -317,6 +317,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j = m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2.cogroup(m1_ols_beta_i_sum_coef_j)
     #print "joined_m1_Vbeta_inv ", joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j.take(1)  
     # m1_beta_mu_j is  RDD keyed structure as hierarchy_level2=> (iter, hierarchy_level2, beta_mu_j)
+    # beta_mu_j is mean with dim 13 X 1
     m1_beta_mu_j = joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j.map(get_substructure_beta_mu_j).keyBy(lambda (iter, hierarchy_level2, beta_mu_j): hierarchy_level2)
     #print "counts of m1_beta_mu_j ", m1_beta_mu_j.count() # number is 5 on both sides
      
