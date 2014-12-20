@@ -51,9 +51,9 @@ def get_d_childcount(obj):
     return keyBy_h2_to_h1.map(lambda (x,iter): (x, sum(1 for _ in set(iter))))
 
 def get_d_count_grpby_level2(obj):
-    keyBy_h2_week = obj.map(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2, week))
-    return keyBy_h2_week
-    # return keyBy_h2.map(lambda (x,iter): (x, sum(1 for _ in set(iter))))
+    keyBy_h2 = obj.map(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2, 1)).reduceByKey(lambda (x, y): (x + y))
+    return keyBy_h2
+    #return keyBy_h2.map(lambda (x,iter): (x, sum(1 for _ in set(iter))))
 
 def get_ols_initialvals_beta_i(obj):
     from sklearn import linear_model
@@ -290,6 +290,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     # since the number of weeks of data for each deparment_name-tiers is different.
     # we wll precompute this quantity for each department_name-tier
     m1_d_count_grpby_level2 = get_d_count_grpby_level2(d)
+    m1_d_count_grpby_level2 = sc.parallelize(m1_d_count_grpby_level2).keyBy(lambda (hierarchy_level2, countsp): hierarchy_level2)
     #print "Available data for each department_name-tiers", m1_d_count_grpby_level2.countByKey()
     # structure to compute maps by h2 as key only at m1_d_array_agg levels
     keyBy_h2 = d.keyBy(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2)).groupByKey().map(create_x_matrix_y_array)
@@ -417,12 +418,15 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     # & parallelizing  beta_i_mean using h2, h1
     m1_beta_i_mean_keyBy_h2_h1 = sc.parallelize(m1_beta_i_mean.values().reduce(add)).keyBy(lambda (i, hierarchy_level2, hierarchy_level1, beta_i_mean): (hierarchy_level2, hierarchy_level1))
     # JOINED_m1_beta_i_mean_WITH_m1_Vbeta_i
+    # m1_beta_i_draw : (iter, h2, h1, beta_i_draw)
     m1_beta_i_draw = m1_beta_i_mean_keyBy_h2_h1.cogroup(m1_Vbeta_i_keyby_h2_h1).map(lambda (x,y): (list(y[0])[0][0], x, gu.beta_draw(list(y[0])[0][3], list(y[1])[0][3])))
     print "beta_i_mean take ", m1_beta_i_draw.take(1) 
     print "beta_i_mean count ", m1_beta_i_draw.count()
     
     """
     2 more DS after that """
-    # -- Compute updated value of s2 to use in next section.
+    # -- Compute updated value of s2 to use for drawing h.
+    JOINED_m1_beta_i_draw_WITH_d_keyBy_h2_h1 = keyBy_groupby_h2_h1.cogroup(m1_beta_i_draw.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, beta_i_draw): (hierarchy_level2, hierarchy_level1, i))).groupByKey()
+    JOINED_m1_beta_i_draw_WITH_d_keyBy_h2_h1 = JOINED_m1_beta_i_draw_WITH_d_keyBy_h2_h1.map(lambda (x, y): (x, list(y[0]), list(y[1])))
     
      
