@@ -241,6 +241,26 @@ def get_Vbeta_i(obj):
         count += 1
         rows.append(row)
     return (rows)
+    
+def get_beta_i_mean(y):
+    # y[0] is iterable results of a list of tuples <h2,h1,Vbeta_i, xty>
+    # y[1] is iterable results of a tuple with values <h2, iter, Vbeta_i_inv_draw, beta_mu_j_draw>
+    for r in y[1]:
+      hierarchy_level2 = r[0]
+      i = r[1]
+      Vbeta_i_inv_draw = r[2]
+      beta_mu_j_draw = r[3]
+    result_list = []
+    for r in y[0]:
+        for j in r:
+            hierarchy_level1 = j[1]
+            Vbeta_i = j[2]
+            xty = j[3]
+            beta_i_mean = gu.beta_i_mean(Vbeta_i, 1, xty, Vbeta_i_inv_draw, beta_mu_j_draw)
+            row = (i, hierarchy_level2, hierarchy_level1, beta_i_mean)
+            result_list.append(row)
+    return result_list
+            
             
 
 def gibbs_init(model_name, source_RDD, hierarchy_level1, hierarchy_level2, p, df1, y_var, x_var_array, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals):
@@ -375,18 +395,24 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     #print "take 1 m1_Vbeta_i", m1_Vbeta_i.take(1)
     
     """
-    3 more DS after that """    
+    3 more DS after that """  
+    # -- Compute beta_i_mean
     m1_Vbeta_i_keyby_h2_h1 = sc.parallelize(m1_Vbeta_i.values().reduce(add)).keyBy(lambda (i, hierarchy_level2, hierarchy_level1, Vbeta_i): (hierarchy_level2, hierarchy_level1))
     m1_d_array_agg_constants_key_by_h2_h1 = m1_d_array_agg_constants.keyBy(lambda (h2, h1, xtx, xty): (h2, h1))
     JOINED_m1_Vbeta_i_keyby_h2_h1_WITH_m1_d_array_agg_constants_key_by_h2_h1 = m1_Vbeta_i_keyby_h2_h1.cogroup(m1_d_array_agg_constants_key_by_h2_h1).map(lambda (x,y): (list(y[0])[0][1],list(y[0])[0][2], list(y[0])[0][3], list(y[1])[0][3]))
+    JOINED_part_1_by_keyBy_h2 = JOINED_m1_Vbeta_i_keyby_h2_h1_WITH_m1_d_array_agg_constants_key_by_h2_h1.keyBy(lambda (hierarchy_level2, hierarchy_level1, Vbeta_i, xty): hierarchy_level2)
     #print "table outer count ",  JOINED_m1_Vbeta_i_keyby_h2_h1_WITH_m1_d_array_agg_constants_key_by_h2_h1.count()
     #print "table outer take 1",  JOINED_m1_Vbeta_i_keyby_h2_h1_WITH_m1_d_array_agg_constants_key_by_h2_h1.take(1)     
     # Following is h2 ->(resIter1, resIter2) <=> where 
     # resIter1 is (iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j)
     # resIter2 is (iter, hierarchy_level2, beta_mu_j_draw)
     JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw = m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2.cogroup(m1_beta_mu_j_draw).map(lambda (x,y): (x, list(y[0])[0][0], list(y[0])[0][3], list(y[1])[0][2]))
+    JOINED_part_2_by_keyBy_h2 = JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw.keyBy(lambda (hierarchy_level2, i, Vbeta_inv_j_draw, beta_mu_j_draw):hierarchy_level2)
     #print "take 1 ", JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw.take(1) 
     #print "count 1 ", JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw.count()
+    beta_i_mean = JOINED_part_1_by_keyBy_h2.cogroup(JOINED_part_2_by_keyBy_h2).map(lambda (x,y): (x, get_beta_i_mean(y)))
+    print "beta_i_mean take ", beta_i_mean.take(1) 
+    print "beta_i_mean count ", beta_i_mean.count()
     
     
     
