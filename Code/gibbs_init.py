@@ -389,12 +389,10 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     # count of 5    
     #print "count joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw ", joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw.count()
     #print "take 1 m1_beta_mu_j_draw", joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw.take(1)
-    m1_Vbeta_i = joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw.map(lambda (x,y):(x,get_Vbeta_i(y)))
+    m1_Vbeta_i = joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw.map(lambda (x,y): (x, get_Vbeta_i(y)))
     #print "count m1_Vbeta_i", m1_Vbeta_i.count()
     #print "take 1 m1_Vbeta_i", m1_Vbeta_i.take(1)
-    
-    """
-    3 more DS after that """  
+      
     # -- Compute beta_i_mean
     m1_Vbeta_i_keyby_h2_h1 = sc.parallelize(m1_Vbeta_i.values().reduce(add)).keyBy(lambda (i, hierarchy_level2, hierarchy_level1, Vbeta_i): (hierarchy_level2, hierarchy_level1))
     m1_d_array_agg_constants_key_by_h2_h1 = m1_d_array_agg_constants.keyBy(lambda (h2, h1, xtx, xty): (h2, h1))
@@ -406,14 +404,23 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     # resIter1 is (iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j)
     # resIter2 is (iter, hierarchy_level2, beta_mu_j_draw)
     JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw = m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2.cogroup(m1_beta_mu_j_draw).map(lambda (x,y): (x, list(y[0])[0][0], list(y[0])[0][3], list(y[1])[0][2]))
-    JOINED_part_2_by_keyBy_h2 = JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw.keyBy(lambda (hierarchy_level2, i, Vbeta_inv_j_draw, beta_mu_j_draw):hierarchy_level2)
+    JOINED_part_2_by_keyBy_h2 = JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw.keyBy(lambda (hierarchy_level2, i, Vbeta_inv_j_draw, beta_mu_j_draw): hierarchy_level2)
     #print "take 1 ", JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw.take(1) 
     #print "count 1 ", JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw.count()
-    beta_i_mean = JOINED_part_1_by_keyBy_h2.cogroup(JOINED_part_2_by_keyBy_h2).map(lambda (x,y): (x, get_beta_i_mean(y)))
+    m1_beta_i_mean = JOINED_part_1_by_keyBy_h2.cogroup(JOINED_part_2_by_keyBy_h2).map(lambda (x,y): (x, get_beta_i_mean(y)))
     #beta_i_mean = JOINED_part_1_by_keyBy_h2.cogroup(JOINED_part_2_by_keyBy_h2).map(lambda (x,y): (x, list(y[0]),list(y[1])))
-    print "beta_i_mean take ", beta_i_mean.take(1) 
-    print "beta_i_mean count ", beta_i_mean.count()
+    #print "beta_i_mean take ", m1_beta_i_mean.take(1) 
+    #print "beta_i_mean count ", m1_beta_i_mean.count()
     
-    
+    """
+    2 more DS after that """
+    #-- compute m1_beta_i_draw by  Draw beta_i from mvnorm dist'n
+    # using m1_Vbeta_i_keyby_h2_h1 : h2, h1 => (i, hierarchy_level2, hierarchy_level1, Vbeta_i)
+    # & parallelizing  beta_i_mean using h2, h1
+    m1_beta_i_mean_keyBy_h2_h1 = sc.parallelize(m1_beta_i_mean.values().reduce(add)).keyBy(lambda (i, hierarchy_level2, hierarchy_level1, beta_i_mean): (hierarchy_level2, hierarchy_level1))
+    # JOINED_m1_beta_i_mean_WITH_m1_Vbeta_i
+    m1_beta_i_draw = m1_beta_i_mean_keyBy_h2_h1.cogroup(m1_Vbeta_i_keyby_h2_h1).map(lambda (x,y): (list(y[0])[0], x, gu.beta_draw(list(y[0])[3], list(y[1])[3])))
+    print "beta_i_mean take ", m1_beta_i_draw.take(1) 
+    print "beta_i_mean count ", m1_beta_i_draw.count()
     
      
