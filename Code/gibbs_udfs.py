@@ -128,10 +128,14 @@ def Vbeta_i(mat1, mat2, mat3):
 # Function to compute beta_i_mean, as defined in (7.25) of Koop pp.156.
 # Only computed at lowest level of the hierarchy (i.e. the level that "mixes" directly with the data, namely X'y).
 
-def beta_i_mean(mat1, value, mat2, mat3, mat4):
-    mat_r1 = np.dot(np.matrix(mat3), np.matrix(mat4).getA1())
-    mat_r2 = np.dot(value, mat2)
-    mat_r3 = np.dot(mat1, np.add(mat_r2, mat_r1))
+def beta_i_mean(Vbeta_i, value, xty, Vbeta_i_inv_draw, beta_mu_j_draw):
+    #def beta_i_mean(mat1, value, mat2, mat3, mat4):
+    # error was mat_r1 is 1 X 13 instead of 13 X 1 but with T it will be not
+    mat_r1 = np.dot(np.matrix(Vbeta_i_inv_draw), np.matrix(beta_mu_j_draw).getA1()).T
+    # mat_r2 is 13 X 1
+    mat_r2 = np.dot(value, xty)
+    # mat_r3 is 13 X 1 == 13 X 13 + 13 X 1
+    mat_r3 = np.dot(Vbeta_i, np.add(mat_r2, mat_r1))
     return mat_r3
 
 # Function to draw h from gamma dist'n, as defined in (7.28) of Koop pp.157. 

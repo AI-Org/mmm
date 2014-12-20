@@ -352,7 +352,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     #print " m1_Vbeta_inv_Sigmabeta_j_draw Count: ", len(m1_Vbeta_inv_Sigmabeta_j_draw)
     m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2 = sc.parallelize(m1_Vbeta_inv_Sigmabeta_j_draw).keyBy(lambda (iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j): (hierarchy_level2)) 
     
-    ##-- Compute mean pooled coefficient vector to use in drawing a new pooled coefficient vector.  
+    ##-- m1_beta_mu_j : Compute mean pooled coefficient vector to use in drawing a new pooled coefficient vector.  
     ##-- Get back one coefficient vector for each j (i.e. J  coefficient vectors are returned).
     ## computing _beta_mu_j
     ## for computing _beta_mu_j we first will modify m1_ols_beta_i or _initialvals_beta_i to get sum_coef_j 
@@ -366,7 +366,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     m1_beta_mu_j = joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j.map(get_substructure_beta_mu_j).keyBy(lambda (iter, hierarchy_level2, beta_mu_j): hierarchy_level2)
     #print "counts of m1_beta_mu_j ", m1_beta_mu_j.count() # number is 5 on both sides
      
-    ## -- Draw beta_mu from mvnorm dist'n.  Get back J vectors of beta_mu, one for each J.
+    ## -- m1_beta_mu_j_draw : Draw beta_mu from mvnorm dist'n.  Get back J vectors of beta_mu, one for each J.
     ## Simply creates a join on  m1_beta_mu_j and  m1_Vbeta_inv_Sigmabeta_j_draw (the RDD keyby h2 equivalent is m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2 )
     ## extracts iter, hierarchy_level2 and beta_draw(beta_mu_j, Sigmabeta_j)
     joined_m1_beta_mu_j_with_m1_Vbeta_inv_Sigmabeta_j_draw_rdd = m1_beta_mu_j.cogroup(m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2)
@@ -412,15 +412,17 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     #print "beta_i_mean take ", m1_beta_i_mean.take(1) 
     #print "beta_i_mean count ", m1_beta_i_mean.count()
     
-    """
-    2 more DS after that """
     #-- compute m1_beta_i_draw by  Draw beta_i from mvnorm dist'n
     # using m1_Vbeta_i_keyby_h2_h1 : h2, h1 => (i, hierarchy_level2, hierarchy_level1, Vbeta_i)
     # & parallelizing  beta_i_mean using h2, h1
     m1_beta_i_mean_keyBy_h2_h1 = sc.parallelize(m1_beta_i_mean.values().reduce(add)).keyBy(lambda (i, hierarchy_level2, hierarchy_level1, beta_i_mean): (hierarchy_level2, hierarchy_level1))
     # JOINED_m1_beta_i_mean_WITH_m1_Vbeta_i
-    m1_beta_i_draw = m1_beta_i_mean_keyBy_h2_h1.cogroup(m1_Vbeta_i_keyby_h2_h1).map(lambda (x,y): (list(y[0])[0], x, gu.beta_draw(list(y[0])[3], list(y[1])[3])))
+    m1_beta_i_draw = m1_beta_i_mean_keyBy_h2_h1.cogroup(m1_Vbeta_i_keyby_h2_h1).map(lambda (x,y): (list(y[0])[0][0], x, gu.beta_draw(list(y[0])[0][3], list(y[1])[0][3])))
     print "beta_i_mean take ", m1_beta_i_draw.take(1) 
     print "beta_i_mean count ", m1_beta_i_draw.count()
+    
+    """
+    2 more DS after that """
+    # -- Compute updated value of s2 to use in next section.
     
      
