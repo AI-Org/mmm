@@ -251,14 +251,13 @@ def get_beta_i_mean(y):
       Vbeta_i_inv_draw = r[2]
       beta_mu_j_draw = r[3]
     result_list = []
-    for r in y[0]:
-        for j in r:
-            hierarchy_level1 = j[1]
-            Vbeta_i = j[2]
-            xty = j[3]
-            beta_i_mean = gu.beta_i_mean(Vbeta_i, 1, xty, Vbeta_i_inv_draw, beta_mu_j_draw)
-            row = (i, hierarchy_level2, hierarchy_level1, beta_i_mean)
-            result_list.append(row)
+    for j in y[0]:
+        hierarchy_level1 = j[1]
+        Vbeta_i = j[2]
+        xty = j[3]
+        beta_i_mean = gu.beta_i_mean(Vbeta_i, 1, xty, Vbeta_i_inv_draw, beta_mu_j_draw)
+        row = (i, hierarchy_level2, hierarchy_level1, beta_i_mean)
+        result_list.append(row)
     return result_list
             
             
@@ -411,6 +410,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     #print "take 1 ", JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw.take(1) 
     #print "count 1 ", JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw.count()
     beta_i_mean = JOINED_part_1_by_keyBy_h2.cogroup(JOINED_part_2_by_keyBy_h2).map(lambda (x,y): (x, get_beta_i_mean(y)))
+    #beta_i_mean = JOINED_part_1_by_keyBy_h2.cogroup(JOINED_part_2_by_keyBy_h2).map(lambda (x,y): (x, list(y[0]),list(y[1])))
     print "beta_i_mean take ", beta_i_mean.take(1) 
     print "beta_i_mean count ", beta_i_mean.count()
     

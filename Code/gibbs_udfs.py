@@ -129,7 +129,7 @@ def Vbeta_i(mat1, mat2, mat3):
 # Only computed at lowest level of the hierarchy (i.e. the level that "mixes" directly with the data, namely X'y).
 
 def beta_i_mean(mat1, value, mat2, mat3, mat4):
-    mat_r1 = np.dot(np.matrix(mat3), np.matrix(mat4))
+    mat_r1 = np.dot(np.matrix(mat3), np.matrix(mat4).getA1())
     mat_r2 = np.dot(value, mat2)
     mat_r3 = np.dot(mat1, np.add(mat_r2, mat_r1))
     return mat_r3
