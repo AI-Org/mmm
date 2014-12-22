@@ -260,7 +260,8 @@ def get_beta_i_mean(y):
         result_list.append(row)
     return result_list
             
-            
+def join_d_count_grpby_level2(obj, m1_d_count_grpby_level2):
+     return m1_d_count_grpby_level2          
 
 def gibbs_init(model_name, source_RDD, hierarchy_level1, hierarchy_level2, p, df1, y_var, x_var_array, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals):
     text_output = 'Done: Gibbs Sampler for model model_name is initialized.  Proceed to run updates of the sampler by using the gibbs() function.  All objects associated with this model are named with a model_name prefix.'
@@ -295,7 +296,11 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     print "count m1_d_count_grpby_level2 : ", m1_d_count_grpby_level2.count()
     #m1_d_count_grpby_level2 = sc.parallelize(m1_d_count_grpby_level2).keyBy(lambda (hierarchy_level2, countsp): hierarchy_level2)
     print "Available data for each department_name-tiers", m1_d_count_grpby_level2.countByKey()
-
+    # m1_d_count_grpby_level2.countByKey() becomes defaultdict of type int As
+    # defaultdict(<type 'int'>, {u'"5"': 1569, u'"1"': 3143, u'"2"': 3150, u'"3"': 3150, u'"4"': 3150})
+    m1_d_count_grpby_level2 = m1_d_count_grpby_level2.countByKey()
+    
+    
     keyBy_h2 = d.keyBy(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2)).groupByKey().map(create_x_matrix_y_array)
     if(initial_vals == "ols"):
         # Compute OLS estimates for reference
@@ -433,7 +438,10 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     m1_d_array_agg_key_by_h2_h1 = m1_d_array_agg.keyBy(lambda (keys, x_matrix, y_array, hierarchy_level2, hierarchy_level1) : (keys[0], keys[1]))
     JOINED_m1_beta_i_draw_WITH_m1_d_array_agg = m1_d_array_agg_key_by_h2_h1.cogroup(m1_beta_i_draw_group_by_h2_h1)
     print "JOINED_m1_beta_i_draw_WITH_m1_d_array_agg : 2 : ", JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.take(1)
-    # hierarchy_level2, hierarchy_level1, x_var, y, iter, beta_i_draw
+    # hierarchy_level2, hierarchy_level1, x_array_var, y_var, iter, beta_i_draw
     JOINED_m1_beta_i_draw_WITH_m1_d_array_agg = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.map(lambda (x, y): (x[0], x[1], list(list(y[0])[0])[1], list(list(y[0])[0])[2], list(y[1])[0][0], list(y[1])[0][3]))
-
-    print "JOINED_m1_beta_i_draw_WITH_d_keyBy_h2_h1 : 3 : ", JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.take(1)     
+    foo2 = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.keyBy(lambda (hierarchy_level2, hierarchy_level1, x_array_var, y_var, iteri, beta_i_draw): (hierarchy_level2, hierarchy_level1, iteri))
+    print "JOINED_m1_beta_i_draw_WITH_d_keyBy_h2_h1 : 3 : ", JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.take(1)
+     
+    JOIN_d_count_grpby_level2_to_JOINED_m1_beta_i_draw_WITH_m1_d_array_agg =  JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.map(join_d_count_grpby_level2(m1_d_count_grpby_level2))  
+    m1_d_count_grpby_level2
