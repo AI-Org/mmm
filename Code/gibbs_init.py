@@ -51,8 +51,8 @@ def get_d_childcount(obj):
     return keyBy_h2_to_h1.map(lambda (x,iter): (x, sum(1 for _ in set(iter))))
 
 def get_d_count_grpby_level2(obj):
-    keyBy_h2 = obj.map(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2, 1)).reduceByKey(lambda (x, y): (x + y))
-    return keyBy_h2
+    keyBy_h2_week = obj.map(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2, week))
+-   return keyBy_h2_week
     #return keyBy_h2.map(lambda (x,iter): (x, sum(1 for _ in set(iter))))
 
 def get_ols_initialvals_beta_i(obj):
@@ -289,10 +289,21 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     #print "d_child_counts are : ", m1_d_childcount.count()
     # since the number of weeks of data for each deparment_name-tiers is different.
     # we wll precompute this quantity for each department_name-tier
+    
     m1_d_count_grpby_level2 = get_d_count_grpby_level2(d)
+    print "takes m1_d_count_grpby_level2 : ", m1_d_count_grpby_level2.take(1)
+    print "count m1_d_count_grpby_level2 : ", m1_d_count_grpby_level2.count()
     m1_d_count_grpby_level2 = sc.parallelize(m1_d_count_grpby_level2).keyBy(lambda (hierarchy_level2, countsp): hierarchy_level2)
-    #print "Available data for each department_name-tiers", m1_d_count_grpby_level2.countByKey()
-    # structure to compute maps by h2 as key only at m1_d_array_agg levels
+    print "Available data for each department_name-tiers", m1_d_count_grpby_level2.countByKey()
+    
+
+
+
+
+
+
+
+# structure to compute maps by h2 as key only at m1_d_array_agg levels
     keyBy_h2 = d.keyBy(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2)).groupByKey().map(create_x_matrix_y_array)
     if(initial_vals == "ols"):
         # Compute OLS estimates for reference
