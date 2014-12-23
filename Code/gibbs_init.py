@@ -259,7 +259,24 @@ def get_beta_i_mean(y):
         row = (i, hierarchy_level2, hierarchy_level1, beta_i_mean)
         result_list.append(row)
     return result_list
-            
+    
+def getX_var_array_y_array(y_0_list):
+    import numpy as np
+    #index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13
+    #
+    y_var = np.array(y_0_list[4])
+    x_var_array = np.array(y_0_list[5:18])
+    return (x_var_array, y_var)
+
+def get_sum_beta_i_draw_x(y):
+    import numpy as np
+    # where y is a tuple with value hierarchy_level2, hierarchy_level1, x_array_var, y_var, iteri, beta_i_draw, m1_d_count_grpby_level2_b
+    #ssr = sum((y-madlib.array_dot(beta_i_draw, x))^2)
+    beta_i_draw = y[5]
+    x_array_var = y[2]
+    ssr = np.dot(beta_i_draw, x_array_var)
+    # hierarchy_level2, hierarchy_level1, iteri, ssr
+    return (y[0], y[1], y[4], ssr, y[5])          
 
 def gibbs_init(model_name, source_RDD, hierarchy_level1, hierarchy_level2, p, df1, y_var, x_var_array, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals):
     text_output = 'Done: Gibbs Sampler for model model_name is initialized.  Proceed to run updates of the sampler by using the gibbs() function.  All objects associated with this model are named with a model_name prefix.'
@@ -436,11 +453,19 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     2 more DS after that """
     # -- Compute updated value of s2 to use for drawing h.
     m1_beta_i_draw_group_by_h2_h1 = m1_beta_i_draw.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, beta_i_draw): (hierarchy_level2, hierarchy_level1))
-    m1_d_array_agg_key_by_h2_h1 = m1_d_array_agg.keyBy(lambda (keys, x_matrix, y_array, hierarchy_level2, hierarchy_level1) : (keys[0], keys[1]))
-    JOINED_m1_beta_i_draw_WITH_m1_d_array_agg = m1_d_array_agg_key_by_h2_h1.cogroup(m1_beta_i_draw_group_by_h2_h1)
+    m1_d_keyBy_h2_h1 = d.keyBy(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2, hierarchy_level1))
+    JOINED_m1_beta_i_draw_WITH_m1_d_array_agg = m1_d_keyBy_h2_h1.cogroup(m1_beta_i_draw_group_by_h2_h1)
+    #m1_d_array_agg_key_by_h2_h1 = m1_d_array_agg.keyBy(lambda (keys, x_matrix, y_array, hierarchy_level2, hierarchy_level1) : (keys[0], keys[1]))
+    #JOINED_m1_beta_i_draw_WITH_m1_d_array_agg = m1_d_array_agg_key_by_h2_h1.cogroup(m1_beta_i_draw_group_by_h2_h1)
     print "JOINED_m1_beta_i_draw_WITH_m1_d_array_agg : 2 : ", JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.take(1)
     # hierarchy_level2, hierarchy_level1, x_array_var, y_var, iter, beta_i_draw
-    JOINED_m1_beta_i_draw_WITH_m1_d_array_agg = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.map(lambda (x, y): (x[0], x[1], list(list(y[0])[0])[1], list(list(y[0])[0])[2], list(y[1])[0][0], list(y[1])[0][3], m1_d_count_grpby_level2_b.value[x[0]]))
-    foo2 = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.keyBy(lambda (hierarchy_level2, hierarchy_level1, x_array_var, y_var, iteri, beta_i_draw, m1_d_count_grpby_level2_b): (hierarchy_level2, hierarchy_level1, iteri))
+    JOINED_m1_beta_i_draw_WITH_m1_d_array_agg = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.map(lambda (x, y): (x[0], x[1], getX_var_array_y_array(list(y[0])), list(y[1])[0][0], list(y[1])[0][3], m1_d_count_grpby_level2_b.value[x[0]]))
+    
+    #JOINED_m1_beta_i_draw_WITH_m1_d_array_agg = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.map(lambda (x, y): (x[0], x[1], list(list(y[0])[0])[1], list(list(y[0])[0])[2], list(y[1])[0][0], list(y[1])[0][3], m1_d_count_grpby_level2_b.value[x[0]]))
+    foo = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.keyBy(lambda (hierarchy_level2, hierarchy_level1, x_array_var, y_var, iteri, beta_i_draw, m1_d_count_grpby_level2_b): (hierarchy_level2, hierarchy_level1, iteri))
+    print "JOINED_m1_beta_i_draw_WITH_d_keyBy_h2_h1 : 3 : ", foo.take(1)
+    
+    # foo2 is group by hierarchy_level2, hierarchy_level1, iteri and has structure as ey => h2, h1, iter, ssr
+    foo2 = foo.map(lambda (x, y): (x, get_sum_beta_i_draw_x(y)))
     print "JOINED_m1_beta_i_draw_WITH_d_keyBy_h2_h1 : 3 : ", foo2.take(1)
     print "JOINED_m1_beta_i_draw_WITH_d_keyBy_h2_h1 : 3 : ", foo2.count()
