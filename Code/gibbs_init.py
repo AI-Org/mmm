@@ -264,7 +264,12 @@ def getX_var_array_y_array(y_0_list):
     import numpy as np
     #index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13
     #
-    y_var = np.array(y_0_list[4])
+    y_var_list = []
+    x_var_array_list = []
+    for row in y_0_list:
+        y_var_list.append(y_0_list[4]).astype(float)
+        x_var_array_list.append(y_0_list[5:18]).astype(float)
+    y_var = np.array(y_var_list)
     x_var_array = np.array(y_0_list[5:18])
     return (x_var_array, y_var)
 
@@ -460,10 +465,10 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     print "JOINED_m1_beta_i_draw_WITH_m1_d_array_agg : 2 : ", JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.take(1)
     # hierarchy_level2, hierarchy_level1, x_array_var, y_var, iter, beta_i_draw
     JOINED_m1_beta_i_draw_WITH_m1_d_array_agg = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.map(lambda (x, y): (x[0], x[1], getX_var_array_y_array(list(y[0])), list(y[1])[0][0], list(y[1])[0][3], m1_d_count_grpby_level2_b.value[x[0]]))
-    
+    print "JOINED_m1_beta_i_draw_WITH_m1_d_array_agg : 3 :", JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.take(1)
     #JOINED_m1_beta_i_draw_WITH_m1_d_array_agg = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.map(lambda (x, y): (x[0], x[1], list(list(y[0])[0])[1], list(list(y[0])[0])[2], list(y[1])[0][0], list(y[1])[0][3], m1_d_count_grpby_level2_b.value[x[0]]))
     foo = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.keyBy(lambda (hierarchy_level2, hierarchy_level1, x_array_var, y_var, iteri, beta_i_draw, m1_d_count_grpby_level2_b): (hierarchy_level2, hierarchy_level1, iteri))
-    print "JOINED_m1_beta_i_draw_WITH_d_keyBy_h2_h1 : 3 : ", foo.take(1)
+    print "JOINED_m1_beta_i_draw_WITH_d_keyBy_h2_h1 : 4 : ", foo.take(1)
     
     # foo2 is group by hierarchy_level2, hierarchy_level1, iteri and has structure as ey => h2, h1, iter, ssr
     foo2 = foo.map(lambda (x, y): (x, get_sum_beta_i_draw_x(y)))
