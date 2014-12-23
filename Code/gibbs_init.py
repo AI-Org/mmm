@@ -443,3 +443,4 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     JOINED_m1_beta_i_draw_WITH_m1_d_array_agg = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.map(lambda (x, y): (x[0], x[1], list(list(y[0])[0])[1], list(list(y[0])[0])[2], list(y[1])[0][0], list(y[1])[0][3], m1_d_count_grpby_level2_b.value[x[0]]))
     foo2 = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.keyBy(lambda (hierarchy_level2, hierarchy_level1, x_array_var, y_var, iteri, beta_i_draw, m1_d_count_grpby_level2_b): (hierarchy_level2, hierarchy_level1, iteri))
     print "JOINED_m1_beta_i_draw_WITH_d_keyBy_h2_h1 : 3 : ", foo2.take(1)
+    print "JOINED_m1_beta_i_draw_WITH_d_keyBy_h2_h1 : 3 : ", foo2.count()
