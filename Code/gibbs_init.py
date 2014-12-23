@@ -13,7 +13,7 @@ df1_var = 15
 # corrections at this point of time and revisit this problem again.
 coef_precision_prior_array_var = [1,1,1,1,1,1,1,1,1,1,1,1,1]
 coef_means_prior_array_var = [0,0,0,0,0,0,0,0,0,0,0,0,0]
-m1_d_count_grpby_level2 = None
+
 def create_x_matrix_y_array(recObj):
     """
        Take an iterable of records, where the key corresponds to a certain age group
@@ -165,13 +165,13 @@ def get_m1_Vbeta_inv_Sigmabeta_j_draw(lst):
     #  Vbeta_inv_j_draw =  from m1_Vbeta_j_mu_pinv, pinv_Vbeta_inv_Sigmabeta_j_draw()
     Vbeta_inv_j_draw = None
     for r in lst[0]:
-    for j in r:
-        iter = j[0]
-        h2 = j[1]
-        Vbeta_inv_j_draw = j[2]
+        for j in r:
+            iter = j[0]
+            h2 = j[1]
+            Vbeta_inv_j_draw = j[2]
     for r in lst[1]:
-    for j in r:
-        n1 = j[1]
+        for j in r:
+            n1 = j[1]
     
     return (iter, h2, n1, Vbeta_inv_j_draw, pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, n1, coef_precision_prior_array_var))
 
@@ -260,11 +260,6 @@ def get_beta_i_mean(y):
         result_list.append(row)
     return result_list
             
-def join_d_count_grpby_level2(obj):
-    global m1_d_count_grpby_level2
-    # (hierarchy_level2, hierarchy_level1, x_array_var, y_var, iteri, beta_i_draw)
-    count_grpby_level2 = m1_d_count_grpby_level2[obj[0]]
-    return obj + count_grpby_level2          
 
 def gibbs_init(model_name, source_RDD, hierarchy_level1, hierarchy_level2, p, df1, y_var, x_var_array, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals):
     text_output = 'Done: Gibbs Sampler for model model_name is initialized.  Proceed to run updates of the sampler by using the gibbs() function.  All objects associated with this model are named with a model_name prefix.'
@@ -277,7 +272,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     #if __name__ == '__main__':
     global p_var
     global coef_precision_prior_array_var
-    global m1_d_count_grpby_level2
+    
     # sc = SparkContext(appName="gibbs_init")
     # of the form keys, x_matrix, y_array, hierarchy_level2[1,0], hierarchy_level1[1,0]
     m1_d_array_agg = keyBy_groupby_h2_h1.map(create_x_matrix_y_array)
@@ -303,7 +298,9 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     # m1_d_count_grpby_level2.countByKey() becomes defaultdict of type int As
     # defaultdict(<type 'int'>, {u'"5"': 1569, u'"1"': 3143, u'"2"': 3150, u'"3"': 3150, u'"4"': 3150})
     m1_d_count_grpby_level2 = m1_d_count_grpby_level2.countByKey()
-    m1_d_count_grpby_level2 = sc.broadcast(m1_d_count_grpby_level2)
+    m1_d_count_grpby_level2_b = sc.broadcast(m1_d_count_grpby_level2)
+    #print "bc value", m1_d_count_grpby_level2_b.value
+    #print "bc ", m1_d_count_grpby_level2_b
     
     keyBy_h2 = d.keyBy(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2)).groupByKey().map(create_x_matrix_y_array)
     if(initial_vals == "ols"):
@@ -443,10 +440,6 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     JOINED_m1_beta_i_draw_WITH_m1_d_array_agg = m1_d_array_agg_key_by_h2_h1.cogroup(m1_beta_i_draw_group_by_h2_h1)
     print "JOINED_m1_beta_i_draw_WITH_m1_d_array_agg : 2 : ", JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.take(1)
     # hierarchy_level2, hierarchy_level1, x_array_var, y_var, iter, beta_i_draw
-    JOINED_m1_beta_i_draw_WITH_m1_d_array_agg = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.map(lambda (x, y): (x[0], x[1], list(list(y[0])[0])[1], list(list(y[0])[0])[2], list(y[1])[0][0], list(y[1])[0][3]))
-    foo2 = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.keyBy(lambda (hierarchy_level2, hierarchy_level1, x_array_var, y_var, iteri, beta_i_draw): (hierarchy_level2, hierarchy_level1, iteri))
+    JOINED_m1_beta_i_draw_WITH_m1_d_array_agg = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.map(lambda (x, y): (x[0], x[1], list(list(y[0])[0])[1], list(list(y[0])[0])[2], list(y[1])[0][0], list(y[1])[0][3], m1_d_count_grpby_level2_b.value[x[0]]))
+    foo2 = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.keyBy(lambda (hierarchy_level2, hierarchy_level1, x_array_var, y_var, iteri, beta_i_draw, m1_d_count_grpby_level2_b): (hierarchy_level2, hierarchy_level1, iteri))
     print "JOINED_m1_beta_i_draw_WITH_d_keyBy_h2_h1 : 3 : ", foo2.take(1)
-    #JOINED_m1_beta_i_draw_WITH_m1_d_array_agg_keyby_h2 = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.keyBy(lambda (hierarchy_level2, hierarchy_level1, x_array_var, y_var, iteri, beta_i_draw): (hierarchy_level2))
-    # 
-    JOIN_d_count_grpby_level2_to_JOINED_m1_beta_i_draw_WITH_m1_d_array_agg = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.map(join_d_count_grpby_level2) 
-    print "JOIN_d_count_grpby_level2_to_JOINED_m1_beta_i_draw_WITH_m1_d_array_agg", JOIN_d_count_grpby_level2_to_JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.take(1)
