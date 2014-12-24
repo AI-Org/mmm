@@ -298,15 +298,23 @@ def get_sum_beta_i_draw_x2(y):
     for x_var in x_array_var:
         ssr_sm = np.power(np.subtract(y_var, np.dot(beta_i_draw, x_var.getA1())), 2)
         lsts_squares_of_sub_of_dot.append(ssr_sm)
-    ssr = sum(lsts_squares_of_sub_of_dot)
+    ssr = sum(lsts_squares_of_sub_of_dot).item(0)
     return (y[0], y[1], y[4], ssr, y[6]) 
     
 def get_s2(y):
     # hierarchy_level2, hierarchy_level1, iteri, ssr, m1_d_count_grpby_level2_b
+    # where y is a set of result iterables objects : 
+    # hierarchy_level2, hierarchy_level1, iteri, ssr, m1_d_count_grpby_level2_b
     global sample_size_deflator
-    m1_d_count_grpby_level2_b = y[4]
-    s2 = sum(y[3])/(m1_d_count_grpby_level2_b / sample_size_deflator)
-    return (y[0], y[2], y[4], s2)
+    list_ssrs = []
+    prelims = y[0]
+    hierarchy_level2 = prelims[0]
+    iteri = prelims[2]
+    m1_d_count_grpby_level2_b = prelims[4]
+    for rec in y:
+        list_ssrs.append(rec[3])
+    s2 = sum(list_ssrs)/(m1_d_count_grpby_level2_b / sample_size_deflator)
+    return (iteri, hierarchy_level2, m1_d_count_grpby_level2_b, s2)
 
 def gibbs_init(model_name, source_RDD, hierarchy_level1, hierarchy_level2, p, df1, y_var, x_var_array, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals):
     text_output = 'Done: Gibbs Sampler for model model_name is initialized.  Proceed to run updates of the sampler by using the gibbs() function.  All objects associated with this model are named with a model_name prefix.'
@@ -492,11 +500,12 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     print "foo : 4 : ", foo.take(1)
     print "foo : 4 : ", foo.count()
     # foo2 is group by hierarchy_level2, hierarchy_level1, iteri and has structure as ey => ( hierarchy_level2, hierarchy_level1, iteri, ssr, m1_d_count_grpby_level2_b )
-    foo2 = foo.map(lambda (x, y): (x, get_sum_beta_i_draw_x2(y))).keyBy(lambda (hierarchy_level2, hierarchy_level1, iteri, ssr, m1_d_count_grpby_level2_b): (hierarchy_level2, hierarchy_level1, iteri))
+    foo2 = foo.map(lambda (x, y): get_sum_beta_i_draw_x2(y)).keyBy(lambda (hierarchy_level2, hierarchy_level1, iteri, ssr, m1_d_count_grpby_level2_b): (hierarchy_level2, iteri, m1_d_count_grpby_level2_b))
     print "foo2 : 5 : ", foo2.take(1)
     print "foo2 : 5 : ", foo2.count()
     
-    foo3 = foo2.map(lambda (x, y): (x, get_s2(y)))
+    #foo3 = foo2.groupByKey().map(lambda (x, y): get_s2(list(y)))
+    m1_s2 = foo2.groupByKey().map(lambda (x, y): get_s2(list(y)))
     print "foo3 : 5 : ", foo3.take(1)
     print "foo3 : 5 : ", foo3.count() 
     
