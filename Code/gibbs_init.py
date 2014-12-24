@@ -145,7 +145,7 @@ def get_m1_Vbeta_j_mu_pinv(obj):
     if np.all(np.linalg.eigvals(phi) > 0) != True:
         phi = npd.nearPD(phi)
     Vbeta_inv_j_draw = gu.Vbeta_inv_draw(df1_var, phi)
-    return (seq, hierarchy_level2, Vbeta_inv_j_draw)
+    return (seq, hierarchy_level2, Vbeta_inv_j_draw.real)
 
 
 def pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, n1, coef_precision_prior_array):
@@ -322,7 +322,7 @@ def get_h_draw(x):
     hierarchy_level2 = x[1]
     m1_d_count_grpby_level2_b = x[2]
     s2 = x[3]
-    h_draw = gu.h_draw(1/(s2), m1_d_count_grpby_level2_b/sample_size_deflator)
+    h_draw = gu.h_draw(1.0/(s2), m1_d_count_grpby_level2_b/sample_size_deflator)
     return (iteri, hierarchy_level2, h_draw)
 
 def gibbs_init(model_name, source_RDD, hierarchy_level1, hierarchy_level2, p, df1, y_var, x_var_array, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals):
@@ -521,8 +521,8 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     ### -- Draw h from gamma distn.  Note that h=1/(s^2)
     ## from iteri, hierarchy_level2, m1_d_count_grpby_level2_b, s2
     m1_h_draw = m1_s2.map(get_h_draw)
-    print "m1_s2 : 5 : ", m1_h_draw.take(1)
-    print "m1_s2 : 5 : ", m1_h_draw.count() 
+    print "m1_h_draw : 5 : ", m1_h_draw.take(1)
+    print "m1_h_draw : 5 : ", m1_h_draw.count() 
     
     
     
