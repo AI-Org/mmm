@@ -369,7 +369,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     #  we need to make use of X'X and X'y
     #  m1_d_array_agg_constants : list of tuples of (h2, h1, xtx, xty)
     m1_d_array_agg_constants = m1_d_array_agg.map(create_xtx_matrix_xty)
-    #m1_d_array_agg_constants.saveAsTextFile("hdfs://sandbox:9000/m1_d_array_agg_constants")
+    # m1_d_array_agg_constants.saveAsTextFile("hdfs://sandbox:9000/m1_d_array_agg_constants")
     # print "m1_d_array_agg_constants take ",m1_d_array_agg_constants.take(1)
     # print "m1_d_array_agg_constants count",m1_d_array_agg_constants.count()
     # Compute the childcount at each hierarchy level
@@ -421,20 +421,12 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     # CHECKPOINT for get_Vbeta_j_mu
     ## checked get_Vbeta_j_mu & appears correct one,
     ## Data Structure m1_Vbeta_j_mu is symmetric along diagonal and have same dimensions as the one in SQL.
-    m1_Vbeta_j_mu = joined_i_j_rdd.map(lambda x,y: (1, x, get_Vbeta_j_mu(y))
+    m1_Vbeta_j_mu = joined_i_j_rdd.map(lambda x,y: (1, x, get_Vbeta_j_mu(y)))
      
     #print " m1_Vbeta_j_mu count ", m1_Vbeta_j_mu.count() # the actual values are 500 I am getting 135 values
     #print " m1_Vbeta_j_mu take 1", m1_Vbeta_j_mu.take(1)
     ###-- Draw Vbeta_inv and compute resulting sigmabeta using the above functions for each j
-    """
-    Errorsome on "matrix is not positive definite." raised by
-    File "gibbs_init.py", line 133, in get_m1_Vbeta_j_mu_pinv
-    Vbeta_inv_j_draw = gu.Vbeta_inv_draw(df1_var, phi)
-    File "gibbs_udfs.py", line 84, in Vbeta_inv_draw
-    return wishartrand(nu, phi)
-    CHECKPOINT for get_Vbeta_j_mu ## changed one of the phi matrixs into
-    definite positive using nearPD in python
-    """
+    
     m1_Vbeta_j_mu_pinv = m1_Vbeta_j_mu.map(get_m1_Vbeta_j_mu_pinv).keyBy(lambda (seq, hierarchy_level2, Vbeta_inv_j_draw) : (hierarchy_level2)).groupByKey() 
     m1_d_childcount_groupBy_h2 = m1_d_childcount.keyBy(lambda (hierarchy_level2, n1) : hierarchy_level2).groupByKey()
     #  here vals are iter, h2,
@@ -555,7 +547,9 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     print "m1_h_draw : 5 : ", m1_h_draw.count() 
     ##m1_h_draw.saveAsTextFile("hdfs://sandbox:9000m1_h_draw.txt")
     ##################################################################################Gibbs ###
-   
+    s = 2
+    m1_h_draw_filter_by_iteration = m1_h_draw.filter(lambda (iteri, h2, h_draw): iteri == s - 1 ).keyBy(lambda (iteri, h2, h_draw): h2)
+    print "m1_h_draw_filter_by_iteration", m1_h_draw_filter_by_iteration.collect()
     
     
     
