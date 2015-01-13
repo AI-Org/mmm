@@ -217,8 +217,8 @@ def get_beta_draw(obj):
         Sigmabeta_j = r[4]
     return (iteri, key, gu.beta_draw(beta_mu_j, Sigmabeta_j))
     
-def pinv_Vbeta_i(xtx, Vbeta_inv_j_draw):
-    return gu.matrix_add_plr(gu.matrix_scalarmult_plr(xtx, 1), Vbeta_inv_j_draw)    
+def pinv_Vbeta_i(xtx, Vbeta_inv_j_draw, s):
+    return gu.matrix_add_plr(gu.matrix_scalarmult_plr(xtx, s), Vbeta_inv_j_draw)    
     #return (type(xtx), type(Vbeta_inv_j_draw))
     
 def get_Vbeta_i(obj):
@@ -234,13 +234,42 @@ def get_Vbeta_i(obj):
     for r in obj[0]:
         hierarchy_level2 = r[0]
         if hierarchy_level2 != h2:
-            raise NameError('Index not correct'+str)
+            raise NameError('Index not correct')
         hierarchy_level1 =r[1]
         xtx = r[2]
-        Vbeta_i = pinv_Vbeta_i(xtx, Vbeta_inv_j_draw)
+        Vbeta_i = pinv_Vbeta_i(xtx, Vbeta_inv_j_draw, 1)
         row = (count, hierarchy_level2, hierarchy_level1, Vbeta_i)
         count += 1
         rows.append(row)
+    # row = (count, hierarchy_level2, hierarchy_level1, Vbeta_i)
+    return (rows)
+
+def get_Vbeta_i_next(obj, s):
+    # key is hierarchy_level2 and 
+    # cogrouped_iterable_object is <W1,W2>
+    # where W2 is a ResultIterable having hierarchy_level2 => (iter, hierarchy_level2, Vbeta_inv_j_draw, h_draw))
+    obj1 = list(obj[1])[0]
+    h2 = obj1[1]
+    Vbeta_inv_j_draw = obj1[2]
+    h_draw = obj1[3]
+    for r in obj[1]:
+        h2 = r[1]
+        Vbeta_inv_j_draw = r[2]
+        h_draw = r[3]
+    rows = []
+    count = 1
+    # obj[0] where W1 is a ResultIterable having obj[1][0]=hierarchy_level2, obj[1][1]=hierarchy_level1, xtx, xty
+    for r in obj[0]:
+        hierarchy_level2 = r[0]
+        if hierarchy_level2 != h2:
+            raise NameError('Index not correct')
+        hierarchy_level1 =r[1]
+        xtx = r[2]
+        Vbeta_i = pinv_Vbeta_i(xtx, Vbeta_inv_j_draw, h_draw)
+        row = (count, hierarchy_level2, hierarchy_level1, Vbeta_i)
+        count += 1
+        rows.append(row)
+    # row = (count, hierarchy_level2, hierarchy_level1, Vbeta_i)
     return (rows)
     
 def get_beta_i_mean(y):
@@ -322,7 +351,7 @@ def get_h_draw(x):
     hierarchy_level2 = x[1]
     m1_d_count_grpby_level2_b = x[2]
     s2 = x[3]
-    h_draw = gu.h_draw(1.0/(s2), m1_d_count_grpby_level2_b/sample_size_deflator)
+    h_draw = gu.h_draw(1.0/(s2), m1_d_count_grpby_level2_b/sample_size_deflator)[0]
     return (iteri, hierarchy_level2, h_draw)
 
 def gibbs_init(model_name, source_RDD, hierarchy_level1, hierarchy_level2, p, df1, y_var, x_var_array, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals):
@@ -343,6 +372,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     #  we need to make use of X'X and X'y
     #  m1_d_array_agg_constants : list of tuples of (h2, h1, xtx, xty)
     m1_d_array_agg_constants = m1_d_array_agg.map(create_xtx_matrix_xty)
+    #m1_d_array_agg_constants.saveAsTextFile("hdfs://sandbox:9000/m1_d_array_agg_constants")
     # print "m1_d_array_agg_constants take ",m1_d_array_agg_constants.take(1)
     # print "m1_d_array_agg_constants count",m1_d_array_agg_constants.count()
     # Compute the childcount at each hierarchy level
@@ -421,9 +451,11 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     #print " cogroup counts: ", len(joined_Vbeta_i_j)
     #print " Vbeta_i_j cogroup take 1", joined_Vbeta_i_j[1]
     #print "map ", map(lambda (x,y): (x, (y for y in list(y[0]))), joined_Vbeta_i_j)
+    # m1_Vbeta_inv_Sigmabeta_j_draw : iter, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j
     m1_Vbeta_inv_Sigmabeta_j_draw = map(lambda (x,y): get_m1_Vbeta_inv_Sigmabeta_j_draw(list(y)), joined_Vbeta_i_j) 
     #print " m1_Vbeta_inv_Sigmabeta_j_draw Take 1: ", m1_Vbeta_inv_Sigmabeta_j_draw[1]
     #print " m1_Vbeta_inv_Sigmabeta_j_draw Count: ", len(m1_Vbeta_inv_Sigmabeta_j_draw)
+    #sc.parallelize(m1_Vbeta_inv_Sigmabeta_j_draw).saveAsTextFile("hdfs://sandbox:9000m1_Vbeta_inv_Sigmabeta_j_draw.txt")
     m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2 = sc.parallelize(m1_Vbeta_inv_Sigmabeta_j_draw).keyBy(lambda (iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j): (hierarchy_level2)) 
     
     ##-- m1_beta_mu_j : Compute mean pooled coefficient vector to use in drawing a new pooled coefficient vector.  
@@ -520,9 +552,15 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     
     ### -- Draw h from gamma distn.  Note that h=1/(s^2)
     ## from iteri, hierarchy_level2, m1_d_count_grpby_level2_b, s2
+    ## m1_h_draw = iteri, h2, h_draw
     m1_h_draw = m1_s2.map(get_h_draw)
     print "m1_h_draw : 5 : ", m1_h_draw.take(1)
     print "m1_h_draw : 5 : ", m1_h_draw.count() 
+    ##m1_h_draw.saveAsTextFile("hdfs://sandbox:9000m1_h_draw.txt")
+    ##################################################################################Gibbs ###
+   
+    
+    
     
     
     
