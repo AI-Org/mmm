@@ -226,7 +226,7 @@ def get_Vbeta_i(obj):
         h2 = r[1]
         Vbeta_inv_j_draw = r[3]
     rows = []
-    count = 1
+    #count = 1
     # obj[0] where W1 is a ResultIterable having obj[1][0]=hierarchy_level2, obj[1][1]=hierarchy_level1, xtx, xty
     for r in obj[0]:
         hierarchy_level2 = r[0]
@@ -236,9 +236,10 @@ def get_Vbeta_i(obj):
         xtx = r[2]
         Vbeta_i = pinv_Vbeta_i(xtx, Vbeta_inv_j_draw, 1)
         row = (1, hierarchy_level2, hierarchy_level1, Vbeta_i)
-        count += 1
+        #count += 1
         rows.append(row)
-    # row = (count, hierarchy_level2, hierarchy_level1, Vbeta_i)
+    # iteration is 1 so returning only 1
+    # row = (1, hierarchy_level2, hierarchy_level1, Vbeta_i)
     return (rows)
 
 def get_Vbeta_i_next(obj, s):
@@ -251,7 +252,6 @@ def get_Vbeta_i_next(obj, s):
     h_draw = obj1[3]
     
     rows = []
-    count = 1
     # obj[0] where W1 is a ResultIterable having obj[1][0]=hierarchy_level2, obj[1][1]=hierarchy_level1, xtx, xty
     for r in obj[0]:
         hierarchy_level2 = r[0]
@@ -260,27 +260,45 @@ def get_Vbeta_i_next(obj, s):
         hierarchy_level1 =r[1]
         xtx = r[2]
         Vbeta_i = pinv_Vbeta_i(xtx, Vbeta_inv_j_draw, h_draw)
-        row = (s, hierarchy_level2, hierarchy_level1, Vbeta_i)
-        
+        row = (s, hierarchy_level2, hierarchy_level1, Vbeta_i) 
         rows.append(row)
     # row = (s, hierarchy_level2, hierarchy_level1, Vbeta_i)
     return (rows)
     
-def get_beta_i_mean(y):
-    # y[0] is iterable results of a list of tuples <h2,h1,Vbeta_i, xty>
-    # y[1] is iterable results of a tuple with values <h2, iter, Vbeta_i_inv_draw, beta_mu_j_draw>
+def get_beta_i_mean(y, s):
+    # y[0] is iterable results of a list of tuples <h2, h1, Vbeta_i, xty>
+    # y[1] is iterable results of a tuple with values <h2, iter, Vbeta_inv_j_draw, beta_mu_j_draw>
     for r in y[1]:
       hierarchy_level2 = r[0]
       i = r[1]
-      Vbeta_i_inv_draw = r[2]
+      Vbeta_inv_j_draw = r[2]
       beta_mu_j_draw = r[3]
     result_list = []
     for j in y[0]:
         hierarchy_level1 = j[1]
         Vbeta_i = j[2]
         xty = j[3]
-        beta_i_mean = gu.beta_i_mean(Vbeta_i, 1, xty, Vbeta_i_inv_draw, beta_mu_j_draw)
+        beta_i_mean = gu.beta_i_mean(Vbeta_i, 1, xty, Vbeta_inv_j_draw, beta_mu_j_draw)
         row = (i, hierarchy_level2, hierarchy_level1, beta_i_mean)
+        result_list.append(row)
+    return result_list
+    
+def get_beta_i_mean_next(y, s):
+    # y[0] is iterable results of a list of tuples <h2, h1, Vbeta_i, xty>
+    # y[1] is iterable results of a tuple with values <h2, h_draw, Vbeta_inv_j_draw, beta_mu_j_draw>
+    r = list(y[1])[0]
+    hierarchy_level2 = r[0]
+    h_draw = r[1]
+    Vbeta_inv_j_draw = r[2]
+    beta_mu_j_draw = r[3]
+    
+    result_list = []
+    for j in y[0]:
+        hierarchy_level1 = j[1]
+        Vbeta_i = j[2]
+        xty = j[3]
+        beta_i_mean = gu.beta_i_mean(Vbeta_i, h_draw, xty, Vbeta_inv_j_draw, beta_mu_j_draw)
+        row = (s, hierarchy_level2, hierarchy_level1, beta_i_mean)
         result_list.append(row)
     return result_list
     
@@ -487,8 +505,10 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     #print "take 1 m1_Vbeta_i", m1_Vbeta_i.take(1)
       
     # -- Compute beta_i_mean
-    m1_Vbeta_i_keyby_h2_h1 = sc.parallelize(m1_Vbeta_i.values().reduce(add)).keyBy(lambda (i, hierarchy_level2, hierarchy_level1, Vbeta_i): (hierarchy_level2, hierarchy_level1))
+    m1_Vbeta_i_unified = sc.parallelize(m1_Vbeta_i.values().reduce(add))
+    m1_Vbeta_i_keyby_h2_h1 = m1_Vbeta_i_unified.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, Vbeta_i): (hierarchy_level2, hierarchy_level1))
     m1_d_array_agg_constants_key_by_h2_h1 = m1_d_array_agg_constants.keyBy(lambda (h2, h1, xtx, xty): (h2, h1))
+    # JOINED_m1_Vbeta_i_keyby_h2_h1_WITH_m1_d_array_agg_constants_key_by_h2_h1 of tuples : hierarchy_level2, hierarchy_level1, Vbeta_i,xty
     JOINED_m1_Vbeta_i_keyby_h2_h1_WITH_m1_d_array_agg_constants_key_by_h2_h1 = m1_Vbeta_i_keyby_h2_h1.cogroup(m1_d_array_agg_constants_key_by_h2_h1).map(lambda (x,y): (list(y[0])[0][1],list(y[0])[0][2], list(y[0])[0][3], list(y[1])[0][3]))
     JOINED_part_1_by_keyBy_h2 = JOINED_m1_Vbeta_i_keyby_h2_h1_WITH_m1_d_array_agg_constants_key_by_h2_h1.keyBy(lambda (hierarchy_level2, hierarchy_level1, Vbeta_i, xty): hierarchy_level2)
     #print "table outer count ",  JOINED_m1_Vbeta_i_keyby_h2_h1_WITH_m1_d_array_agg_constants_key_by_h2_h1.count()
@@ -508,7 +528,8 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     #-- compute m1_beta_i_draw by  Draw beta_i from mvnorm dist'n
     # using m1_Vbeta_i_keyby_h2_h1 : h2, h1 => (i, hierarchy_level2, hierarchy_level1, Vbeta_i)
     # & parallelizing  beta_i_mean using h2, h1
-    m1_beta_i_mean_keyBy_h2_h1 = sc.parallelize(m1_beta_i_mean.values().reduce(add)).keyBy(lambda (i, hierarchy_level2, hierarchy_level1, beta_i_mean): (hierarchy_level2, hierarchy_level1))
+    m1_beta_i_draw_unified = sc.parallelize(m1_beta_i_mean.values().reduce(add))
+    m1_beta_i_mean_keyBy_h2_h1 = m1_beta_i_draw_unified.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, beta_i_mean): (hierarchy_level2, hierarchy_level1))
     # JOINED_m1_beta_i_mean_WITH_m1_Vbeta_i
     # m1_beta_i_draw : (iter, h2, h1, beta_i_draw)
     m1_beta_i_draw = m1_beta_i_mean_keyBy_h2_h1.cogroup(m1_Vbeta_i_keyby_h2_h1).map(lambda (x,y): (list(y[0])[0][0], x[0], x[1], gu.beta_draw(list(y[0])[0][3], list(y[1])[0][3])))
@@ -567,12 +588,46 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     
     # compute next values of m1_Vbeta_i : (h2, [(count, hierarchy_level2, hierarchy_level1, Vbeta_i)])
     m1_Vbeta_i_next = m1_d_array_agg_constants_key_by_h2_join_joined_simplified.map(lambda (x,y): (x, get_Vbeta_i_next(y, s)))
-    m1_Vbeta_i = m1_Vbeta_i.union(m1_Vbeta_i_next) 
-    #print "count m1_Vbeta_i", m1_Vbeta_i.count()
-    #print "take 1 m1_Vbeta_i", m1_Vbeta_i.take(1)
-    
-    
+    # the Unified table is the actual table that reflects all the rows of m1_Vbeta_i in correct format.
+    m1_Vbeta_i_unified = m1_Vbeta_i_unified.union(sc.parallelize(m1_Vbeta_i_next.values().reduce(add)))
+    #print "count  m1_Vbeta_i_unified   ", m1_Vbeta_i_unified.count()
+    #print "take 1 m1_Vbeta_i_unified ", m1_Vbeta_i_unified.take(1)
+    m1_Vbeta_i_keyby_h2_h1 = m1_Vbeta_i_unified.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, Vbeta_i): (hierarchy_level2, hierarchy_level1))
+
+   
     ### insert into beta_i_mean
+    m1_Vbeta_i_unified_filter_iter_s = m1_Vbeta_i_unified.filter(lambda (i, hierarchy_level2, hierarchy_level1, Vbeta_i) : i == s)
+    m1_Vbeta_i_keyby_h2_h1 = m1_Vbeta_i_unified_filter_iter_s.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, Vbeta_i): (hierarchy_level2, hierarchy_level1))
+    #print "count  m1_Vbeta_i_keyby_h2_h1   ", m1_Vbeta_i_keyby_h2_h1.count()
+    #print "take 1 m1_Vbeta_i_keyby_h2_h1 ", m1_Vbeta_i_keyby_h2_h1.take(1)    
+    #  JOINED_m1_Vbeta_i_keyby_h2_h1_WITH_m1_d_array_agg_constants_key_by_h2_h1 of tuples : hierarchy_level2, hierarchy_level1, Vbeta_i,xty 
+    # following is the foo of computer beta_i_mean
+    JOINED_m1_Vbeta_i_keyby_h2_h1_WITH_m1_d_array_agg_constants_key_by_h2_h1 = m1_Vbeta_i_keyby_h2_h1.cogroup(m1_d_array_agg_constants_key_by_h2_h1).map(lambda (x,y): (list(y[0])[0][1],list(y[0])[0][2], list(y[0])[0][3], list(y[1])[0][3]))
+    JOINED_part_1_by_keyBy_h2 = JOINED_m1_Vbeta_i_keyby_h2_h1_WITH_m1_d_array_agg_constants_key_by_h2_h1.keyBy(lambda (hierarchy_level2, hierarchy_level1, Vbeta_i, xty): hierarchy_level2)
+    
+    # m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration joined with m1_beta_mu_j_draw_by_iteration
+    # m1_beta_mu_j_draw = hierarchy_level2 -> (iter, hierarchy_level2, beta_mu_j_draw)
+    m1_beta_mu_j_draw_by_iteration = m1_beta_mu_j_draw.filter(lambda (x,y): y[0] == s - 1)
+    #print "count  m1_beta_mu_j_draw_by_iteration   ", m1_beta_mu_j_draw_by_iteration.count()
+    #print "take 1 m1_beta_mu_j_draw_by_iteration ", m1_beta_mu_j_draw_by_iteration.take(1)
+    # Following is computed from h2 ->(resIter1, resIter2) <=> where 
+    # resIter1 is (iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j)
+    # resIter2 is (iter, hierarchy_level2, beta_mu_j_draw)
+    # strucuture is  ( h2, iter, Vbeta_inv_j_draw, beta_mu_j_draw )
+    JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw = m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration.cogroup(m1_beta_mu_j_draw_by_iteration).map(lambda (x,y): (x, list(y[0])[0][0], list(y[0])[0][3], list(y[1])[0][2])).keyBy(lambda (hierarchy_level2, iteri, Vbeta_inv_j_draw, beta_mu_j_draw): hierarchy_level2)
+    # Cogroup above structure h2 -> h2, iter, Vbeta_inv_j_draw, beta_mu_j_draw with m1_h_draw_filter_by_iteration,  h2 -> (iteri, h2, h_draw)
+    JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw_join_WITH_h_draw = JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw.cogroup(m1_h_draw_filter_by_iteration).map(lambda (x, y): (list(y[0])[0][0], list(y[1])[0][2], list(y[0])[0][2], list(y[0])[0][3]))
+    JOINED_part_2_by_keyBy_h2 = JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw_join_WITH_h_draw.keyBy(lambda (hierarchy_level2, h_draw, Vbeta_inv_j_draw, beta_mu_j_draw): hierarchy_level2)
+    #print "take 1 ", JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw.take(1) 
+    #print "count 1 ", JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw.count()
+    m1_beta_i_mean_next = JOINED_part_1_by_keyBy_h2.cogroup(JOINED_part_2_by_keyBy_h2).map(lambda (x,y): (x, get_beta_i_mean(y)))
+    # the Unified table is the actual table that reflects all rows of m1_beta_i_draw in correct format.
+    m1_beta_i_draw_unified = m1_beta_i_draw_unified.union(sc.parallelize(m1_beta_i_mean_next.values().reduce(add)))
+    print "count  m1_Vbeta_i_unified   ", m1_beta_i_draw_unified.count()
+    print "take 1 m1_Vbeta_i_unified ", m1_beta_i_draw_unified.take(1)
+    m1_beta_i_mean_keyBy_h2_h1 = m1_beta_i_draw_unified.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, beta_i_mean): (hierarchy_level2, hierarchy_level1))
+    
+
     
     
 
