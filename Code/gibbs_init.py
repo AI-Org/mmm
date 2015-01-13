@@ -115,20 +115,17 @@ def get_Vbeta_i_mu_coeff_i_coeff_j(result_Iterable_list):
     return Vbeta_i_mu_ar
 
 
-def get_Vbeta_j_mu(obj):
-    global accum;
-    accum += 1
-    keys = obj[0] # hierarchy_level2
-    # now Obj1 is an ResultIterable object pointing to a collection of arrays
+def get_Vbeta_j_mu(y):
+    # now y is an ResultIterable object pointing to a collection of arrays
     # where each array has a structure like <h2,h1,coef_i,coef_j>
-    result_Iterable_list = list(obj[1])
+    result_Iterable_list = list(y)
     Vbeta_i_mu_ar = get_Vbeta_i_mu_coeff_i_coeff_j(result_Iterable_list)
     # one can also obtain Vbeta_i_mu_sum as  map(lambda (x,y): (x, sum(fun(list(y)))), joined_i_j_rdd.take(1))
     # corresponding to each one of the h2 level
     Vbeta_i_mu_sum = sum(Vbeta_i_mu_ar)
     Vbeta_j_mu = gu.matrix_add_diag_plr(Vbeta_i_mu_sum, p_var)
     # iter, hierarchy_level2, Vbeta_j_mu
-    return accum, keys, Vbeta_j_mu
+    return Vbeta_j_mu
 
 
 def get_m1_Vbeta_j_mu_pinv(obj):
@@ -424,7 +421,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     # CHECKPOINT for get_Vbeta_j_mu
     ## checked get_Vbeta_j_mu & appears correct one,
     ## Data Structure m1_Vbeta_j_mu is symmetric along diagonal and have same dimensions as the one in SQL.
-    m1_Vbeta_j_mu = joined_i_j_rdd.map(get_Vbeta_j_mu)
+    m1_Vbeta_j_mu = joined_i_j_rdd.map(lambda x,y: (1, x, get_Vbeta_j_mu(y))
      
     #print " m1_Vbeta_j_mu count ", m1_Vbeta_j_mu.count() # the actual values are 500 I am getting 135 values
     #print " m1_Vbeta_j_mu take 1", m1_Vbeta_j_mu.take(1)
@@ -455,7 +452,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     m1_Vbeta_inv_Sigmabeta_j_draw = map(lambda (x,y): get_m1_Vbeta_inv_Sigmabeta_j_draw(list(y)), joined_Vbeta_i_j) 
     #print " m1_Vbeta_inv_Sigmabeta_j_draw Take 1: ", m1_Vbeta_inv_Sigmabeta_j_draw[1]
     #print " m1_Vbeta_inv_Sigmabeta_j_draw Count: ", len(m1_Vbeta_inv_Sigmabeta_j_draw)
-    #sc.parallelize(m1_Vbeta_inv_Sigmabeta_j_draw).saveAsTextFile("hdfs://sandbox:9000m1_Vbeta_inv_Sigmabeta_j_draw.txt")
+    #sc.parallelize(m1_Vbeta_inv_Sigmabeta_j_draw).saveAsTextFile("hdfs://sandbox:9000/m1_Vbeta_inv_Sigmabeta_j_draw.txt")
     m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2 = sc.parallelize(m1_Vbeta_inv_Sigmabeta_j_draw).keyBy(lambda (iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j): (hierarchy_level2)) 
     
     ##-- m1_beta_mu_j : Compute mean pooled coefficient vector to use in drawing a new pooled coefficient vector.  

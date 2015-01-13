@@ -23,10 +23,10 @@ def gibbs_test(sc, d, hierarchy_level1, hierarchy_level2, p, df1, y_var, x_var_a
     
     ## -- Compute Vbeta_i
     # filter first then do a key by as it will reduce the data for shuffle during keyby
-    m1_h_draw = sc.textFile("hdfs://m1_h_draw.txt")
+    #m1_h_draw = sc.textFile("hdfs://m1_h_draw.txt")
     m1_h_draw_filter_by_iteration = m1_h_draw.filter(lambda (iteri, h2, h_draw): iteri == s - 1 ).keyBy(lambda (iteri, h2, h_draw): h2)
     # filter # m1_Vbeta_inv_Sigmabeta_j_draw : (iter, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j) filter by |s| -1 into account
-    m1_Vbeta_inv_Sigmabeta_j_draw = sc.textFile("hdfs://m1_Vbeta_inv_Sigmabeta_j_draw.txt")
+    # m1_Vbeta_inv_Sigmabeta_j_draw = sc.textFile("hdfs://m1_Vbeta_inv_Sigmabeta_j_draw.txt")
     m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration = sc.parallelize(m1_Vbeta_inv_Sigmabeta_j_draw).filter(lambda (iteri, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): iteri == s - 1 ).keyBy(lambda (iteri, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): h2)
     # filter m1_h_draw taking only |s| -1 into account
     m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration_join_m1_h_draw_filter_by_iteration = m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration.cogroup(m1_h_draw_filter_by_iteration)
