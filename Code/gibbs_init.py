@@ -265,7 +265,7 @@ def get_Vbeta_i_next(obj, s):
     # row = (s, hierarchy_level2, hierarchy_level1, Vbeta_i)
     return (rows)
     
-def get_beta_i_mean(y, s):
+def get_beta_i_mean(y):
     # y[0] is iterable results of a list of tuples <h2, h1, Vbeta_i, xty>
     # y[1] is iterable results of a tuple with values <h2, iter, Vbeta_inv_j_draw, beta_mu_j_draw>
     for r in y[1]:
@@ -620,12 +620,16 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     JOINED_part_2_by_keyBy_h2 = JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw_join_WITH_h_draw.keyBy(lambda (hierarchy_level2, h_draw, Vbeta_inv_j_draw, beta_mu_j_draw): hierarchy_level2)
     #print "take 1 ", JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw.take(1) 
     #print "count 1 ", JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw.count()
-    m1_beta_i_mean_next = JOINED_part_1_by_keyBy_h2.cogroup(JOINED_part_2_by_keyBy_h2).map(lambda (x,y): (x, get_beta_i_mean(y)))
+    m1_beta_i_mean_next = JOINED_part_1_by_keyBy_h2.cogroup(JOINED_part_2_by_keyBy_h2).map(lambda (x,y): (x, get_beta_i_mean_next(y, s)))
     # the Unified table is the actual table that reflects all rows of m1_beta_i_draw in correct format.
+    # strucutured as iter or s, h2, h1, beta_i_mean
     m1_beta_i_draw_unified = m1_beta_i_draw_unified.union(sc.parallelize(m1_beta_i_mean_next.values().reduce(add)))
     print "count  m1_Vbeta_i_unified   ", m1_beta_i_draw_unified.count()
     print "take 1 m1_Vbeta_i_unified ", m1_beta_i_draw_unified.take(1)
     m1_beta_i_mean_keyBy_h2_h1 = m1_beta_i_draw_unified.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, beta_i_mean): (hierarchy_level2, hierarchy_level1))
+    
+    # computing new beta_i using iter=s-1 values.  Draw from mvnorm dist'n.
+    
     
 
     
