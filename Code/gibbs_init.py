@@ -235,7 +235,7 @@ def get_Vbeta_i(obj):
         hierarchy_level1 =r[1]
         xtx = r[2]
         Vbeta_i = pinv_Vbeta_i(xtx, Vbeta_inv_j_draw, 1)
-        row = (count, hierarchy_level2, hierarchy_level1, Vbeta_i)
+        row = (1, hierarchy_level2, hierarchy_level1, Vbeta_i)
         count += 1
         rows.append(row)
     # row = (count, hierarchy_level2, hierarchy_level1, Vbeta_i)
@@ -249,10 +249,7 @@ def get_Vbeta_i_next(obj, s):
     h2 = obj1[1]
     Vbeta_inv_j_draw = obj1[2]
     h_draw = obj1[3]
-    for r in obj[1]:
-        h2 = r[1]
-        Vbeta_inv_j_draw = r[2]
-        h_draw = r[3]
+    
     rows = []
     count = 1
     # obj[0] where W1 is a ResultIterable having obj[1][0]=hierarchy_level2, obj[1][1]=hierarchy_level1, xtx, xty
@@ -263,10 +260,10 @@ def get_Vbeta_i_next(obj, s):
         hierarchy_level1 =r[1]
         xtx = r[2]
         Vbeta_i = pinv_Vbeta_i(xtx, Vbeta_inv_j_draw, h_draw)
-        row = (count, hierarchy_level2, hierarchy_level1, Vbeta_i)
-        count += 1
+        row = (s, hierarchy_level2, hierarchy_level1, Vbeta_i)
+        
         rows.append(row)
-    # row = (count, hierarchy_level2, hierarchy_level1, Vbeta_i)
+    # row = (s, hierarchy_level2, hierarchy_level1, Vbeta_i)
     return (rows)
     
 def get_beta_i_mean(y):
@@ -421,7 +418,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     # CHECKPOINT for get_Vbeta_j_mu
     ## checked get_Vbeta_j_mu & appears correct one,
     ## Data Structure m1_Vbeta_j_mu is symmetric along diagonal and have same dimensions as the one in SQL.
-    m1_Vbeta_j_mu = joined_i_j_rdd.map(lambda x,y: (1, x, get_Vbeta_j_mu(y)))
+    m1_Vbeta_j_mu = joined_i_j_rdd.map(lambda (x, y): (1, x, get_Vbeta_j_mu(y)))
      
     #print " m1_Vbeta_j_mu count ", m1_Vbeta_j_mu.count() # the actual values are 500 I am getting 135 values
     #print " m1_Vbeta_j_mu take 1", m1_Vbeta_j_mu.take(1)
@@ -484,6 +481,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     # count of 5    
     #print "count joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw ", joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw.count()
     #print "take 1 m1_beta_mu_j_draw", joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw.take(1)
+    # m1_Vbeta_i : iter, h2, h1, Vbeta_i
     m1_Vbeta_i = joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw.map(lambda (x,y): (x, get_Vbeta_i(y)))
     #print "count m1_Vbeta_i", m1_Vbeta_i.count()
     #print "take 1 m1_Vbeta_i", m1_Vbeta_i.take(1)
@@ -549,8 +547,35 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     ##################################################################################Gibbs ###
     s = 2
     m1_h_draw_filter_by_iteration = m1_h_draw.filter(lambda (iteri, h2, h_draw): iteri == s - 1 ).keyBy(lambda (iteri, h2, h_draw): h2)
-    print "m1_h_draw_filter_by_iteration", m1_h_draw_filter_by_iteration.collect()
+    #print "m1_h_draw_filter_by_iteration", m1_h_draw_filter_by_iteration.collect()
+    m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration = sc.parallelize(m1_Vbeta_inv_Sigmabeta_j_draw).filter(lambda (iteri, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): iteri == s - 1 ).keyBy(lambda (iteri, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): h2)
+    # filter m1_h_draw taking only |s| -1 into account
+    m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration_join_m1_h_draw_filter_by_iteration = m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration.cogroup(m1_h_draw_filter_by_iteration)
     
+    # Creating a new structure joined_simplified : iteri, h2, Vbeta_inv_j_draw, h_draw, which is a simplified version of what the original structure looks.
+    joined_simplified = m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration_join_m1_h_draw_filter_by_iteration.map(lambda (x,y): (list(y[0])[0][0], x, list(y[0])[0][3], list(y[1])[0][2]))
+    joined_simplified_key_by_h2 = joined_simplified.keyBy(lambda (iteri, h2, Vbeta_inv_j_draw, h_draw): h2)
+    ## m1_d_array_agg_constants is RDD of tuples h2, h1, xtx, xty
+    ## joined_simplified is RDD of tuples h2 -> iteri, h2, Vbeta_inv_j_draw, h_draw 
+    # join the m1_d_array_agg_constants_key_by_h2 with join_simplified
+    m1_d_array_agg_constants_key_by_h2 = m1_d_array_agg_constants.keyBy(lambda (h2, h1, xtx, xty): (h2))  
+    m1_d_array_agg_constants_key_by_h2_join_joined_simplified = m1_d_array_agg_constants_key_by_h2.cogroup(joined_simplified_key_by_h2)
+    #print "count and take 1", m1_d_array_agg_constants_key_by_h2_join_joined_simplified.count(), m1_d_array_agg_constants_key_by_h2_join_joined_simplified.take(1)
+    # following two lines of mapped RDD are for testing : m1_d_array_agg_constants_key_by_h2_join_joined_simplified
+    #m1_d_array_agg_constants_key_by_h2_join_joined_simplified_mapped = m1_d_array_agg_constants_key_by_h2_join_joined_simplified.map(lambda (x,y): (x, list(y[0])[0], list(y[1])[0]))
+    #print "m1_d_array_agg_constants_key_by_h2_join_joined_simplified_mapped", m1_d_array_agg_constants_key_by_h2_join_joined_simplified_mapped.take(1)
+    
+    # compute next values of m1_Vbeta_i : (h2, [(count, hierarchy_level2, hierarchy_level1, Vbeta_i)])
+    m1_Vbeta_i_next = m1_d_array_agg_constants_key_by_h2_join_joined_simplified.map(lambda (x,y): (x, get_Vbeta_i_next(y, s)))
+    m1_Vbeta_i = m1_Vbeta_i.union(m1_Vbeta_i_next) 
+    #print "count m1_Vbeta_i", m1_Vbeta_i.count()
+    #print "take 1 m1_Vbeta_i", m1_Vbeta_i.take(1)
+    
+    
+    ### insert into beta_i_mean
+    
+    
+
     
     
     
