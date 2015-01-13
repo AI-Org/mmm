@@ -126,6 +126,30 @@ def get_Vbeta_j_mu(y):
     Vbeta_j_mu = gu.matrix_add_diag_plr(Vbeta_i_mu_sum, p_var)
     # iter, hierarchy_level2, Vbeta_j_mu
     return Vbeta_j_mu
+    
+def get_Vbeta_j_mu_next(y):
+    # now y is an ResultIterable object pointing RI1, RI2
+    # where RI1 is a collection of tuples with h2, h1, beta_i_draw
+    # and RI2 is a single tuple iter, hierarchy_level2, beta_mu_j_draw
+    beta_mu_j_draw = list(y[1])[0][2]
+    Vbeta_i_mu_ar = []
+    for rec in list(y[0]):
+        h2 = rec[0]
+        h1 = rec[1]
+        beta_i_draw = rec[2]
+        Vbeta_i_mu_ar.append(gu.Vbeta_i_mu(beta_i_draw, beta_mu_j_draw))
+    Vbeta_j_mu = gu.matrix_add_diag_plr(sum(Vbeta_i_mu_ar) ,p_var) 
+    return Vbeta_j_mu
+        
+    # where each array has a structure like <h2,h1,coef_i,coef_j>
+    result_Iterable_list = list(y)
+    Vbeta_i_mu_ar = get_Vbeta_i_mu_coeff_i_coeff_j(result_Iterable_list)
+    # one can also obtain Vbeta_i_mu_sum as  map(lambda (x,y): (x, sum(fun(list(y)))), joined_i_j_rdd.take(1))
+    # corresponding to each one of the h2 level
+    Vbeta_i_mu_sum = sum(Vbeta_i_mu_ar)
+    Vbeta_j_mu = gu.matrix_add_diag_plr(Vbeta_i_mu_sum, p_var)
+    # iter, hierarchy_level2, Vbeta_j_mu
+    return Vbeta_j_mu
 
 
 def get_m1_Vbeta_j_mu_pinv(obj):
@@ -480,6 +504,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     ## Simply creates a join on  m1_beta_mu_j and  m1_Vbeta_inv_Sigmabeta_j_draw (the RDD keyby h2 equivalent is m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2 )
     ## extracts iter, hierarchy_level2 and beta_draw(beta_mu_j, Sigmabeta_j)
     joined_m1_beta_mu_j_with_m1_Vbeta_inv_Sigmabeta_j_draw_rdd = m1_beta_mu_j.cogroup(m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2)
+    #  m1_beta_mu_j_draw <h2> => (iter, h2, beta_mu_j_draw)
     m1_beta_mu_j_draw = joined_m1_beta_mu_j_with_m1_Vbeta_inv_Sigmabeta_j_draw_rdd.map(get_beta_draw).keyBy(lambda (iter, hierarchy_level2, beta_mu_j_draw): hierarchy_level2)
     # count of 5    
     #print "count m1_beta_mu_j_draw", m1_beta_mu_j_draw.count()
@@ -618,8 +643,8 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     # Cogroup above structure h2 -> h2, iter, Vbeta_inv_j_draw, beta_mu_j_draw with m1_h_draw_filter_by_iteration,  h2 -> (iteri, h2, h_draw)
     JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw_join_WITH_h_draw = JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw.cogroup(m1_h_draw_filter_by_iteration).map(lambda (x, y): (list(y[0])[0][0], list(y[1])[0][2], list(y[0])[0][2], list(y[0])[0][3]))
     JOINED_part_2_by_keyBy_h2 = JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw_join_WITH_h_draw.keyBy(lambda (hierarchy_level2, h_draw, Vbeta_inv_j_draw, beta_mu_j_draw): hierarchy_level2)
-    #print "take 1 ", JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw.take(1) 
-    #print "count 1 ", JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw.count()
+    #print "take 1 ", JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw_join_WITH_h_draw.take(1) 
+    #print "count 1 ", JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw_join_WITH_h_draw.count()
     m1_beta_i_mean_next = JOINED_part_1_by_keyBy_h2.cogroup(JOINED_part_2_by_keyBy_h2).map(lambda (x,y): (x, get_beta_i_mean_next(y, s)))
     # the Unified table is the actual table that reflects all rows of m1_beta_i_draw in correct format.
     # strucutured as iter or s, h2, h1, beta_i_mean
@@ -628,9 +653,40 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     print "take 1 m1_Vbeta_i_unified ", m1_beta_i_draw_unified.take(1)
     m1_beta_i_mean_keyBy_h2_h1 = m1_beta_i_draw_unified.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, beta_i_mean): (hierarchy_level2, hierarchy_level1))
     
-    # computing new beta_i using iter=s-1 values.  Draw from mvnorm dist'n.
+    # insert into beta_i, using iter=s-1 values.  Draw from mvnorm dist'n.
+    # for strucuter like iter, h2, h1, beta_draw,
+    # ,for iter for iter ==s, join beta_i_mean and Vbeta_i for structure s, h2, h1, beta_i_mean, Vbeta_i
+    m1_beta_i_mean_by_current_iteration = m1_beta_i_mean_keyBy_h2_h1.filter(lambda (x,y): y[0] == s-1)
+    m1_Vbeta_i_by_current_iteration = m1_Vbeta_i_keyby_h2_h1.filter(lambda (x,y): y[0] == s-1)
+    # After cogroup of above two Data Structures we can easily compute bet_draw directly from the map function
+    # structure : s, h2, h1, beta_draw 
+    m1_beta_i_draw_next = m1_beta_i_mean_by_current_iteration.cogroup(m1_Vbeta_i_by_current_iteration).map(lambda (x,y): (s, x[0], x[1], gu.beta_draw(list(y[0])[0][3], list(y[1])[0][3])))
+    print "count  m1_beta_i_draw_next   ", m1_beta_i_draw_next.count()
+    print "take 1 m1_beta_i_draw_next ", m1_beta_i_draw_next.take(1)
+    m1_beta_i_draw = m1_beta_i_draw.union(m1_beta_i_draw_next)
+    #print "count  m1_beta_i_draw   ", m1_beta_i_draw.count()
+    #print "take 1 m1_beta_i_draw ", m1_beta_i_draw.take(1)
+    
+    # insert into Vbeta_j_mu table 
+    # using using the most "recent" values of the beta_i_draw coefficients
+    # The values of beta_mu_j_draw and Vbeta_j_mu have not yet been updated at this stage, so their values at iter=s-1 are taken.
+    # S1 : h2, h1, beta_i_draw  from m1_beta_i_draw where iteri == s ==> m1_beta_i_draw_next => key it by h2
+    m1_beta_i_draw_next_key_by_h2 = m1_beta_i_draw_next.keyBy(lambda (s, h2, h1, beta_i_draw): h2)
+    # S2 : h2, beta_mu_j_draw from m1_beta_mu_j_draw where iter= s-1 and also key it by h2
+    # m1_beta_mu_j_draw_by_iteration = hierarchy_level2 -> (s-1, hierarchy_level2, beta_mu_j_draw)
+    JOINED_m1_beta_i_draw_next_key_by_h2_WITH_m1_beta_mu_j_draw_by_iteration = m1_beta_i_draw_next_key_by_h2.cogroup(m1_beta_mu_j_draw_by_iteration)
+    m1_Vbeta_j_mu_next = JOINED_m1_beta_i_draw_next_key_by_h2_WITH_m1_beta_mu_j_draw_by_iteration.map(lambda (h2,y): (s, h2, get_Vbeta_j_mu_next(y)))
+    print "count  m1_Vbeta_j_mu_next   ", m1_Vbeta_j_mu_next.count()
+    print "take 1 m1_Vbeta_j_mu_next ", m1_Vbeta_j_mu_next.take(1)
+    m1_Vbeta_j_mu = m1_Vbeta_j_mu.union(m1_Vbeta_j_mu_next)
+    print "count  m1_Vbeta_j_mu   ", m1_Vbeta_j_mu.count()
+    print "take 1 m1_Vbeta_j_mu ", m1_Vbeta_j_mu.take(1)
+    
+    ## inserting into 
     
     
+    
+   
 
     
     
