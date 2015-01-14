@@ -710,7 +710,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     print "count  JOINED_m1_Vbeta_j_mu_pinv_WITH_m1_d_childcount_groupBy_h2_simplified   ", JOINED_m1_Vbeta_j_mu_pinv_WITH_m1_d_childcount_groupBy_h2_simplified.count()
     print "take 1 JOINED_m1_Vbeta_j_mu_pinv_WITH_m1_d_childcount_groupBy_h2_simplified ", JOINED_m1_Vbeta_j_mu_pinv_WITH_m1_d_childcount_groupBy_h2_simplified.take(1)    
     # iteri, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j
-    m1_Vbeta_inv_Sigmabeta_j_draw_next = JOINED_m1_Vbeta_j_mu_pinv_WITH_m1_d_childcount_groupBy_h2_simplified.map(get_m1_Vbeta_inv_Sigmabeta_j_draw_next)
+    m1_Vbeta_inv_Sigmabeta_j_draw_next = sc.parallelize(JOINED_m1_Vbeta_j_mu_pinv_WITH_m1_d_childcount_groupBy_h2_simplified.map(get_m1_Vbeta_inv_Sigmabeta_j_draw_next))
     print "count  m1_Vbeta_inv_Sigmabeta_j_draw_next   ", m1_Vbeta_inv_Sigmabeta_j_draw_next.count()
     print "take 1 m1_Vbeta_inv_Sigmabeta_j_draw_next ", m1_Vbeta_inv_Sigmabeta_j_draw_next.take(1)
     ## appending the next iteration values to previous Data Structure
