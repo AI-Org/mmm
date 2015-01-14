@@ -491,21 +491,25 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     ## computing _beta_mu_j
     ## for computing _beta_mu_j we first will modify m1_ols_beta_i or _initialvals_beta_i to get sum_coef_j 
     ## and then  we will join it with m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2
+    # modifying m1_ols_beta_i_sum_coef_j (h2, h1) -> (h2,h1,coff) 
     m1_ols_beta_i_sum_coef_j = m1_ols_beta_i.map(lambda (x,y): (x[0], y[2])).keyBy(lambda (h2, coeff): h2).groupByKey().map(lambda (key, value) : add_coeff_j(key,value))
     #print "Diagnostics m1_ols_beta_i_sum_coef_j ", m1_ols_beta_i_sum_coef_j.collect()    
     joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j = m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2.cogroup(m1_ols_beta_i_sum_coef_j)
     #print "joined_m1_Vbeta_inv ", joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j.take(1)  
-    # m1_beta_mu_j is  RDD keyed structure as hierarchy_level2=> (iter, hierarchy_level2, beta_mu_j)
+    # m1_beta_mu_j is  RDD keyed structure as (iter, hierarchy_level2, beta_mu_j)
     # beta_mu_j is mean with dim 13 X 1
-    m1_beta_mu_j = joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j.map(get_substructure_beta_mu_j).keyBy(lambda (iter, hierarchy_level2, beta_mu_j): hierarchy_level2)
+    m1_beta_mu_j = joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j.map(get_substructure_beta_mu_j)
+    # hierarchy_level2=> (iter, hierarchy_level2, beta_mu_j)
+    m1_beta_mu_j_keyBy_h2 = m1_beta_mu_j.keyBy(lambda (iter, hierarchy_level2, beta_mu_j): hierarchy_level2)
     #print "counts of m1_beta_mu_j ", m1_beta_mu_j.count() # number is 5 on both sides
      
     ## -- m1_beta_mu_j_draw : Draw beta_mu from mvnorm dist'n.  Get back J vectors of beta_mu, one for each J.
     ## Simply creates a join on  m1_beta_mu_j and  m1_Vbeta_inv_Sigmabeta_j_draw (the RDD keyby h2 equivalent is m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2 )
     ## extracts iter, hierarchy_level2 and beta_draw(beta_mu_j, Sigmabeta_j)
-    joined_m1_beta_mu_j_with_m1_Vbeta_inv_Sigmabeta_j_draw_rdd = m1_beta_mu_j.cogroup(m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2)
+    joined_m1_beta_mu_j_with_m1_Vbeta_inv_Sigmabeta_j_draw_rdd = m1_beta_mu_j_keyBy_h2.cogroup(m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2)
     #  m1_beta_mu_j_draw <h2> => (iter, h2, beta_mu_j_draw)
-    m1_beta_mu_j_draw = joined_m1_beta_mu_j_with_m1_Vbeta_inv_Sigmabeta_j_draw_rdd.map(get_beta_draw).keyBy(lambda (iter, hierarchy_level2, beta_mu_j_draw): hierarchy_level2)
+    m1_beta_mu_j_draw = joined_m1_beta_mu_j_with_m1_Vbeta_inv_Sigmabeta_j_draw_rdd.map(get_beta_draw)
+    m1_beta_mu_j_draw_keyBy_h2 = m1_beta_mu_j_draw.keyBy(lambda (iter, hierarchy_level2, beta_mu_j_draw): hierarchy_level2)
     # count of 5    
     #print "count m1_beta_mu_j_draw", m1_beta_mu_j_draw.count()
     # take 1 of <h2> => (iter, h2, beta_mu_j_draw)    
@@ -541,7 +545,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     # Following is h2 ->(resIter1, resIter2) <=> where 
     # resIter1 is (iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j)
     # resIter2 is (iter, hierarchy_level2, beta_mu_j_draw)
-    JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw = m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2.cogroup(m1_beta_mu_j_draw).map(lambda (x,y): (x, list(y[0])[0][0], list(y[0])[0][3], list(y[1])[0][2]))
+    JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw = m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2.cogroup(m1_beta_mu_j_draw_keyBy_h2).map(lambda (x,y): (x, list(y[0])[0][0], list(y[0])[0][3], list(y[1])[0][2]))
     JOINED_part_2_by_keyBy_h2 = JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw.keyBy(lambda (hierarchy_level2, i, Vbeta_inv_j_draw, beta_mu_j_draw): hierarchy_level2)
     #print "take 1 ", JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw.take(1) 
     #print "count 1 ", JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw.count()
@@ -638,7 +642,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     
     # m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration joined with m1_beta_mu_j_draw_by_previous_iteration
     # m1_beta_mu_j_draw = hierarchy_level2 -> (iter, hierarchy_level2, beta_mu_j_draw)
-    m1_beta_mu_j_draw_by_previous_iteration = m1_beta_mu_j_draw.filter(lambda (x,y): y[0] == s - 1)
+    m1_beta_mu_j_draw_by_previous_iteration = m1_beta_mu_j_draw_keyBy_h2.filter(lambda (x,y): y[0] == s - 1)
     #print "count  m1_beta_mu_j_draw_by_previous_iteration   ", m1_beta_mu_j_draw_by_previous_iteration.count()
     #print "take 1 m1_beta_mu_j_draw_by_previous_iteration ", m1_beta_mu_j_draw_by_previous_iteration.take(1)
     # Following is computed from h2 ->(resIter1, resIter2) <=> where 
@@ -708,13 +712,53 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     m1_Vbeta_inv_Sigmabeta_j_draw_next = JOINED_m1_Vbeta_j_mu_pinv_WITH_m1_d_childcount_groupBy_h2_simplified.map(get_m1_Vbeta_inv_Sigmabeta_j_draw_next)
     print "count  m1_Vbeta_inv_Sigmabeta_j_draw_next   ", m1_Vbeta_inv_Sigmabeta_j_draw_next.count()
     print "take 1 m1_Vbeta_inv_Sigmabeta_j_draw_next ", m1_Vbeta_inv_Sigmabeta_j_draw_next.take(1)
-    
+    ## appending the next iteration values to previous Data Structure
+    m1_Vbeta_inv_Sigmabeta_j_draw = m1_Vbeta_inv_Sigmabeta_j_draw.union(m1_Vbeta_inv_Sigmabeta_j_draw_next)
     
     ## inserting into m1_beta_mu_j
+    print "Inserting into m1_beta_mu_j"
     # -- Compute mean pooled coefficient vector to use in drawing a new pooled coefficient vector.  
     # -- Get back one coefficient vector for each j (i.e. J  coefficient vectors are returned).
-    # By joining m1_Vbeta_inv_Sigmabeta_j_draw (with iteration == s, i.e., m1_Vbeta_inv_Sigmabeta_j_draw_next, select *) 
-    # & m1_beta_i_draw (with iteration == s, i.e., m1_beta_i_draw_next, select h2, sum(beta_j_draw) as sum_coef_j)
+    # first we modify m1_beta_i_draw to compute sum_coef_j
+    # m1_beta_i_draw_keyby_h2 has a key-value structure h2 -> (s, h2, h1, beta_i_draw) into h2 -> h2, sum_coef_j
+    m1_beta_i_draw_next_key_by_h2_sum_coef_j = m1_beta_i_draw_next_key_by_h2.map(lambda (x,y): (x, y[3])).keyBy(lambda (h2, coeff): h2).groupByKey().map(lambda (key, value) : add_coeff_j(key,value))
+    # NEXT 
+    # Join m1_Vbeta_inv_Sigmabeta_j_draw (with iteration == s, i.e., m1_Vbeta_inv_Sigmabeta_j_draw_next, select *) 
+    # & m1_beta_i_draw (with iteration == s, i.e., m1_beta_i_draw_next_key_by_h2_sum_coef_j, select h2, sum_coef_j)   
+    m1_Vbeta_inv_Sigmabeta_j_draw_next_keyBy_h2 = m1_Vbeta_inv_Sigmabeta_j_draw_next.keyBy(lambda (s, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): h2)
+    Joined_m1_Vbeta_inv_Sigmabeta_j_draw_next_keyBy_h2_WITH_m1_beta_i_draw_next_key_by_h2_sum_coef_j = m1_Vbeta_inv_Sigmabeta_j_draw_next_keyBy_h2.cogroup(m1_beta_i_draw_next_key_by_h2_sum_coef_j)
+    # Using same function as was used in the gibbs_init
+    # s, h2, beta_mu_j
+    m1_beta_mu_j_next = Joined_m1_Vbeta_inv_Sigmabeta_j_draw_next_keyBy_h2_WITH_m1_beta_i_draw_next_key_by_h2_sum_coef_j.map(get_substructure_beta_mu_j)
+    m1_beta_mu_j = m1_beta_mu_j.union(m1_beta_mu_j_next)
+    print "count  m1_beta_mu_j_next   ", m1_beta_mu_j_next.count()
+    print "take 1 m1_beta_mu_j_next ", m1_beta_mu_j_next.take(1)
+    # h2 -> s, h2, beta_mu_j
+    m1_beta_mu_j_keyBy_h2 = m1_beta_mu_j.keyBy(lambda (iter, hierarchy_level2, beta_mu_j): hierarchy_level2)
+    
+    # inserting into m1_beta_mu_j_draw
+    # -- Draw beta_mu from mvnorm dist'n.  Get back J vectors of beta_mu, one for each J.  Note that all input values are at iter=s.
+    print "inserting into m1_beta_mu_j_draw"
+    # Structures : m1_beta_mu_j and m1_Vbeta_inv_Sigmabeta_j_draw for current iteration will be cogrouped.
+    # m1_beta_mu_j_next : s, h2, beta_mu_j, we will need h2, beta_mu_j
+    # m1_Vbeta_inv_Sigmabeta_j_draw_next : s, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j, we will need h2, Sigmabeta_j
+    m1_Vbeta_inv_Sigmabeta_j_draw_next_keyBy_h2 = m1_Vbeta_inv_Sigmabeta_j_draw_next.keyBy(lambda (s, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): h2)
+    m1_beta_mu_j_next_keyBy_h2 = m1_beta_mu_j_next.keyBy(lambda (s, h2, beta_mu_j): h2)
+    # now the cogroup
+    Joined_m1_Vbeta_inv_Sigmabeta_j_draw_next_keyBy_h2_WITH_m1_beta_mu_j_next_keyBy_h2 = m1_Vbeta_inv_Sigmabeta_j_draw_next_keyBy_h2.cogroup(m1_beta_mu_j_next_keyBy_h2)
+    m1_beta_mu_j_draw_next = Joined_m1_Vbeta_inv_Sigmabeta_j_draw_next_keyBy_h2_WITH_m1_beta_mu_j_next_keyBy_h2.map(get_beta_draw)
+    print "count  m1_beta_mu_j_draw_next   ", m1_beta_mu_j_draw_next.count()
+    print "take 1 m1_beta_mu_j_draw_next ", m1_beta_mu_j_draw_next.take(1)
+    m1_beta_mu_j_draw = m1_beta_mu_j_draw_next.union(m1_beta_mu_j_draw_next)
+    m1_beta_mu_j_draw_keyBy_h2 = m1_beta_mu_j_draw.keyBy(lambda (iter, hierarchy_level2, beta_mu_j_draw): hierarchy_level2)
+    
+    # Update values of s2
+    ##-- Compute updated value of s2 to use in next section.
+    print "Updating values of s2"
+    
+    
+    
+    
     
     
     
