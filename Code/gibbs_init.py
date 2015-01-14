@@ -602,7 +602,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     print "Inserting into m1_beta_i"
     m1_h_draw_filter_by_iteration = m1_h_draw.filter(lambda (iteri, h2, h_draw): iteri == s - 1 ).keyBy(lambda (iteri, h2, h_draw): h2)
     #print "m1_h_draw_filter_by_iteration", m1_h_draw_filter_by_iteration.collect()
-    m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration = sc.parallelize(m1_Vbeta_inv_Sigmabeta_j_draw).filter(lambda (iteri, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): iteri == s - 1 ).keyBy(lambda (iteri, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): h2)
+    m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration = m1_Vbeta_inv_Sigmabeta_j_draw.filter(lambda (iteri, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): iteri == s - 1 ).keyBy(lambda (iteri, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): h2)
     # filter m1_h_draw taking only |s| -1 into account
     m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration_join_m1_h_draw_filter_by_iteration = m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration.cogroup(m1_h_draw_filter_by_iteration)
     
@@ -709,7 +709,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     print "count  JOINED_m1_Vbeta_j_mu_pinv_WITH_m1_d_childcount_groupBy_h2_simplified   ", JOINED_m1_Vbeta_j_mu_pinv_WITH_m1_d_childcount_groupBy_h2_simplified.count()
     print "take 1 JOINED_m1_Vbeta_j_mu_pinv_WITH_m1_d_childcount_groupBy_h2_simplified ", JOINED_m1_Vbeta_j_mu_pinv_WITH_m1_d_childcount_groupBy_h2_simplified.take(1)    
     # iteri, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j
-    m1_Vbeta_inv_Sigmabeta_j_draw_next = sc.parallelize(JOINED_m1_Vbeta_j_mu_pinv_WITH_m1_d_childcount_groupBy_h2_simplified.map(get_m1_Vbeta_inv_Sigmabeta_j_draw_next))
+    m1_Vbeta_inv_Sigmabeta_j_draw_next = JOINED_m1_Vbeta_j_mu_pinv_WITH_m1_d_childcount_groupBy_h2_simplified.map(get_m1_Vbeta_inv_Sigmabeta_j_draw_next)
     print "count  m1_Vbeta_inv_Sigmabeta_j_draw_next   ", m1_Vbeta_inv_Sigmabeta_j_draw_next.count()
     print "take 1 m1_Vbeta_inv_Sigmabeta_j_draw_next ", m1_Vbeta_inv_Sigmabeta_j_draw_next.take(1)
     ## appending the next iteration values to previous Data Structure
@@ -745,8 +745,8 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     m1_Vbeta_inv_Sigmabeta_j_draw_next_keyBy_h2 = m1_Vbeta_inv_Sigmabeta_j_draw_next.keyBy(lambda (s, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): h2)
     m1_beta_mu_j_next_keyBy_h2 = m1_beta_mu_j_next.keyBy(lambda (s, h2, beta_mu_j): h2)
     # now the cogroup
-    Joined_m1_Vbeta_inv_Sigmabeta_j_draw_next_keyBy_h2_WITH_m1_beta_mu_j_next_keyBy_h2 = m1_Vbeta_inv_Sigmabeta_j_draw_next_keyBy_h2.cogroup(m1_beta_mu_j_next_keyBy_h2)
-    m1_beta_mu_j_draw_next = Joined_m1_Vbeta_inv_Sigmabeta_j_draw_next_keyBy_h2_WITH_m1_beta_mu_j_next_keyBy_h2.map(get_beta_draw)
+    Joined_m1_beta_mu_j_next_keyBy_h2_WITH_m1_Vbeta_inv_Sigmabeta_j_draw_next_keyBy_h2 = m1_beta_mu_j_next_keyBy_h2.cogroup(m1_Vbeta_inv_Sigmabeta_j_draw_next_keyBy_h2)
+    m1_beta_mu_j_draw_next = Joined_m1_beta_mu_j_next_keyBy_h2_WITH_m1_Vbeta_inv_Sigmabeta_j_draw_next_keyBy_h2.map(get_beta_draw)
     print "count  m1_beta_mu_j_draw_next   ", m1_beta_mu_j_draw_next.count()
     print "take 1 m1_beta_mu_j_draw_next ", m1_beta_mu_j_draw_next.take(1)
     m1_beta_mu_j_draw = m1_beta_mu_j_draw_next.union(m1_beta_mu_j_draw_next)
