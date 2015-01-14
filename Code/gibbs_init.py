@@ -480,11 +480,10 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     #print " Vbeta_i_j cogroup take 1", joined_Vbeta_i_j[1]
     #print "map ", map(lambda (x,y): (x, (y for y in list(y[0]))), joined_Vbeta_i_j)
     # m1_Vbeta_inv_Sigmabeta_j_draw : iter, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j
-    m1_Vbeta_inv_Sigmabeta_j_draw = map(lambda (x,y): get_m1_Vbeta_inv_Sigmabeta_j_draw(list(y)), joined_Vbeta_i_j) 
+    m1_Vbeta_inv_Sigmabeta_j_draw = sc.parallelize(map(lambda (x,y): get_m1_Vbeta_inv_Sigmabeta_j_draw(list(y)), joined_Vbeta_i_j)) 
     #print " m1_Vbeta_inv_Sigmabeta_j_draw Take 1: ", m1_Vbeta_inv_Sigmabeta_j_draw[1]
     #print " m1_Vbeta_inv_Sigmabeta_j_draw Count: ", len(m1_Vbeta_inv_Sigmabeta_j_draw)
-    #sc.parallelize(m1_Vbeta_inv_Sigmabeta_j_draw).saveAsTextFile("hdfs://sandbox:9000/m1_Vbeta_inv_Sigmabeta_j_draw.txt")
-    m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2 = sc.parallelize(m1_Vbeta_inv_Sigmabeta_j_draw).keyBy(lambda (iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j): (hierarchy_level2)) 
+    m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2 = m1_Vbeta_inv_Sigmabeta_j_draw.keyBy(lambda (iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j): (hierarchy_level2)) 
     
     ##-- m1_beta_mu_j : Compute mean pooled coefficient vector to use in drawing a new pooled coefficient vector.  
     ##-- Get back one coefficient vector for each j (i.e. J  coefficient vectors are returned).
