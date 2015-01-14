@@ -701,6 +701,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     m1_Vbeta_j_mu_pinv = m1_Vbeta_j_mu_next.map(get_m1_Vbeta_j_mu_pinv).keyBy(lambda (s, h2, Vbeta_inv_j_draw): h2)
     print "count  m1_Vbeta_j_mu_pinv   ", m1_Vbeta_j_mu_pinv.count()
     print "take 1 m1_Vbeta_j_mu_pinv ", m1_Vbeta_j_mu_pinv.take(1)
+    m1_d_childcount_groupBy_h2 = m1_d_childcount.keyBy(lambda (hierarchy_level2, n1) : hierarchy_level2)
     # structure m1_d_childcount_groupBy_h2 can be used,
     # m1_d_childcount_groupBy_h2 has a structure h2 -> h2, n1
     JOINED_m1_Vbeta_j_mu_pinv_WITH_m1_d_childcount_groupBy_h2 = m1_Vbeta_j_mu_pinv.cogroup(m1_d_childcount_groupBy_h2)
