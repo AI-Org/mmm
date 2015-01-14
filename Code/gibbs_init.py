@@ -179,7 +179,7 @@ def get_m1_Vbeta_inv_Sigmabeta_j_draw(lst):
     global coef_precision_prior_array_var
     #y[0][0], y[0][1], y[1][1] , y[0][2], pinv_Vbeta_inv_Sigmabeta_j_draw(y[0][2], y[1][1], coef_precision_prior_array_var)
     #or seq from m1_Vbeta_j_mu_pinv
-    iter = 0 
+    iter = 1 
     #from in m1_Vbeta_j_mu_pinv
     h2 = "" 
     # from m1_d_childcount_groupBy_h2,
@@ -196,6 +196,15 @@ def get_m1_Vbeta_inv_Sigmabeta_j_draw(lst):
             n1 = j[1]
     
     return (iter, h2, n1, Vbeta_inv_j_draw, pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, n1, coef_precision_prior_array_var))
+    
+def get_m1_Vbeta_inv_Sigmabeta_j_draw_next(y):
+    global coef_precision_prior_array_var
+    # y has structure : s, h2, Vbeta_inv_j_draw, n1
+    iteri = y[0]
+    h2 = y[1]
+    Vbeta_inv_j_draw = y[2]
+    n1 = y[3]
+    return (iteri, h2, n1, Vbeta_inv_j_draw, pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, n1, coef_precision_prior_array_var))
 
 
 def get_substructure_beta_mu_j(obj):
@@ -590,8 +599,12 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     print "m1_h_draw : 5 : ", m1_h_draw.take(1)
     print "m1_h_draw : 5 : ", m1_h_draw.count() 
     ##m1_h_draw.saveAsTextFile("hdfs://sandbox:9000m1_h_draw.txt")
-    ##################################################################################Gibbs ###
+    ##################################################################################   Gibbs   ##################################################################################
+    print "Computing Samples for next iterations"
     s = 2
+    
+    ## Inserting into m1_beta_i
+    print "Inserting into m1_beta_i"
     m1_h_draw_filter_by_iteration = m1_h_draw.filter(lambda (iteri, h2, h_draw): iteri == s - 1 ).keyBy(lambda (iteri, h2, h_draw): h2)
     #print "m1_h_draw_filter_by_iteration", m1_h_draw_filter_by_iteration.collect()
     m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration = sc.parallelize(m1_Vbeta_inv_Sigmabeta_j_draw).filter(lambda (iteri, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): iteri == s - 1 ).keyBy(lambda (iteri, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): h2)
@@ -620,7 +633,8 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     m1_Vbeta_i_keyby_h2_h1 = m1_Vbeta_i_unified.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, Vbeta_i): (hierarchy_level2, hierarchy_level1))
 
    
-    ### insert into beta_i_mean
+    ### Inserting into beta_i_mean
+    print "Inserting into beta_i_mean"
     m1_Vbeta_i_unified_filter_iter_s = m1_Vbeta_i_unified.filter(lambda (i, hierarchy_level2, hierarchy_level1, Vbeta_i) : i == s)
     m1_Vbeta_i_keyby_h2_h1 = m1_Vbeta_i_unified_filter_iter_s.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, Vbeta_i): (hierarchy_level2, hierarchy_level1))
     #print "count  m1_Vbeta_i_keyby_h2_h1   ", m1_Vbeta_i_keyby_h2_h1.count()
@@ -650,10 +664,11 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     # strucutured as iter or s, h2, h1, beta_i_mean
     m1_beta_i_draw_unified = m1_beta_i_draw_unified.union(sc.parallelize(m1_beta_i_mean_next.values().reduce(add)))
     print "count  m1_Vbeta_i_unified   ", m1_beta_i_draw_unified.count()
-    print "take 1 m1_Vbeta_i_unified ", m1_beta_i_draw_unified.take(1)
+    #print "take 1 m1_Vbeta_i_unified ", m1_beta_i_draw_unified.take(1)
     m1_beta_i_mean_keyBy_h2_h1 = m1_beta_i_draw_unified.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, beta_i_mean): (hierarchy_level2, hierarchy_level1))
     
     # insert into beta_i, using iter=s-1 values.  Draw from mvnorm dist'n.
+    print "insert into beta_i"
     # for strucuter like iter, h2, h1, beta_draw,
     # ,for iter for iter ==s, join beta_i_mean and Vbeta_i for structure s, h2, h1, beta_i_mean, Vbeta_i
     m1_beta_i_mean_by_current_iteration = m1_beta_i_mean_keyBy_h2_h1.filter(lambda (x,y): y[0] == s-1)
@@ -668,6 +683,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     #print "take 1 m1_beta_i_draw ", m1_beta_i_draw.take(1)
     
     # insert into Vbeta_j_mu table 
+    print "Inserting into Vbeta_j_mu"
     # using using the most "recent" values of the beta_i_draw coefficients
     # The values of beta_mu_j_draw and Vbeta_j_mu have not yet been updated at this stage, so their values at iter=s-1 are taken.
     # S1 : h2, h1, beta_i_draw  from m1_beta_i_draw where iteri == s ==> m1_beta_i_draw_next => key it by h2
@@ -682,7 +698,21 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
     print "count  m1_Vbeta_j_mu   ", m1_Vbeta_j_mu.count()
     print "take 1 m1_Vbeta_j_mu ", m1_Vbeta_j_mu.take(1)
     
-    ## inserting into 
+    ## inserting into m1_Vbeta_inv_Sigmabeta_j_draw
+    print "inserting into m1_Vbeta_inv_Sigmabeta_j_draw"
+    ## computing Vbeta_inv_j_draw from m1_Vbeta_j_mu where iteration == s
+    ## returns s, h2, Vbeta_inv_j_draw
+    m1_Vbeta_j_mu_pinv = m1_Vbeta_j_mu_next.map(get_m1_Vbeta_j_mu_pinv).keyBy(lambda (s, h2, Vbeta_inv_j_draw): h2)
+    # structure m1_d_childcount_groupBy_h2 can be used,
+    # m1_d_childcount_groupBy_h2 has a structure h2 -> h2, n1
+    JOINED_m1_Vbeta_j_mu_pinv_WITH_m1_d_childcount_groupBy_h2 = m1_Vbeta_j_mu_pinv.cogroup(m1_d_childcount_groupBy_h2)
+    # s, h2, Vbeta_inv_j_draw, n1
+    JOINED_m1_Vbeta_j_mu_pinv_WITH_m1_d_childcount_groupBy_h2_simplified = JOINED_m1_Vbeta_j_mu_pinv_WITH_m1_d_childcount_groupBy_h2.map(lambda (x,y): (list(y[0])[0][0], list(y[0])[0][1], list(y[0])[0][2], list(y[1])[0][1]))
+    
+    m1_Vbeta_inv_Sigmabeta_j_draw_next = JOINED_m1_Vbeta_j_mu_pinv_WITH_m1_d_childcount_groupBy_h2_simplified.map(get_m1_Vbeta_inv_Sigmabeta_j_draw_next)
+    print "count  m1_Vbeta_inv_Sigmabeta_j_draw_next   ", m1_Vbeta_inv_Sigmabeta_j_draw_next.count()
+    print "take 1 m1_Vbeta_inv_Sigmabeta_j_draw_next ", m1_Vbeta_inv_Sigmabeta_j_draw_next.take(1)
+    
     
     
     
