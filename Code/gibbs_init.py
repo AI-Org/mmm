@@ -395,7 +395,9 @@ def gibbs_init(model_name, source_RDD, hierarchy_level1, hierarchy_level2, p, df
 def add(x,y):
     return (x+y)
 
-def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
+# Initialize Gibbs with initial values for future iterations
+# Call as gi.gibbs_init_test(sc, d, keyBy_groupby_h2_h1, hierarchy_level1, hierarchy_level2, p, df1, y_var_index, x_var_indexes, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals)
+def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, hierarchy_level1, hierarchy_level2, p, df1, y_var_index, x_var_indexes, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals):
     #if __name__ == '__main__':
     global p_var
     global coef_precision_prior_array_var
