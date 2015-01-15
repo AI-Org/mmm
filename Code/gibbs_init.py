@@ -776,18 +776,18 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, initial_vals, p):
         #foo3 = foo2.groupByKey().map(lambda (x, y): get_s2(list(y)))
         # iteri, hierarchy_level2, m1_d_count_grpby_level2_b, s2
         m1_s2_next = foo2.groupByKey().map(lambda (x, y): get_s2(list(y)))
-        print "m1_s2 : 5 : ", m1_s2_next.take(1)
-        print "m1_s2 : 5 : ", m1_s2_next.count() 
         m1_s2 = m1_s2.union(m1_s2_next)
+        print "m1_s2 : ", m1_s2.take(1)
+        print "m1_s2 : ", m1_s2.count()
         
         ## Updating values of h_draw based on current iteration
         # -- Draw h from gamma dist'n.  Note that h=1/(s^2)
         ## from iteri, hierarchy_level2, m1_d_count_grpby_level2_b, s2
         ## m1_h_draw = iteri, h2, h_draw
         m1_h_draw_next = m1_s2_next.map(get_h_draw)
-        print "m1_h_draw : 5 : ", m1_h_draw_next.take(1)
-        print "m1_h_draw : 5 : ", m1_h_draw_next.count() 
         m1_h_draw = m1_h_draw.union(m1_h_draw_next)
+        print "m1_h_draw : ", m1_h_draw.take(1)
+        print "m1_h_draw : ", m1_h_draw.count()
         
         ## Creating vertical draws
         ## -- Convert the array-based draws from the Gibbs Sampler into a "vertically long" format by unnesting the arrays.
