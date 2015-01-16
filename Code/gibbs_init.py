@@ -193,8 +193,8 @@ def gibbs_initializer(sc, d, keyBy_groupby_h2_h1, hierarchy_level1, hierarchy_le
     # JOINED_m1_beta_i_mean_WITH_m1_Vbeta_i
     # m1_beta_i_draw : (iter, h2, h1, beta_i_draw)
     m1_beta_i_draw = m1_beta_i_mean_keyBy_h2_h1.cogroup(m1_Vbeta_i_keyby_h2_h1).map(lambda (x,y): (list(y[0])[0][0], x[0], x[1], gu.beta_draw(list(y[0])[0][3], list(y[1])[0][3])))
-    # print "beta_i_mean take ", m1_beta_i_draw.take(1) 
-    # print "beta_i_mean count ", m1_beta_i_draw.count() # 135
+    print "beta_i_mean take ", m1_beta_i_draw.take(1) 
+    print "beta_i_mean count ", m1_beta_i_draw.count() # 135
     
     ## -- Compute updated value of s2 to use in next section. 
     m1_beta_i_draw_group_by_h2_h1 = m1_beta_i_draw.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, beta_i_draw): (hierarchy_level2, hierarchy_level1))
@@ -215,15 +215,15 @@ def gibbs_initializer(sc, d, keyBy_groupby_h2_h1, hierarchy_level1, hierarchy_le
     # foo3 = foo2.groupByKey().map(lambda (x, y): get_s2(list(y)))
     # iteri, hierarchy_level2, m1_d_count_grpby_level2_b, s2
     m1_s2 = foo2.groupByKey().map(lambda (x, y): gtr.get_s2(list(y)))
-    # print "m1_s2 : 5 : ", m1_s2.take(1)
-    # print "m1_s2 : 5 : ", m1_s2.count() 
+    print "m1_s2 : 5 : ", m1_s2.take(1)
+    print "m1_s2 : 5 : ", m1_s2.count() 
     
     ### -- Draw h from gamma distn.  Note that h=1/(s^2)
     ## from iteri, hierarchy_level2, m1_d_count_grpby_level2_b, s2
     ## m1_h_draw = iteri, h2, h_draw
     m1_h_draw = m1_s2.map(gtr.get_h_draw)
-    #print "m1_h_draw : 5 : ", m1_h_draw.take(1)
-    #print "m1_h_draw : 5 : ", m1_h_draw.count() 
+    print "m1_h_draw : 5 : ", m1_h_draw.take(1)
+    print "m1_h_draw : 5 : ", m1_h_draw.count() 
     
     print gibbs_init_text()    
     

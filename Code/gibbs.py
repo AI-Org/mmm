@@ -85,7 +85,7 @@ def gibbs_iter(sc, begin_iter, end_iter, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta
         m1_beta_i_mean = m1_beta_i_mean.union(sc.parallelize(m1_beta_i_mean_keyBy_h2_long_next.values().reduce(add)))
         #print "count  m1_Vbeta_i_unified   ", m1_beta_i_draw_unified.count()
         #print "take 1 m1_Vbeta_i_unified ", m1_beta_i_draw_unified.take(1)
-        m1_beta_i_mean_keyBy_h2_h1 = m1_beta_i_draw.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, beta_i_mean): (hierarchy_level2, hierarchy_level1))
+        m1_beta_i_mean_keyBy_h2_h1 = m1_beta_i_mean.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, beta_i_mean): (hierarchy_level2, hierarchy_level1))
         
         # insert into beta_i, using iter=s-1 values.  Draw from mvnorm dist'n.
         print "insert into beta_i"
