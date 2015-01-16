@@ -1,10 +1,6 @@
 from numpy import matrix
 import numpy as np
 
-import numpy.random as npr
-from numpy.linalg import cholesky
-from scipy.stats import chi2
-
 # Function takes recObj is of the form of [key, <Iterable of all values tuples>]
 # returns matrix from recIter objects and returns the shape of the matrix
 
