@@ -5,8 +5,8 @@
 import gibbs_udfs as gu
 import gibbs_transformations as gtr
 
-def gibbs_init_text(model_name, source_RDD, hierarchy_level1, hierarchy_level2, p, df1, y_var, x_var_array, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals):
-    text_output = 'Done: Gibbs Sampler for model model_name is initialized.  Proceed to run updates of the sampler by using the gibbs() function.  All objects associated with this model are named with a model_name prefix.'
+def gibbs_init_text():
+    text_output = 'Done: Gibbs Sampler for model m1 is initialized.  Proceed to run updates of the sampler by using the gibbs() function.  All objects associated with this model are named with a m1 prefix.'
     return text_output
 
 def add(x,y):
