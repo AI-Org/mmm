@@ -396,80 +396,93 @@ def add(x,y):
     return (x+y)
 
 # Initialize Gibbs with initial values for future iterations
+# Pre-computing quantities that are contant throughout sampler iterations
 # Call as gi.gibbs_init_test(sc, d, keyBy_groupby_h2_h1, hierarchy_level1, hierarchy_level2, p, df1, y_var_index, x_var_indexes, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals)
-def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, hierarchy_level1, hierarchy_level2, p, df1, y_var_index, x_var_indexes, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals):
-    #if __name__ == '__main__':
-    global p_var
-    global coef_precision_prior_array_var
+def gibbs_initializer(sc, d, keyBy_groupby_h2_h1, hierarchy_level1, hierarchy_level2, p, df1, y_var_index, x_var_indexes, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals):
     
-    # sc = SparkContext(appName="gibbs_init")
-    # of the form keys, x_matrix, y_array, hierarchy_level2[1,0], hierarchy_level1[1,0]
+    # For Detailed Explanation
+    # Create array aggregated version of d.  
+    # For the response variable, collapse data from all weeks into a single array named y for each department_name-tier combo.  
+    # For the set of explanatory variables, in our case 14 explanatory variables, we collapse data from all weeks into a single array named x_matrix.  
+    # The data type of x_matrix is a 2-dimensional array.  
+    # There is one cell of x_matrix for each department_name-tier combo, and 
+    # the dimension for each x_matrix is (# of weeks of data in the department_name-tier)x(# of explanatory variables), 
+    # which equals (# of weeks of data in the department_name-tier)x(14) since we have 14 explanatory variables.  
+    # We end up with a Data Structure d_array_agg with as many rows as the number of distinct department_name-tier combos.  
+    # With the original data (with 14162 data points) of we end up with 135 records.  
+    # m1_d_array_agg : tuples of ( keys, x_matrix, y_array, hierarchy_level2[1,0], hierarchy_level1[1,0] )
     m1_d_array_agg = keyBy_groupby_h2_h1.map(create_x_matrix_y_array)
-    #  we need to make use of X'X and X'y
+    
+    #  Compute constants of X'X and X'y for computing 
+    #  m1_Vbeta_i & beta_i_mean
     #  m1_d_array_agg_constants : list of tuples of (h2, h1, xtx, xty)
     m1_d_array_agg_constants = m1_d_array_agg.map(create_xtx_matrix_xty)
-    # m1_d_array_agg_constants.saveAsTextFile("hdfs://sandbox:9000/m1_d_array_agg_constants")
     # print "m1_d_array_agg_constants take ",m1_d_array_agg_constants.take(1)
     # print "m1_d_array_agg_constants count",m1_d_array_agg_constants.count()
-    # Compute the childcount at each hierarchy level
-    # computing the number of hierarchy_level2 nodes for each of the hierarchy_level1 node
-    # think of h2 as department and h1 as the stores
-    # the following computes the number of stores in each department
-    m1_d_childcount = get_d_childcount(d)
-    #print "d_child_counts are : ", m1_d_childcount.count()
-    # since the number of weeks of data for each deparment_name-tiers is different.
-    # we wll precompute this quantity for each department_name-tier
     
+    # Compute the childcount at each hierarchy level
+    # Compute the number of children at the brand level (# of children is equal to the number of genders per brand), 
+    # Compute the number of children at the brand-gender level (# of children is equal to the number of departments per brand-gender), and 
+    # Compute the number of children at the department_name level (# of children is equal to the number tiers within each department_name).
+    # In Short the following Computs the number of hierarchy_level1 values for each of the hierarchy_level2 values
+    # for Example : Considering h2 as departments and h1 as the stores get_d_childcount computes the number of stores for each department
+    m1_d_childcount = get_d_childcount(d)
+    # print "d_child_counts take : ", m1_d_childcount.take(1)
+    # print "d_child_counts count : ", m1_d_childcount.count()
+     
+    # Not all department_name-tiers have the same number of weeks of available data (i.e. the number of data points for each department_name-tier is not the same for all department_name-tiers).  
+    # We pre-compute this quantity for each department_name-tier
     m1_d_count_grpby_level2 = get_d_count_grpby_level2(d)
-    #print "takes m1_d_count_grpby_level2 : ", m1_d_count_grpby_level2.take(1)
-    #print "count m1_d_count_grpby_level2 : ", m1_d_count_grpby_level2.count()
-    #m1_d_count_grpby_level2 = sc.parallelize(m1_d_count_grpby_level2).keyBy(lambda (hierarchy_level2, countsp): hierarchy_level2)
-    #print "Available data for each department_name-tiers", m1_d_count_grpby_level2.countByKey()
+    # print "m1_d_count_grpby_level2 take : ", m1_d_count_grpby_level2.take(1)
+    # print "m1_d_count_grpby_level2 count : ", m1_d_count_grpby_level2.count()
+    # print "Available data for each department_name-tiers", m1_d_count_grpby_level2.countByKey()
     # m1_d_count_grpby_level2.countByKey() becomes defaultdict of type int As
     # defaultdict(<type 'int'>, {u'"5"': 1569, u'"1"': 3143, u'"2"': 3150, u'"3"': 3150, u'"4"': 3150})
     m1_d_count_grpby_level2 = m1_d_count_grpby_level2.countByKey()
+    # for multinode setup we need to broadcast these values across all the nodes
     m1_d_count_grpby_level2_b = sc.broadcast(m1_d_count_grpby_level2)
-    #print "bc value", m1_d_count_grpby_level2_b.value
-    #print "bc ", m1_d_count_grpby_level2_b
     
-    keyBy_h2 = d.keyBy(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2)).groupByKey().map(create_x_matrix_y_array)
+    # Arrange d keyBy h2 or hierarchy_level2
+    d_keyBy_h2 = d.keyBy(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2)).groupByKey().map(create_x_matrix_y_array)
+    
+    # Compute OLS estimates for reference    
     if(initial_vals == "ols"):
-        # Compute OLS estimates for reference
+        # Initial values of coefficients for each department_name-tier (i).  Set crudely as OLS regression coefficients for each department_name-tier (i).
         m1_ols_beta_i = m1_d_array_agg.map(get_ols_initialvals_beta_i).keyBy(lambda (h2,h1,coff): (h2, h1))
-        #print "Coefficients for LL after keyby H2", m1_ols_beta_i.count()
-        # similarly we compute the m1_ols_beta_j which uses the RDD mapped upon only hierarchy_level2
-        m1_ols_beta_j = keyBy_h2.map(get_ols_initialvals_beta_j).keyBy(lambda (h2,coff): (h2))
-        #print "Coefficients for LL after keyby H2", m1_ols_beta_j.count()
-    # in case the initial_vals are defined as "random" we compute the exact same
-    # data structures using deviates from Uniform distribution
+        # print "Coefficients for LinearRegression ", m1_ols_beta_i.count()
+        # Initial values of coefficients for each department_name (j).  Set crudely as OLS regression coefficients for each department_name (j).
+        # Similarly we compute the m1_ols_beta_j which uses the RDD mapped upon only hierarchy_level2
+        m1_ols_beta_j = d_keyBy_h2.map(get_ols_initialvals_beta_j).keyBy(lambda (h2,coff): (h2))
+        # print "Coefficients for LinearRegression after keyby H2", m1_ols_beta_j.count()
+        
+    # In case the initial_vals are defined as "random" we compute the coefficients for each department_name-tier (i) and for each department_name (j)
+    # We compute these coefficients using deviates from Uniform distribution
     if(initial_vals == "random"):
-        #print "Draw random array samples of p elements from the uniform(-1,1) dist'n"
-        p_var = p
+        # print "Draw random array samples of p elements from the uniform(-1,1) dist'n"
         m1_ols_beta_i = m1_d_array_agg.map(get_random_initialvals_beta_i).keyBy(lambda (h2,h1,coff): (h2, h1))
-        m1_ols_beta_j = keyBy_h2.map(get_random_initialvals_beta_j).keyBy(lambda (h2,coff): (h2))
-    #-- Using the above initial values of the coefficients and drawn values of priors,
-    #   compute initial value of coefficient var-cov matrix (Vbeta_i_mu)
+        m1_ols_beta_j = d_keyBy_h2.map(get_random_initialvals_beta_j).keyBy(lambda (h2,coff): (h2))
+        
+    
+    #-- Compute m1_Vbeta_j_mu 
+    #   Using the above initial values of the coefficients and drawn values of priors,
+    #   compute initial value of coefficient var-cov matrix (Vbeta_j_mu)
     #   FOR EACH group i, with group j coefficients as priors, and
-    #   then sum then to get back J matrices
-    # computing _Vbeta_j_mu
-      
+    #   then sum them to get back Vbeta_j_mu matrices
+    # computing _Vbeta_j_mu  
     joined_i_j = create_join_by_h2_only(m1_ols_beta_i.collect(), m1_ols_beta_j.collect())
     # keyBy and groupBy will reduce the rows from 135 to 5 since there are only 5 hierarchy_level2's
-    joined_i_j_rdd = sc.parallelize(joined_i_j).keyBy(lambda (hierarchy_level2, hierarchy_level1, values_array_i, values_array_j): (hierarchy_level2)).groupByKey()
     # joined_i_j_rdd.take(1) :  (u'"5"', <pyspark.resultiterable.ResultIterable object at 0x117be50>) similarly 5 others
-    # CHECKPOINT for get_Vbeta_j_mu
-    ## checked get_Vbeta_j_mu & appears correct one,
-    ## Data Structure m1_Vbeta_j_mu is symmetric along diagonal and have same dimensions as the one in SQL.
-    #print "coefficients i and j", joined_i_j_rdd.take(1)
-    m1_Vbeta_j_mu = joined_i_j_rdd.map(lambda (x, y): (1, x, get_Vbeta_j_mu(y)))
-     
-    #print " m1_Vbeta_j_mu count ", m1_Vbeta_j_mu.count() # the actual values are 500 I am getting 135 values
+    joined_i_j_rdd = sc.parallelize(joined_i_j).keyBy(lambda (hierarchy_level2, hierarchy_level1, values_array_i, values_array_j): (hierarchy_level2)).groupByKey()
+    ## Data Structure m1_Vbeta_j_mu is symmetric along diagonal and have same dimensions as the one in HAWQ tables.
+    # print "coefficients i and j", joined_i_j_rdd.take(1)
+    m1_Vbeta_j_mu = joined_i_j_rdd.map(lambda (x, y): (1, x, get_Vbeta_j_mu(y))) 
+    #print " m1_Vbeta_j_mu count ", m1_Vbeta_j_mu.count() 
     #print " m1_Vbeta_j_mu take 1", m1_Vbeta_j_mu.take(1)
-    ###-- Draw Vbeta_inv and compute resulting sigmabeta using the above functions for each j
     
+    ###-- Draw Vbeta_inv and compute resulting sigmabeta using the above functions for each j    
     m1_Vbeta_j_mu_pinv = m1_Vbeta_j_mu.map(get_m1_Vbeta_j_mu_pinv).keyBy(lambda (seq, hierarchy_level2, Vbeta_inv_j_draw) : (hierarchy_level2)).groupByKey() 
     m1_d_childcount_groupBy_h2 = m1_d_childcount.keyBy(lambda (hierarchy_level2, n1) : hierarchy_level2).groupByKey()
-    #print "m1_d_childcount_groupBy_h2 ", m1_d_childcount_groupBy_h2.collect()
+    #  print "m1_d_childcount_groupBy_h2 ", m1_d_childcount_groupBy_h2.collect()
     #  here vals are iter, h2,
     #  y[0][0] = iter or seq from m1_Vbeta_j_mu_pinv
     #  y[0][1] = h2 from in m1_Vbeta_j_mu_pinv
@@ -582,7 +595,6 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, hierarchy_level1, hierarchy_leve
     foo2 = foo.map(lambda (x, y): get_sum_beta_i_draw_x2(y)).keyBy(lambda (hierarchy_level2, hierarchy_level1, iteri, ssr, m1_d_count_grpby_level2_b): (hierarchy_level2, iteri, m1_d_count_grpby_level2_b))
     #print "foo2 : 5 : ", foo2.take(1)
     #print "foo2 : 5 : ", foo2.count()
-    
     #foo3 = foo2.groupByKey().map(lambda (x, y): get_s2(list(y)))
     # iteri, hierarchy_level2, m1_d_count_grpby_level2_b, s2
     m1_s2 = foo2.groupByKey().map(lambda (x, y): get_s2(list(y)))
@@ -595,7 +607,7 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, hierarchy_level1, hierarchy_leve
     m1_h_draw = m1_s2.map(get_h_draw)
     #print "m1_h_draw : 5 : ", m1_h_draw.take(1)
     #print "m1_h_draw : 5 : ", m1_h_draw.count() 
-
+    #return (m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw , m1_ols_beta_i ,m1_ols_beta_j ,m1_s2 ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_j_mu)
     ##################################################################################   Gibbs   ##################################################################################
     for s in range(2, 101):
         print "Computing Samples for next iterations", s
@@ -793,23 +805,10 @@ def gibbs_init_test(sc, d, keyBy_groupby_h2_h1, hierarchy_level1, hierarchy_leve
         
         ## Creating vertical draws
         ## -- Convert the array-based draws from the Gibbs Sampler into a "vertically long" format by unnesting the arrays.
-        
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-   
-
-    
-    
+    return (m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw , m1_ols_beta_i ,m1_ols_beta_j ,m1_s2 ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_j_mu)
+  
+ 
 
     
     
