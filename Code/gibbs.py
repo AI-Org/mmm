@@ -7,7 +7,7 @@ import gibbs_udfs as gu
 import gibbs_transformations as gtr
 
 def gibbs_iteration_text():
-    text_output = 'Done: Gibbs Sampler for model gibbs  is initialized.  Proceed to run updates of the sampler by using the gibbs() function.  All objects associated with this model are named with a m1 prefix.'
+    text_output = 'Done: All requested Gibbs Sampler updates are complete.  All objects associated with this model are named with a m1 prefix.'   
     return text_output
 
 def add(x,y):
@@ -219,6 +219,6 @@ def gibbs_iter(sc, begin_iter, end_iter, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta
         ## Creating vertical draws
         ## -- Convert the array-based draws from the Gibbs Sampler into a "vertically long" format by unnesting the arrays.
         # pausing over prettyfying the DS 
-        print gibbs_iteration_text()
+    print gibbs_iteration_text()
     
     return (m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw , m1_ols_beta_i ,m1_ols_beta_j ,m1_s2 ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_j_mu)
