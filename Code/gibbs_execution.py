@@ -74,11 +74,11 @@ if __name__ == "__main__":
     
     # coef_means_prior_array' = Priors for coefficient means at the upper-most level of the hierarchy. 
     # coef_means_prior_array=sys.argv[5] if len(sys.argv) > 5 else [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-    coef_means_prior_array = sys.argv[8] if len(sys.argv) > 8 else [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    coef_means_prior_array = sys.argv[8] if len(sys.argv) > 8 else [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
     
     # coef_precision_prior_array = Priors for coefficient covariances at the upper-most level of the hierarchy. 
     # coef_precision_prior_array=sys.argv[5] if len(sys.argv) > 5 else [1,1,1,1,1,1,1,1,1,1,1,1,1]
-    coef_precision_prior_array = sys.argv[9] if len(sys.argv) > 9 else [1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+    coef_precision_prior_array = sys.argv[9] if len(sys.argv) > 9 else [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
     
     sample_size_deflator = sys.argv[10] if len(sys.argv) > 10 else 1
     
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     end_iter = sys.argv[13] if len(sys.argv) > 13 else 4    
     
     # Calling the iterative gibbs algorithm 
-    (m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw ,m1_s2 ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_j_mu) = gibbs.gibbs_iter(sc, begin_iter, end_iter, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw ,m1_s2 ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_j_mu)
+    (m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw ,m1_s2 ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_j_mu, m1_beta_i_draw_long) = gibbs.gibbs_iter(sc, begin_iter, end_iter, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw ,m1_s2 ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_j_mu)
     
-    
+    # call gibbs summary functions
     sc.stop()

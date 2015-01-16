@@ -193,8 +193,8 @@ def gibbs_initializer(sc, d, keyBy_groupby_h2_h1, hierarchy_level1, hierarchy_le
     # JOINED_m1_beta_i_mean_WITH_m1_Vbeta_i
     # m1_beta_i_draw : (iter, h2, h1, beta_i_draw)
     m1_beta_i_draw = m1_beta_i_mean_keyBy_h2_h1.cogroup(m1_Vbeta_i_keyby_h2_h1).map(lambda (x,y): (list(y[0])[0][0], x[0], x[1], gu.beta_draw(list(y[0])[0][3], list(y[1])[0][3])))
-    print "beta_i_mean take ", m1_beta_i_draw.take(1) 
-    print "beta_i_mean count ", m1_beta_i_draw.count() # 135
+    print "m1_beta_i_draw take ", m1_beta_i_draw.take(1) 
+    print "m1_beta_i_draw count ", m1_beta_i_draw.count() # 135
     
     ## -- Compute updated value of s2 to use in next section. 
     m1_beta_i_draw_group_by_h2_h1 = m1_beta_i_draw.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, beta_i_draw): (hierarchy_level2, hierarchy_level1))

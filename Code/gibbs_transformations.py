@@ -15,8 +15,8 @@ df1_var = 15
 # Looks like there was a one in row or
 # column somewhere in the computations that was missed out. I was to proceed without any
 # corrections at this point of time and revisit this problem again.
-coef_precision_prior_array_var = [1,1,1,1,1,1,1,1,1,1,1,1,1]
-coef_means_prior_array_var = [0,0,0,0,0,0,0,0,0,0,0,0,0]
+coef_precision_prior_array_var = [1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+coef_means_prior_array_var = [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 sample_size_deflator = 1
 
 def create_x_matrix_y_array(recObj):
@@ -32,6 +32,7 @@ def create_x_matrix_y_array(recObj):
 
     mat = numpy.matrix([r for r in recIter])
     x_matrix = mat[:,5:18].astype(float)
+    x_matrix = numpy.append([[1 for _ in range(0,len(x_matrix))]], x_matrix.T,0).T
     y_array = mat[:,4].astype(float)
     hierarchy_level2 =  mat[:,2]
     hierarchy_level1 = mat[:,1]
@@ -162,7 +163,7 @@ def get_m1_Vbeta_j_mu_pinv(obj):
 
 def pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, n1, coef_precision_prior_array):
     import numpy as np
-    temp = gu.matrix_scalarmult_plr(Vbeta_inv_j_draw, n1)
+    temp = gu.matrix_scalarmult_plr(Vbeta_inv_j_draw, n1) # (14 X 14)
     temp_add = gu.matrix_scalarmult_plr(temp, gu.matrix_diag_plr(coef_precision_prior_array))
     return np.linalg.pinv(temp_add)
     
@@ -388,3 +389,21 @@ def get_h_draw(x):
     s2 = x[3]
     h_draw = gu.h_draw(1.0/(s2), m1_d_count_grpby_level2_b/sample_size_deflator)[0]
     return (iteri, hierarchy_level2, h_draw)
+
+# returns extended beta_draw values pertaining to each driver combination of h2, h1 and 
+# dependable variable, returned structure is to be used in summary functions
+# iter, h2, h1, beta_Draw, x_array_driver, hierarchy_level2_hierarchy_level1_driver  
+def get_beta_i_draw_long(x):
+    # x : s, h2, h1, beta_draw 
+    rows = []
+    s = x[0]
+    h2 = x[1]
+    h1 = x[2]
+    beta_draw = x[3]
+    # where each row : s, h2, h1, beta_draw[i], x_array[i]
+    x_array = ['1', 'x1','x2','x3','x4','x5','x6','x7','x8','x9','x10','x11','x12','x13']
+    for i in range(0,len(x_array)):
+        hierarchy_level2_hierarchy_level1_driver = h2+"-:-"+h1+"-:-"+ x_array[i]
+        row = (s, h2, h1, beta_draw[:,i][0], x_array[i], hierarchy_level2_hierarchy_level1_driver)
+        rows.append(row)
+    return rows

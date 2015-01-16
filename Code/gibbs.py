@@ -218,7 +218,14 @@ def gibbs_iter(sc, begin_iter, end_iter, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta
         
         ## Creating vertical draws
         ## -- Convert the array-based draws from the Gibbs Sampler into a "vertically long" format by unnesting the arrays.
-        # pausing over prettyfying the DS 
+        # lists of tuples : s, h2, h1, beta_i_draw[:,i][0], driver_x_array[i], hierarchy_level2_hierarchy_level1_driver        
+        m1_beta_i_draw_long = m1_beta_i_draw.map(gtr.get_beta_i_draw_long)  
+        print "m1_beta_i_draw_long count :", m1_beta_i_draw_long.count()
+        print "m1_beta_i_draw_long take :", m1_beta_i_draw_long.take(1)
+        m1_beta_i_draw_long_keyBy_h2_h1_driver = m1_beta_i_draw_long.keyBy(lambda (s, h2, h1, beta_i_draw, driver, h2_h1_driver): h2_h1_driver)
+        print "m1_beta_i_draw_long_keyBy_h2_h1_driver count :", m1_beta_i_draw_long_keyBy_h2_h1_driver.count()
+        print "m1_beta_i_draw_long_keyBy_h2_h1_driver take :", m1_beta_i_draw_long_keyBy_h2_h1_driver.take(1)
+        
     print gibbs_iteration_text()
     
-    return (m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw , m1_ols_beta_i ,m1_ols_beta_j ,m1_s2 ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_j_mu)
+    return (m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw  ,m1_s2 ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_j_mu, m1_beta_i_draw_long)
