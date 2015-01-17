@@ -29,8 +29,7 @@ def m1_summary_geweke_conv_diag_detailed(hierarchy_level1, hierarchy_level2, raw
     Joined_geweke_part_10_percent_with_geweke_part_40_percent = geweke_part_10_percent.cogroup(geweke_part_40_percent)
     m1_summary_geweke_conv_diag_detailed = Joined_geweke_part_10_percent_with_geweke_part_40_percent.map(lambda (x,y): (x, list(y[0])[0][0], list(y[0])[0][1], list(y[1])[0][0], list(y[1])[0][1], str.get_cd_beta_i(list(y[0])[0][0], list(y[0])[0][1], list(y[1])[0][0], list(y[1])[0][1])))
     
-    print "m1_summary_geweke_conv_diag_detailed count", m1_summary_geweke_conv_diag_detailed.count()
-    print "m1_summary_geweke_conv_diag_detailed take 1", m1_summary_geweke_conv_diag_detailed.take(1)
+    
     return m1_summary_geweke_conv_diag_detailed
     
     
