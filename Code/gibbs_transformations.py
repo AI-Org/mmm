@@ -400,10 +400,37 @@ def get_beta_i_draw_long(x):
     h2 = x[1]
     h1 = x[2]
     beta_draw = x[3]
-    # where each row : s, h2, h1, beta_draw[i], x_array[i]
+    # where each row : s, h2, h1, beta_draw[i], x_array[i], h2_h1_driver
     x_array = ['1', 'x1','x2','x3','x4','x5','x6','x7','x8','x9','x10','x11','x12','x13']
     for i in range(0,len(x_array)):
         hierarchy_level2_hierarchy_level1_driver = h2+"-:-"+h1+"-:-"+ x_array[i]
         row = (s, h2, h1, beta_draw[:,i][0], x_array[i], hierarchy_level2_hierarchy_level1_driver)
         rows.append(row)
     return rows
+    
+def compute_se_sa_i_avg_sa_i(y, raw_iters, burn_in):
+    import numpy as np
+    # s, h2, h1, beta_draw[i], x_array_i, h2_h1_driver
+    arrays = list(y)[0]
+    beta_i_draw_array = []
+    for row in arrays:
+        beta_i_draw_array.append(row[3])
+    avg_sa_i = np.average(beta_i_draw_array)
+    stddev_samp = np.std(beta_i_draw_array)
+    se_sa_i = stddev_samp/ np.sqrt(.1 * (raw_iters - burn_in))
+    return (se_sa_i, avg_sa_i)
+    
+def compute_se_sc_i_avg_sc_i(y, raw_iters, burn_in):
+    import numpy as np
+    # s, h2, h1, beta_draw[i], x_array_i, h2_h1_driver
+    arrays = list(y)[0]
+    beta_i_draw_array = []
+    for row in arrays:
+        beta_i_draw_array.append(row[3])
+    avg_sc_i = np.average(beta_i_draw_array)
+    stddev_samp = np.std(beta_i_draw_array)
+    se_sc_i = stddev_samp/ np.sqrt((raw_iters - burn_in) - .6(raw_iters - burn_in))
+    return (se_sc_i, avg_sc_i)
+    
+    
+        
