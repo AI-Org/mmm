@@ -4,6 +4,7 @@ import re
 from pyspark import SparkContext
 import gibbs_init as gi
 import gibbs
+import gibbs_summary as gis
 
 def parseData(data):
     columns = re.split(",", data)
@@ -93,5 +94,13 @@ if __name__ == "__main__":
     # Calling the iterative gibbs algorithm 
     (m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw  ,m1_s2 ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_j_mu, m1_beta_i_draw_long_keyBy_h2_h1_driver) = gibbs.gibbs_iter(sc, begin_iter, end_iter, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw ,m1_s2 ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_j_mu)
     
+    raw_iters = sys.argv[14] if len(sys.argv) > 14 else 100
+    
+    burn_in = sys.argv[15] if len(sys.argv) > 15 else 0     
+    
     # call gibbs summary functions
+    m1_summary_geweke_conv_diag_detailed = gis.m1_summary_geweke_conv_diag_detailed(hierarchy_level1, hierarchy_level2, raw_iters, burn_in, m1_beta_i_draw_long_keyBy_h2_h1_driver)
+    print "m1_summary_geweke_conv_diag_detailed count", m1_summary_geweke_conv_diag_detailed.count()
+    print "m1_summary_geweke_conv_diag_detailed take 1", m1_summary_geweke_conv_diag_detailed.take(1)
+    
     sc.stop()

@@ -31,6 +31,7 @@ def m1_summary_geweke_conv_diag_detailed(hierarchy_level1, hierarchy_level2, raw
     
     print "m1_summary_geweke_conv_diag_detailed count", m1_summary_geweke_conv_diag_detailed.count()
     print "m1_summary_geweke_conv_diag_detailed take 1", m1_summary_geweke_conv_diag_detailed.take(1)
+    return m1_summary_geweke_conv_diag_detailed
     
     
     
