@@ -178,7 +178,7 @@ def gibbs_iter(sc, begin_iter, end_iter, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta
         #print "take 1 m1_beta_mu_j_draw_next ", m1_beta_mu_j_draw_next.take(1)
         m1_beta_mu_j_draw = m1_beta_mu_j_draw_next.union(m1_beta_mu_j_draw_next)
         # beta_mu_j_draw keyed by h2
-        # m1_beta_mu_j_draw_keyBy_h2 = m1_beta_mu_j_draw.keyBy(lambda (iter, hierarchy_level2, beta_mu_j_draw): hierarchy_level2)
+        m1_beta_mu_j_draw_keyBy_h2 = m1_beta_mu_j_draw.keyBy(lambda (iter, hierarchy_level2, beta_mu_j_draw): hierarchy_level2)
         
         # Update values of s2
         ##-- Compute updated value of s2 to use in next section.
