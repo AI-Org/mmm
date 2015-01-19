@@ -432,5 +432,10 @@ def compute_se_sc_i_avg_sc_i(y, raw_iters, burn_in):
     se_sc_i = stddev_samp/ np.sqrt((raw_iters - burn_in) - .6 * (raw_iters - burn_in))
     return (se_sc_i, avg_sc_i)
     
+def get_cd_beta_i(se_sa_i, avg_sa_i, se_sc_i, avg_sc_i):
+    cd_beta_i = (avg_sa_i-avg_sc_i)/(se_sa_i+se_sc_i)
+    return cd_beta_i
+    
+    
     
         
