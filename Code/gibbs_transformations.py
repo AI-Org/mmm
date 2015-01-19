@@ -411,9 +411,9 @@ def get_beta_i_draw_long(x):
 def compute_se_sa_i_avg_sa_i(y, raw_iters, burn_in):
     import numpy as np
     # s, h2, h1, beta_draw[i], x_array_i, h2_h1_driver
-    arrays = list(y)[0]
+   
     beta_i_draw_array = []
-    for row in arrays:
+    for row in y:
         beta_i_draw_array.append(row[3])
     avg_sa_i = np.average(beta_i_draw_array)
     stddev_samp = np.std(beta_i_draw_array)
@@ -423,13 +423,13 @@ def compute_se_sa_i_avg_sa_i(y, raw_iters, burn_in):
 def compute_se_sc_i_avg_sc_i(y, raw_iters, burn_in):
     import numpy as np
     # s, h2, h1, beta_draw[i], x_array_i, h2_h1_driver
-    arrays = list(y)[0]
+    
     beta_i_draw_array = []
-    for row in arrays:
+    for row in y:
         beta_i_draw_array.append(row[3])
     avg_sc_i = np.average(beta_i_draw_array)
     stddev_samp = np.std(beta_i_draw_array)
-    se_sc_i = stddev_samp/ np.sqrt((raw_iters - burn_in) - .6(raw_iters - burn_in))
+    se_sc_i = stddev_samp/ np.sqrt((raw_iters - burn_in) - .6 * (raw_iters - burn_in))
     return (se_sc_i, avg_sc_i)
     
     
