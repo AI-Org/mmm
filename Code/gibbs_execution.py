@@ -107,5 +107,9 @@ if __name__ == "__main__":
     m1_summary_geweke_conv_diag_detailed = gis.m1_summary_geweke_conv_diag_detailed(hierarchy_level1, hierarchy_level2, raw_iters, burn_in, m1_beta_i_draw_long)
     print "m1_summary_geweke_conv_diag_detailed count", m1_summary_geweke_conv_diag_detailed.count()
     print "m1_summary_geweke_conv_diag_detailed take 1", m1_summary_geweke_conv_diag_detailed.take(1)
+
+    cd_pct = gis.m1_summary_geweke_conv_diag(m1_summary_geweke_conv_diag_detailed)
+    print "Count number of coefficients where the CD falls outside of the 95% interval", cd_pct    
     
+    print "Done: Gibbs Sampler draws have been summarized.  All objects associated with this model are named with a m1 prefix."
     sc.stop()
