@@ -1,19 +1,7 @@
-from numpy import matrix
 import numpy as np
 
-# Function takes recObj is of the form of [key, <Iterable of all values tuples>]
-# returns matrix from recIter objects and returns the shape of the matrix
-
-def createMatrix(recObj):
-    """
-       Take an iterable of records, where the key corresponds to a certain age group
-       Create a numpy matrix and return the shape of the matrix
-    """
-    recIter = recObj[1]
-    #Each entry in recIter is an iterable of <values tuple>
-    mat = matrix([r for r in recIter])
-    return mat.shape
-
+# Function to compute median of any array.
+# It takes "anyarray" of type numpy array. 
 def final_median(anyarray):
     return np.median(anyarray)
 
