@@ -64,6 +64,8 @@ if __name__ == "__main__":
                        --py-files gibbs_init.py,gibbs_udfs.py,wishart.py,nearPD.py,gibbs.py,gibbs_transformations.py,gibbs_summary.py 
                        --conf spark.shuffle.spill=false --conf "spark.executor.extraJavaOptions=-XX:+UseCompressedOops"  gibbs_execution.py
                        Does not run with 4 g of driver-memory and 2 or more executor cores.
+        spark-submit  --master yarn-client --py-files gibbs_init.py,gibbs_udfs.py,wishart.py,nearPD.py,gibbs.py,gibbs_transformations.py,gibbs_summary.py --conf spark.shuffle.spill=false --conf "spark.executor.extraJavaOptions=-XX:+UseCompressedOops"  gibbs_execution.py
+                       
     """
     sc = SparkContext(appName="GibbsSampler")
     
