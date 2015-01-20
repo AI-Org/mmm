@@ -18,7 +18,7 @@ def gibbs_iter(sc, begin_iter, end_iter, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta
     
     m1_beta_mu_j_draw_keyBy_h2 = m1_beta_mu_j_draw.keyBy(lambda (iter, hierarchy_level2, beta_mu_j_draw): hierarchy_level2).cache()
     m1_d_array_agg_key_by_h2_h1 = m1_d_array_agg.keyBy(lambda (keys, x_matrix, y_array, hierarchy_level2, hierarchy_level1) : (keys[0], keys[1])).cache() 
-    m1_d_count_grpby_level2_b = sc.broadcast(m1_d_count_grpby_level2).cache()
+    m1_d_count_grpby_level2_b = sc.broadcast(m1_d_count_grpby_level2)
     m1_d_array_agg_constants_key_by_h2_h1 = m1_d_array_agg_constants.keyBy(lambda (h2, h1, xtx, xty): (h2, h1)).cache()
     m1_d_array_agg_constants_key_by_h2 = m1_d_array_agg_constants.keyBy(lambda (h2, h1, xtx, xty): (h2)).cache()
     m1_d_childcount_groupBy_h2 = m1_d_childcount.keyBy(lambda (hierarchy_level2, n1) : hierarchy_level2).cache()
