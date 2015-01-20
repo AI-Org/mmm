@@ -27,6 +27,9 @@ def gibbs_iter(sc, begin_iter, end_iter, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta
     # We dont need to partition m1_d_childcount_groupBy_h2 as it is a small data structure which can be shipped to each node already having the persisted data.
     m1_d_childcount_groupBy_h2 = m1_d_childcount.keyBy(lambda (hierarchy_level2, n1) : hierarchy_level2)
     
+    # optimization for m1_beta_i
+    m1_h_draw_previous_iteration = m1_h_draw
+    
     for s in range(begin_iter, end_iter+1):
         
         ## Inserting into m1_beta_i
@@ -55,7 +58,7 @@ def gibbs_iter(sc, begin_iter, end_iter, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta
         # compute next values of m1_Vbeta_i : (h2, [(count, hierarchy_level2, hierarchy_level1, Vbeta_i)])
         m1_Vbeta_i_keyBy_h2_long_next = m1_d_array_agg_constants_key_by_h2_join_joined_simplified.map(lambda (x,y): (x, gtr.get_Vbeta_i_next(y, s)))
         # the Unified table is the actual table that reflects all the rows of m1_Vbeta_i in correct format.
-        m1_Vbeta_i_keyBy_h2_long_next_cached = sc.parallelize(m1_Vbeta_i_keyBy_h2_long_next.values().reduce(add))
+        m1_Vbeta_i_keyBy_h2_long_next_cached = sc.parallelize(m1_Vbeta_i_keyBy_h2_long_next.values().reduce(add),135)
         m1_Vbeta_i = m1_Vbeta_i.union(m1_Vbeta_i_keyBy_h2_long_next_cached).persist(StorageLevel.DISK_ONLY)
         #print "count  m1_Vbeta_i_unified   ", m1_Vbeta_i_unified.count()
         #print "take 1 m1_Vbeta_i_unified ", m1_Vbeta_i_unified.take(1)
@@ -65,7 +68,8 @@ def gibbs_iter(sc, begin_iter, end_iter, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta
         ### Inserting into beta_i_mean
         print "Inserting into beta_i_mean"
         #m1_Vbeta_i_unified_filter_iter_s = m1_Vbeta_i.filter(lambda (i, hierarchy_level2, hierarchy_level1, Vbeta_i) : i == s)
-        m1_Vbeta_i_keyby_h2_h1_current_iteration = m1_Vbeta_i_keyBy_h2_long_next_cached.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, Vbeta_i): (hierarchy_level2, hierarchy_level1)).partitionBy(135).cache()
+        # for m1_Vbeta_i_keyby_h2_h1_current_iteration dont want to persist the current iterations in memory as it is a relatively small data structure and can be moved across nodes where keyed partitions live
+        m1_Vbeta_i_keyby_h2_h1_current_iteration = m1_Vbeta_i_keyBy_h2_long_next_cached.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, Vbeta_i): (hierarchy_level2, hierarchy_level1))
         #print "count  m1_Vbeta_i_keyby_h2_h1   ", m1_Vbeta_i_keyby_h2_h1.count()
         #print "take 1 m1_Vbeta_i_keyby_h2_h1 ", m1_Vbeta_i_keyby_h2_h1.take(1)    
         #  JOINED_m1_Vbeta_i_keyby_h2_h1_WITH_m1_d_array_agg_constants_key_by_h2_h1 of tuples : hierarchy_level2, hierarchy_level1, Vbeta_i,xty 
@@ -187,7 +191,7 @@ def gibbs_iter(sc, begin_iter, end_iter, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta
         m1_beta_mu_j_draw_next = Joined_m1_beta_mu_j_next_keyBy_h2_WITH_m1_Vbeta_inv_Sigmabeta_j_draw_next_keyBy_h2.map(gtr.get_beta_draw)
         #print "count  m1_beta_mu_j_draw_next   ", m1_beta_mu_j_draw_next.count()
         #print "take 1 m1_beta_mu_j_draw_next ", m1_beta_mu_j_draw_next.take(1)
-        m1_beta_mu_j_draw = m1_beta_mu_j_draw_next.union(m1_beta_mu_j_draw_next)
+        m1_beta_mu_j_draw = m1_beta_mu_j_draw.union(m1_beta_mu_j_draw_next)
         # beta_mu_j_draw keyed by h2
         m1_beta_mu_j_draw_keyBy_h2 = m1_beta_mu_j_draw.keyBy(lambda (iter, hierarchy_level2, beta_mu_j_draw): hierarchy_level2)
         
