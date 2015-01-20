@@ -28,12 +28,12 @@ def gibbs_initializer(sc, d, keyBy_groupby_h2_h1, hierarchy_level1, hierarchy_le
     # We end up with a Data Structure d_array_agg with as many rows as the number of distinct department_name-tier combos.  
     # With the original data (with 14162 data points) of we end up with 135 records.  
     # m1_d_array_agg : tuples of ( keys, x_matrix, y_array, hierarchy_level2[1,0], hierarchy_level1[1,0] )
-    m1_d_array_agg = keyBy_groupby_h2_h1.map(gtr.create_x_matrix_y_array)
+    m1_d_array_agg = keyBy_groupby_h2_h1.map(gtr.create_x_matrix_y_array).cache()
     
     #  Compute constants of X'X and X'y for computing 
     #  m1_Vbeta_i & beta_i_mean
     #  m1_d_array_agg_constants : list of tuples of (h2, h1, xtx, xty)
-    m1_d_array_agg_constants = m1_d_array_agg.map(gtr.create_xtx_matrix_xty)
+    m1_d_array_agg_constants = m1_d_array_agg.map(gtr.create_xtx_matrix_xty).cache()
     # print "m1_d_array_agg_constants take ",m1_d_array_agg_constants.take(1)
     # print "m1_d_array_agg_constants count",m1_d_array_agg_constants.count()
     
@@ -43,13 +43,13 @@ def gibbs_initializer(sc, d, keyBy_groupby_h2_h1, hierarchy_level1, hierarchy_le
     # Compute the number of children at the department_name level (# of children is equal to the number tiers within each department_name).
     # In Short the following Computs the number of hierarchy_level1 values for each of the hierarchy_level2 values
     # for Example : Considering h2 as departments and h1 as the stores get_d_childcount computes the number of stores for each department
-    m1_d_childcount = gtr.get_d_childcount(d)
+    m1_d_childcount = gtr.get_d_childcount(d).cache()
     # print "d_child_counts take : ", m1_d_childcount.take(1)
     # print "d_child_counts count : ", m1_d_childcount.count()
      
     # Not all department_name-tiers have the same number of weeks of available data (i.e. the number of data points for each department_name-tier is not the same for all department_name-tiers).  
     # We pre-compute this quantity for each department_name-tier
-    m1_d_count_grpby_level2 = gtr.get_d_count_grpby_level2(d)
+    m1_d_count_grpby_level2 = gtr.get_d_count_grpby_level2(d).cache()
     # print "m1_d_count_grpby_level2 take : ", m1_d_count_grpby_level2.take(1)
     # print "m1_d_count_grpby_level2 count : ", m1_d_count_grpby_level2.count()
     # print "Available data for each department_name-tiers", m1_d_count_grpby_level2.countByKey()
@@ -165,7 +165,7 @@ def gibbs_initializer(sc, d, keyBy_groupby_h2_h1, hierarchy_level1, hierarchy_le
     # print "take 1 m1_Vbeta_i", m1_Vbeta_i.take(1)
       
     # -- Compute beta_i_mean
-    m1_Vbeta_i = sc.parallelize(m1_Vbeta_i_keyBy_h2_long.values().reduce(add))
+    m1_Vbeta_i = sc.parallelize(m1_Vbeta_i_keyBy_h2_long.values().reduce(add)).cache()
     m1_Vbeta_i_keyby_h2_h1 = m1_Vbeta_i.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, Vbeta_i): (hierarchy_level2, hierarchy_level1))
     m1_d_array_agg_constants_key_by_h2_h1 = m1_d_array_agg_constants.keyBy(lambda (h2, h1, xtx, xty): (h2, h1))
     # JOINED_m1_Vbeta_i_keyby_h2_h1_WITH_m1_d_array_agg_constants_key_by_h2_h1 of tuples : hierarchy_level2, hierarchy_level1, Vbeta_i,xty

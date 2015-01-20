@@ -6,6 +6,15 @@ import gibbs_init as gi
 import gibbs
 import gibbs_summary as gis
 
+# Following the bug that states as of 1/19/2015: "Calling cache() after RDDs are pipelined has no effect in PySpark"
+## https://issues.apache.org/jira/browse/SPARK-3105
+# Note that cache() works properly if we call it before performing any other transformations on the RDD:
+# At this time, for pyspark, its only statically decided whether to cache() the pipelined RDD and not dynamically decided whether to cache when we perform actions
+
+# Importance has been given to laying out the data structures in most optimal way,
+# So as to minimize the network traffic in order to improve performance
+
+
 def parseData(data):
     columns = re.split(",", data)
     return columns 
