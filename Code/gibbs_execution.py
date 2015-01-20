@@ -49,7 +49,7 @@ if __name__ == "__main__":
                           Effectively decreases the precision of the data on the final estimated coefficients.  
                           For example, specifying a value of 10 for 'sample_size_deflator' would very roughly decrease the size and 
                           precision of the sample perceived by the Gibbs Sampler by a factor of 10.  
-         run : spark-submit --py-files gibbs_init.py,gibbs_udfs.py,wishart.py,nearPD.py gibbs_execution.py
+         run : spark-submit --py-files  gibbs_init.py,gibbs_udfs.py,wishart.py,nearPD.py,gibbs.py,gibbs_transformations.py,gibbs_summary.py gibbs_execution.py
          run as yarn-client :
          spark-submit  --master yarn-client --driver-memory 1g --executor-memory 4g --executor-cores 1 
                        --py-files gibbs_init.py,gibbs_udfs.py,wishart.py,nearPD.py,gibbs.py,gibbs_transformations.py,gibbs_summary.py 
