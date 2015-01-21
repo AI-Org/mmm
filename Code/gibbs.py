@@ -28,21 +28,32 @@ def gibbs_iter(sc, begin_iter, end_iter, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta
     m1_d_childcount_groupBy_h2 = m1_d_childcount.keyBy(lambda (hierarchy_level2, n1) : hierarchy_level2)
     
     # optimization for m1_beta_i
-    m1_h_draw_previous_iteration = m1_h_draw
+    m1_h_draw_previous_iteration = m1_h_draw.keyBy(lambda (iteri, h2, h_draw): h2)
+    m1_Vbeta_inv_Sigmabeta_j_draw_previous_iteration = m1_Vbeta_inv_Sigmabeta_j_draw.keyBy(lambda (iteri, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): h2)
     
     for s in range(begin_iter, end_iter+1):
         
         ## Inserting into m1_beta_i
         print "Inserting into m1_beta_i"
-        m1_h_draw_filter_by_iteration = m1_h_draw.filter(lambda (iteri, h2, h_draw): iteri == s - 1 ).keyBy(lambda (iteri, h2, h_draw): h2)
+        
+        ## optimization for m1_h_draw_filter_by_iteration
+        ## m1_h_draw = iteri, h2, h_draw
+        # instead of using m1_h_draw_filter_by_iteration we can use the m1_h_draw_previous_iteration which is already keyed by h2.
+        # m1_h_draw_previous_iteration = m1_h_draw_filter_by_iteration = m1_h_draw.filter(lambda (iteri, h2, h_draw): iteri == s - 1 ).keyBy(lambda (iteri, h2, h_draw): h2)
         #print "m1_h_draw_filter_by_iteration", m1_h_draw_filter_by_iteration.collect()
-        m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration = m1_Vbeta_inv_Sigmabeta_j_draw.filter(lambda (iteri, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): iteri == s - 1 ).keyBy(lambda (iteri, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): h2)
+        
+        # applying the same previous iteration trick here that we applied for m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration  
+        # We can use m1_Vbeta_inv_Sigmabeta_j_draw_previous_iteration instead of m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration
+        # m1_Vbeta_inv_Sigmabeta_j_draw_previous_iteration = m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration = m1_Vbeta_inv_Sigmabeta_j_draw.filter(lambda (iteri, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): iteri == s - 1 ).keyBy(lambda (iteri, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): h2)
+        
+              
         # filter m1_h_draw taking only |s| -1 into account
-        m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration_join_m1_h_draw_filter_by_iteration = m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration.cogroup(m1_h_draw_filter_by_iteration)
+        m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration_join_m1_h_draw_filter_by_iteration = m1_Vbeta_inv_Sigmabeta_j_draw_previous_iteration.cogroup(m1_h_draw_previous_iteration)
         
         # Creating a new structure joined_simplified : iteri, h2, Vbeta_inv_j_draw, h_draw, which is a simplified version of what the original structure looks.
         joined_simplified = m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration_join_m1_h_draw_filter_by_iteration.map(lambda (x,y): (list(y[0])[0][0], x, list(y[0])[0][3], list(y[1])[0][2]))
         joined_simplified_key_by_h2 = joined_simplified.keyBy(lambda (iteri, h2, Vbeta_inv_j_draw, h_draw): h2)
+        
         ## m1_d_array_agg_constants is RDD of tuples h2, h1, xtx, xty
         ## joined_simplified is RDD of tuples h2 -> iteri, h2, Vbeta_inv_j_draw, h_draw 
         # join the m1_d_array_agg_constants_key_by_h2 with join_simplified
@@ -59,7 +70,7 @@ def gibbs_iter(sc, begin_iter, end_iter, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta
         m1_Vbeta_i_keyBy_h2_long_next = m1_d_array_agg_constants_key_by_h2_join_joined_simplified.map(lambda (x,y): (x, gtr.get_Vbeta_i_next(y, s)))
         # the Unified table is the actual table that reflects all the rows of m1_Vbeta_i in correct format.
         m1_Vbeta_i_keyBy_h2_long_next_cached = sc.parallelize(m1_Vbeta_i_keyBy_h2_long_next.values().reduce(add),135)
-        m1_Vbeta_i = m1_Vbeta_i.union(m1_Vbeta_i_keyBy_h2_long_next_cached).persist(StorageLevel.DISK_ONLY)
+        m1_Vbeta_i = m1_Vbeta_i.union(m1_Vbeta_i_keyBy_h2_long_next_cached)
         #print "count  m1_Vbeta_i_unified   ", m1_Vbeta_i_unified.count()
         #print "take 1 m1_Vbeta_i_unified ", m1_Vbeta_i_unified.take(1)
         #m1_Vbeta_i_keyby_h2_h1 = m1_Vbeta_i.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, Vbeta_i): (hierarchy_level2, hierarchy_level1))
@@ -77,7 +88,7 @@ def gibbs_iter(sc, begin_iter, end_iter, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta
         JOINED_m1_Vbeta_i_keyby_h2_h1_WITH_m1_d_array_agg_constants_key_by_h2_h1 = m1_Vbeta_i_keyby_h2_h1_current_iteration.cogroup(m1_d_array_agg_constants_key_by_h2_h1).map(lambda (x,y): (list(y[0])[0][1], list(y[0])[0][2], list(y[0])[0][3], list(y[1])[0][3]))
         JOINED_part_1_by_keyBy_h2 = JOINED_m1_Vbeta_i_keyby_h2_h1_WITH_m1_d_array_agg_constants_key_by_h2_h1.keyBy(lambda (hierarchy_level2, hierarchy_level1, Vbeta_i, xty): hierarchy_level2)
         
-        # m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration joined with m1_beta_mu_j_draw_by_previous_iteration
+        # m1_Vbeta_inv_Sigmabeta_j_draw_previous_iteration joined with m1_beta_mu_j_draw_by_previous_iteration
         # m1_beta_mu_j_draw = hierarchy_level2 -> (iter, hierarchy_level2, beta_mu_j_draw)
         m1_beta_mu_j_draw_by_previous_iteration = m1_beta_mu_j_draw_keyBy_h2.filter(lambda (x,y): y[0] == s - 1)
         #print "count  m1_beta_mu_j_draw_by_previous_iteration   ", m1_beta_mu_j_draw_by_previous_iteration.count()
@@ -86,7 +97,7 @@ def gibbs_iter(sc, begin_iter, end_iter, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta
         # resIter1 is (iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j)
         # resIter2 is (iter, hierarchy_level2, beta_mu_j_draw)
         # strucuture is  ( h2, iter, Vbeta_inv_j_draw, beta_mu_j_draw )
-        JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw = m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration.cogroup(m1_beta_mu_j_draw_by_previous_iteration).map(lambda (x,y): (x, list(y[0])[0][0], list(y[0])[0][3], list(y[1])[0][2])).keyBy(lambda (hierarchy_level2, iteri, Vbeta_inv_j_draw, beta_mu_j_draw): hierarchy_level2)
+        JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw = m1_Vbeta_inv_Sigmabeta_j_draw_previous_iteration.cogroup(m1_beta_mu_j_draw_by_previous_iteration).map(lambda (x,y): (x, list(y[0])[0][0], list(y[0])[0][3], list(y[1])[0][2])).keyBy(lambda (hierarchy_level2, iteri, Vbeta_inv_j_draw, beta_mu_j_draw): hierarchy_level2)
         # Cogroup above structure h2 -> h2, iter, Vbeta_inv_j_draw, beta_mu_j_draw with m1_h_draw_filter_by_iteration,  h2 -> (iteri, h2, h_draw)
         JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw_join_WITH_h_draw = JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw.cogroup(m1_h_draw_filter_by_iteration).map(lambda (x, y): (list(y[0])[0][0], list(y[1])[0][2], list(y[0])[0][2], list(y[0])[0][3]))
         JOINED_part_2_by_keyBy_h2 = JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw_join_WITH_h_draw.keyBy(lambda (hierarchy_level2, h_draw, Vbeta_inv_j_draw, beta_mu_j_draw): hierarchy_level2)
@@ -154,6 +165,7 @@ def gibbs_iter(sc, begin_iter, end_iter, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta
         #print "count  m1_Vbeta_inv_Sigmabeta_j_draw_next   ", m1_Vbeta_inv_Sigmabeta_j_draw_next.count()
         #print "take 1 m1_Vbeta_inv_Sigmabeta_j_draw_next ", m1_Vbeta_inv_Sigmabeta_j_draw_next.take(1)
         ## appending the next iteration values to previous Data Structure
+        m1_Vbeta_inv_Sigmabeta_j_draw_previous_iteration = m1_Vbeta_inv_Sigmabeta_j_draw_next.keyBy(lambda (iteri, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): h2)
         m1_Vbeta_inv_Sigmabeta_j_draw = m1_Vbeta_inv_Sigmabeta_j_draw.union(m1_Vbeta_inv_Sigmabeta_j_draw_next)
         
         ## inserting into m1_beta_mu_j
@@ -230,6 +242,8 @@ def gibbs_iter(sc, begin_iter, end_iter, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta
         m1_h_draw = m1_h_draw.union(m1_h_draw_next)
         print "m1_h_draw : ", m1_h_draw.take(1)
         print "m1_h_draw : ", m1_h_draw.count()
+        
+        m1_h_draw_previous_iteration = m1_h_draw_next.keyBy(lambda (iteri, h2, h_draw): h2)
         
         ## Creating vertical draws
         ## -- Convert the array-based draws from the Gibbs Sampler into a "vertically long" format by unnesting the arrays.
