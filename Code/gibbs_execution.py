@@ -14,15 +14,54 @@ import gibbs_summary as gis
 # Importance has been given to laying out the data structures in most optimal way,
 # So as to minimize the network traffic in order to improve performance
 
-
+# parse the entire dataset into tuples of values,
+# where each tuple is of the type (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13)
 def parseData(data):
     columns = re.split(",", data)
     return columns 
     #return (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13)
 
+## get the number of partitions desired for h2 keyword
+def geth2(data):
+    columns = re.split(",", data)[1]
+    return columns
+
+def load_key_h2(source):
+    return sc.textFile(source).map(lambda datapoint: geth2(datapoint)).keyBy(lambda (hierarchy_level2): (hierarchy_level2))
+    
+## get the number of partitions desired for h2,h1 keyword
+def geth1h2(data):
+    columns = re.split(",", data)[1:3]
+    return columns
+
+def load_key_h1_h2(source):
+     return sc.textFile(source).map(lambda datapoint: geth1h2(datapoint)).keyBy(lambda (hierarchy_level1, hierarchy_level2): (hierarchy_level2, hierarchy_level1))
+
+# Partition data with h2 keys
+def partitionByh2(hierarchy_level2):
+    int(str(hierarchy_level2)[1]) % h2_partitions
+     
+# Partition data with h2,h1 keys
+def geth1(h1):
+    if len(str(h1)) == 4:
+        return int(str(h1)[2])
+    else:
+        return int(str(h1)[2:4])
+
+def partitionByh2h1(obj):
+    h1_int = geth1(obj[1])
+    n = int(str(obj[0])[1]) % 5
+    return n*100 + h1_int    
+
+## get persisted datastores that work on same partitions.
+def get_persisted_by_h2(source, numPartitions):
+    return sc.textFile(source).map(lambda datapoint: parseData(datapoint)).keyBy(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2)).partitionBy(numPartitions, partitionByh2).persist()
+
+def get_persisted_by_h2_h1(source, numPartitions): 
+    return sc.textFile(source).map(lambda datapoint: parseData(datapoint)).keyBy(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2, hierarchy_level1)).partitionBy(numPartitions, partitionByh2h1).persist()
+
 def load(source):
     return sc.textFile(source).map(lambda datapoint: parseData(datapoint))
-    #return sc.textFile(source)
 
 if __name__ == "__main__":
     """
@@ -69,11 +108,19 @@ if __name__ == "__main__":
     """
     sc = SparkContext(appName="GibbsSampler")
     
-    file = sys.argv[1] if len(sys.argv) > 1 else "hdfs:///user/ssoni/data/d.csv"
+    sourcefile = sys.argv[1] if len(sys.argv) > 1 else "hdfs:///user/ssoni/data/d.csv"    
+    h2_partitions = load_key_h2(sourcefile).groupByKey().keys().count()
+    h1_h2_partitions = load_key_h1_h2(sourcefile).groupByKey().keys().count()
+    
+    # OPTIMIZATION 1 : replace d with d_key_h2
+    d_key_h2 = get_persisted_by_h2(sourcefile, h2_partitions)
+    d_key_h2_h1 = get_persisted_by_h2(sourcefile, h1_h2_partitions)
+     
     ## load all data as separate columns
     d = load(file) 
-    keyBy_groupby_h2_h1 = d.keyBy(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2, hierarchy_level1)).groupByKey().cache()     
-    print "Cached Copy of Data, First Data Set : ", keyBy_groupby_h2_h1.take(1)
+    # OPTIMIZATION 2 keyBy_groupby_h2_h1 is essentially d_key_h2_h1 so we use d_key_h2_h1 in place of keyBy_groupby_h2_h1
+    # keyBy_groupby_h2_h1 = d.keyBy(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2, hierarchy_level1)).groupByKey().cache()     
+    print "Cached Copy of Data, First Data Set : ", d_key_h2_h1.take(1)
     
     # hierarchy_level1 = tier, 
     # hierarchy_level2 = brand_department_number
@@ -102,7 +149,7 @@ if __name__ == "__main__":
     initial_vals = sys.argv[11] if len(sys.argv) > 11 else "ols" 
 
     # First initialize the gibbs sampler
-    (m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw , m1_ols_beta_i ,m1_ols_beta_j ,m1_s2 ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_j_mu) = gi.gibbs_initializer(sc, d, keyBy_groupby_h2_h1, hierarchy_level1, hierarchy_level2, p, df1, y_var_index, x_var_indexes, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals)
+    (m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw , m1_ols_beta_i ,m1_ols_beta_j ,m1_s2 ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_j_mu) = gi.gibbs_initializer(sc, d_key_h2, d_key_h2_h1, hierarchy_level1, hierarchy_level2, p, df1, y_var_index, x_var_indexes, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals)
     
     begin_iter = sys.argv[12] if len(sys.argv) > 12 else 2
     end_iter = sys.argv[13] if len(sys.argv) > 13 else 4    

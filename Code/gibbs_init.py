@@ -15,7 +15,7 @@ def add(x,y):
 # Initialize Gibbs with initial values for future iterations
 # Pre-computing quantities that are contant throughout sampler iterations
 # Call as gi.gibbs_init_test(sc, d, keyBy_groupby_h2_h1, hierarchy_level1, hierarchy_level2, p, df1, y_var_index, x_var_indexes, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals)
-def gibbs_initializer(sc, d, keyBy_groupby_h2_h1, hierarchy_level1, hierarchy_level2, p, df1, y_var_index, x_var_indexes, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals):
+def gibbs_initializer(sc, d_key_h2, d_key_h2_h1, hierarchy_level1, hierarchy_level2, p, df1, y_var_index, x_var_indexes, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals):
     
     # For Detailed Explanation
     # Create array aggregated version of d.  
@@ -28,7 +28,10 @@ def gibbs_initializer(sc, d, keyBy_groupby_h2_h1, hierarchy_level1, hierarchy_le
     # We end up with a Data Structure d_array_agg with as many rows as the number of distinct department_name-tier combos.  
     # With the original data (with 14162 data points) of we end up with 135 records.  
     # m1_d_array_agg : tuples of ( keys, x_matrix, y_array, hierarchy_level2[1,0], hierarchy_level1[1,0] )
-    m1_d_array_agg = keyBy_groupby_h2_h1.map(gtr.create_x_matrix_y_array).cache()
+    #m1_d_array_agg = keyBy_groupby_h2_h1.map(gtr.create_x_matrix_y_array).cache()
+    
+    # OPTIMIZATION 3 : create m1_d_arry_agg values on each partitioned block of data which is keyed by h2 h1 
+    m1_d_array_agg = d_key_h2_h1.groupByKey().map(gtr.create_x_matrix_y_array)
     
     #  Compute constants of X'X and X'y for computing 
     #  m1_Vbeta_i & beta_i_mean
