@@ -112,26 +112,31 @@ def create_x_matrix_y_array(recObj):
     """
     import numpy
     recIter = recObj
+    keys = recObj[0] # partition value
+    recIter = recObj[1]
     mat = numpy.matrix([r for r in recIter])
     x_matrix = mat[:,5:18].astype(float)
     x_matrix = numpy.append([[1 for _ in range(0,len(x_matrix))]], x_matrix.T,0).T
     y_array = mat[:,4].astype(float)
     hierarchy_level2 =  mat[:,2]
     hierarchy_level1 = mat[:,1]
-    return (x_matrix, y_array, hierarchy_level2[1,0], hierarchy_level1[1,0])
+    #return (keys, x_matrix, y_array, hierarchy_level2[1,0], hierarchy_level1[1,0])
+    return (keys, x_matrix, y_array, hierarchy_level2[1,0], hierarchy_level1[1,0])
 
 
 def create_xtx_matrix_xty(obj):
     import numpy
     #recObj is of the form of [key, <Iterable of all values tuples>]
-    keys = obj[0]
+    keys = obj[0] # partition value
     x_matrix = obj[1]
     x_matrix_t = numpy.transpose(x_matrix)
     xt_x = x_matrix_t * x_matrix
     y_matrix = obj[2]
     xt_y = x_matrix_t * y_matrix
+    hierarchy_level2 =  obj[3]
+    hierarchy_level1 = obj[4]
     # h2, h1, xtx, xty
-    return (keys[0], keys[1], xt_x, xt_y)
+    return (hierarchy_level2,hierarchy_level1, xt_x, xt_y)
 
 def get_d_childcount(obj):
     keyBy_h2_to_h1 = obj.map(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2, hierarchy_level1)).groupByKey()
@@ -148,6 +153,7 @@ def get_ols_initialvals_beta_i(obj):
     regr = linear_model.LinearRegression()
     # fit x_array, y_array
     regr.fit(obj[1], obj[2])
+    # returns h2, h1, regr.coef_
     return (obj[3], obj[4], regr.coef_)
 
 

@@ -4,6 +4,7 @@
 """
 import gibbs_udfs as gu
 import gibbs_transformations as gtr
+import gibbs_partitions as gp
 
 def gibbs_init_text():
     text_output = 'Done: Gibbs Sampler for model m1 is initialized.  Proceed to run updates of the sampler by using the gibbs() function.  All objects associated with this model are named with a m1 prefix.'
@@ -15,7 +16,7 @@ def add(x,y):
 # Initialize Gibbs with initial values for future iterations
 # Pre-computing quantities that are contant throughout sampler iterations
 # Call as gi.gibbs_init_test(sc, d, keyBy_groupby_h2_h1, hierarchy_level1, hierarchy_level2, p, df1, y_var_index, x_var_indexes, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals)
-def gibbs_initializer(sc, d_key_h2, d_key_h2_h1, hierarchy_level1, hierarchy_level2, p, df1, y_var_index, x_var_indexes, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals):
+def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, d_key_h2, d_key_h2_h1, hierarchy_level1, hierarchy_level2, p, df1, y_var_index, x_var_indexes, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals):
     
     # For Detailed Explanation
     # Create array aggregated version of d.  
@@ -31,12 +32,16 @@ def gibbs_initializer(sc, d_key_h2, d_key_h2_h1, hierarchy_level1, hierarchy_lev
     #m1_d_array_agg = keyBy_groupby_h2_h1.map(gtr.create_x_matrix_y_array).cache()
     
     # OPTIMIZATION 3 : create m1_d_arry_agg values on each partitioned block of data which is keyed by h2 h1 
-    m1_d_array_agg = d_key_h2_h1.groupByKey().map(gtr.create_x_matrix_y_array)
+    #m1_d_array_agg = d_key_h2_h1.groupByKey().map(gtr.create_x_matrix_y_array)
+    #### OR h2,h1, x_matrix, y_array
+    d_groupedBy_h1_h2 = d.groupBy(gp.group_partitionByh2h1, h1_h2_partitions).persist()
+    m1_d_array_agg = d_groupedBy_h1_h2.map(gtr.create_x_matrix_y_array, preservesPartitioning=True).persist()
     
     #  Compute constants of X'X and X'y for computing 
     #  m1_Vbeta_i & beta_i_mean
     #  m1_d_array_agg_constants : list of tuples of (h2, h1, xtx, xty)
-    m1_d_array_agg_constants = m1_d_array_agg.map(gtr.create_xtx_matrix_xty).cache()
+    # OPTIMIZATION preserving the values on partitions
+    m1_d_array_agg_constants = m1_d_array_agg.map(gtr.create_xtx_matrix_xty, preservesPartitioning=True).persist()
     # print "m1_d_array_agg_constants take ",m1_d_array_agg_constants.take(1)
     # print "m1_d_array_agg_constants count",m1_d_array_agg_constants.count()
     
@@ -46,41 +51,61 @@ def gibbs_initializer(sc, d_key_h2, d_key_h2_h1, hierarchy_level1, hierarchy_lev
     # Compute the number of children at the department_name level (# of children is equal to the number tiers within each department_name).
     # In Short the following Computs the number of hierarchy_level1 values for each of the hierarchy_level2 values
     # for Example : Considering h2 as departments and h1 as the stores get_d_childcount computes the number of stores for each department
-    m1_d_childcount = gtr.get_d_childcount(d).cache()
+    # OPTIMIZATION using broadcast variable instead of the RDD so as to not compute it ever again
+    # this saves us one more scan of the table everytime we compute the childrens of key h2
+    m1_d_childcount = gtr.get_d_childcount(d)
+    m1_d_childcount_b = sc.broadcast(m1_d_childcount.collect())
+    #m1_d_childcount = d_groupedBy_h1_h2.map(lambda (x,iter): (x, sum(1 for _ in set(iter))), preservesPartitioning=True).cache()
     # print "d_child_counts take : ", m1_d_childcount.take(1)
     # print "d_child_counts count : ", m1_d_childcount.count()
      
     # Not all department_name-tiers have the same number of weeks of available data (i.e. the number of data points for each department_name-tier is not the same for all department_name-tiers).  
     # We pre-compute this quantity for each department_name-tier
-    m1_d_count_grpby_level2 = gtr.get_d_count_grpby_level2(d).cache()
+    # m1_d_count_grpby_level2 = gtr.get_d_count_grpby_level2(d).cache()
     # print "m1_d_count_grpby_level2 take : ", m1_d_count_grpby_level2.take(1)
     # print "m1_d_count_grpby_level2 count : ", m1_d_count_grpby_level2.count()
     # print "Available data for each department_name-tiers", m1_d_count_grpby_level2.countByKey()
     # m1_d_count_grpby_level2.countByKey() becomes defaultdict of type int As
     # defaultdict(<type 'int'>, {u'"5"': 1569, u'"1"': 3143, u'"2"': 3150, u'"3"': 3150, u'"4"': 3150})
-    m1_d_count_grpby_level2 = m1_d_count_grpby_level2.countByKey()
+    #m1_d_count_grpby_level2 = gtr.get_d_count_grpby_level2(d).countByKey()
     # for multinode setup we need to broadcast these values across all the nodes
-    m1_d_count_grpby_level2_b = sc.broadcast(m1_d_count_grpby_level2)
+    m1_d_count_grpby_level2_b = sc.broadcast(gtr.get_d_count_grpby_level2(d).countByKey())
     
     # Arrange d keyBy h2 or hierarchy_level2
-    d_keyBy_h2 = d.keyBy(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2)).groupByKey().map(gtr.create_x_matrix_y_array)
+    #d_keyBy_h2 = d.keyBy(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2)).groupByKey().map(gtr.create_x_matrix_y_array)
+    # OPTIMIZATION d_keyBy_h2 to use similar concept as we sued ot build m1_d_array_agg
+    # OPTIMIZATION 2 : very simple task of computing a 5 count array so we would rather not persist it this time.
+    d_groupedBy_h2 = d.groupBy(gp.group_partitionByh2, h2_partitions).persist()
+    d_keyBy_h2 = d_groupedBy_h2.map(gtr.create_x_matrix_y_array, preservesPartitioning=True)
     
     # Compute OLS estimates for reference    
     if(initial_vals == "ols"):
         # Initial values of coefficients for each department_name-tier (i).  Set crudely as OLS regression coefficients for each department_name-tier (i).
-        m1_ols_beta_i = m1_d_array_agg.map(gtr.get_ols_initialvals_beta_i).keyBy(lambda (h2,h1,coff): (h2, h1))
+        # OPTIMIZATION SINCE we started doing group by partitionings its not so clear as to still have keyBy h2 h1 or not, Omitting it, till its needed.
+        # m1_ols_beta_i = m1_d_array_agg.map(gtr.get_ols_initialvals_beta_i, preservesPartitioning=True).keyBy(lambda (h2,h1,coff): (h2, h1))
+        # h2, h1, ols_beta_i
+        # OPTIMIZATION instead of preserving partitioning here, I keep it at the h2 level, so that we have a chance to 
+        m1_ols_beta_i = m1_d_array_agg.map(gtr.get_ols_initialvals_beta_i, preservesPartitioning=True)
         # print "Coefficients for LinearRegression ", m1_ols_beta_i.count()
+        
         # Initial values of coefficients for each department_name (j).  Set crudely as OLS regression coefficients for each department_name (j).
         # Similarly we compute the m1_ols_beta_j which uses the RDD mapped upon only hierarchy_level2
-        m1_ols_beta_j = d_keyBy_h2.map(gtr.get_ols_initialvals_beta_j).keyBy(lambda (h2,coff): (h2))
+        # OPTIMIZATION SINCE we started doing group by partitionings its not so clear as to still have keyBy h2 h1 or not, Omitting it, till its needed.
+        # m1_ols_beta_j = d_keyBy_h2.map(gtr.get_ols_initialvals_beta_j).keyBy(lambda (h2,coff): (h2))
+        # OPTIMIZATION 2 , lets collect it and then we can transfer it to various nodes where the m1_ols_beta_i resides
+        m1_ols_beta_j = d_keyBy_h2.map(gtr.get_ols_initialvals_beta_j, preservesPartitioning=True).persist()
+
         # print "Coefficients for LinearRegression after keyby H2", m1_ols_beta_j.count()
         
     # In case the initial_vals are defined as "random" we compute the coefficients for each department_name-tier (i) and for each department_name (j)
     # We compute these coefficients using deviates from Uniform distribution
     if(initial_vals == "random"):
         # print "Draw random array samples of p elements from the uniform(-1,1) dist'n"
-        m1_ols_beta_i = m1_d_array_agg.map(gtr.get_random_initialvals_beta_i).keyBy(lambda (h2,h1,coff): (h2, h1))
-        m1_ols_beta_j = d_keyBy_h2.map(gtr.get_random_initialvals_beta_j).keyBy(lambda (h2,coff): (h2))
+        # OPTIMIZATION SINCE we started doing group by partitionings its not so clear as to still have keyBy h2 h1 or not, Omitting it, till its needed.
+        #m1_ols_beta_i = m1_d_array_agg.map(gtr.get_random_initialvals_beta_i).keyBy(lambda (h2,h1,coff): (h2, h1))
+        #m1_ols_beta_j = d_keyBy_h2.map(gtr.get_random_initialvals_beta_j).keyBy(lambda (h2,coff): (h2))
+        m1_ols_beta_i = m1_d_array_agg.map(gtr.get_random_initialvals_beta_i, preservesPartitioning=True)
+        m1_ols_beta_j = d_keyBy_h2.map(gtr.get_random_initialvals_beta_j, preservesPartitioning=True)
         
     
     #-- Compute m1_Vbeta_j_mu 
@@ -230,5 +255,5 @@ def gibbs_initializer(sc, d_key_h2, d_key_h2_h1, hierarchy_level1, hierarchy_lev
     
     print gibbs_init_text()    
     
-    return (m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw , m1_ols_beta_i ,m1_ols_beta_j ,m1_s2 ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_j_mu)
+    return (m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2_b ,m1_h_draw , m1_ols_beta_i ,m1_ols_beta_j ,m1_s2 ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_j_mu)
     
