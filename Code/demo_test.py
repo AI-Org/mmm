@@ -251,3 +251,5 @@ m1_ols_beta_j = d_keyBy_h2.map(get_ols_initialvals_beta_j, preservesPartitioning
 #m1_ols_beta_i = m1_d_array_agg.map(gtr.get_random_initialvals_beta_i, preservesPartitioning=True)
 #m1_ols_beta_j = d_keyBy_h2.map(gtr.get_random_initialvals_beta_j, preservesPartitioning=True)
 
+
+## stuck at m1_ols_beta_i.coalesce(5, shuffle = False).glom().take(2) as it does not honor the conditioned partitioning

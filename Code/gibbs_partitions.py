@@ -27,12 +27,12 @@ def geth1(h1):
 # here object is one whole data point 
 # index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13 
 # # hierarchy_level2 | n1 
-    #------------------+----
-    # 2                | 30
-    # 1                | 30
-    # 4                | 30
-    # 3                | 30
-    # 5                | 15               
+#------------------+----
+# 2                | 30
+# 1                | 30
+# 4                | 30
+# 3                | 30
+# 5                | 15               
 def group_partitionByh2h1(obj):
     n = int(str(obj[2])[1]) % 5
     return getCode(n,str(obj[1]))

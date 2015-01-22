@@ -93,6 +93,8 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, d_key_h2, d_key_h2_
         # OPTIMIZATION SINCE we started doing group by partitionings its not so clear as to still have keyBy h2 h1 or not, Omitting it, till its needed.
         # m1_ols_beta_j = d_keyBy_h2.map(gtr.get_ols_initialvals_beta_j).keyBy(lambda (h2,coff): (h2))
         # OPTIMIZATION 2 , lets collect it and then we can transfer it to various nodes where the m1_ols_beta_i resides
+        # h2, coeff
+        # m1_ols_beta_j.keys().collect() : [u'"5"', u'"1"', u'"2"', u'"3"', u'"4"']
         m1_ols_beta_j = d_keyBy_h2.map(gtr.get_ols_initialvals_beta_j, preservesPartitioning=True).persist()
 
         # print "Coefficients for LinearRegression after keyby H2", m1_ols_beta_j.count()
