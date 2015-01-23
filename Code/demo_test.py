@@ -184,29 +184,29 @@ def geth1(h1):
 def getCode1(n,h1):
     if n == 1:
         if h1[0] == "A":
-           return geth1(h1)
+           return 5 * geth1(h1)
         else:
-            return 15 + geth1(h1)
+            return 5 * (15 + geth1(h1))
     if n == 2:
         if h1[0] == "A":
-           return 30 + geth1(h1)
+           return 1 + 5 * geth1(h1)
         else:
-            return 45 + geth1(h1)
+            return 5 * (15 + geth1(h1)) + 1
     if n == 3:
         if h1[0] == "A":
-           return 60 + geth1(h1)
+           return 2 + (5 * geth1(h1))
         else:
-            return 75 + geth1(h1)
+            return 5 * (15 + geth1(h1)) + 2
     if n == 4:
         if h1[0] == "A":
-           return 90 + geth1(h1)
+           return 3 + (5 * geth1(h1))
         else:
-            return 105 + geth1(h1)
+            return 5 * (15 + geth1(h1)) + 3
     if n == 0:
         if h1[0] == "A":
-           return 120 + geth1(h1)
+           return 4 + (5 * geth1(h1))
         else:
-            return 135 + geth1(h1)
+            return 5 * (15 + geth1(h1)) + 4
 
 
 

@@ -16,7 +16,7 @@ def add(x,y):
 # Initialize Gibbs with initial values for future iterations
 # Pre-computing quantities that are contant throughout sampler iterations
 # Call as gi.gibbs_init_test(sc, d, keyBy_groupby_h2_h1, hierarchy_level1, hierarchy_level2, p, df1, y_var_index, x_var_indexes, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals)
-def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, d_key_h2, d_key_h2_h1, hierarchy_level1, hierarchy_level2, p, df1, y_var_index, x_var_indexes, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals):
+def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, hierarchy_level2, p, df1, y_var_index, x_var_indexes, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals):
     
     # For Detailed Explanation
     # Create array aggregated version of d.  
@@ -34,14 +34,14 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, d_key_h2, d_key_h2_
     # OPTIMIZATION 3 : create m1_d_arry_agg values on each partitioned block of data which is keyed by h2 h1 
     #m1_d_array_agg = d_key_h2_h1.groupByKey().map(gtr.create_x_matrix_y_array)
     #### OR h2,h1, x_matrix, y_array
-    d_groupedBy_h1_h2 = d.groupBy(gp.group_partitionByh2h1, h1_h2_partitions).persist()
-    m1_d_array_agg = d_groupedBy_h1_h2.map(gtr.create_x_matrix_y_array, preservesPartitioning=True).persist()
+    d_groupedBy_h1_h2 = d.groupBy(gp.group_partitionByh2h1, h1_h2_partitions)
+    m1_d_array_agg = d_groupedBy_h1_h2.map(gtr.create_x_matrix_y_array)
     
     #  Compute constants of X'X and X'y for computing 
     #  m1_Vbeta_i & beta_i_mean
     #  m1_d_array_agg_constants : list of tuples of (h2, h1, xtx, xty)
     # OPTIMIZATION preserving the values on partitions
-    m1_d_array_agg_constants = m1_d_array_agg.map(gtr.create_xtx_matrix_xty, preservesPartitioning=True).persist()
+    m1_d_array_agg_constants = m1_d_array_agg.map(gtr.create_xtx_matrix_xty)
     # print "m1_d_array_agg_constants take ",m1_d_array_agg_constants.take(1)
     # print "m1_d_array_agg_constants count",m1_d_array_agg_constants.count()
     
@@ -75,8 +75,8 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, d_key_h2, d_key_h2_
     #d_keyBy_h2 = d.keyBy(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2)).groupByKey().map(gtr.create_x_matrix_y_array)
     # OPTIMIZATION d_keyBy_h2 to use similar concept as we sued ot build m1_d_array_agg
     # OPTIMIZATION 2 : very simple task of computing a 5 count array so we would rather not persist it this time.
-    d_groupedBy_h2 = d.groupBy(gp.group_partitionByh2, h2_partitions).persist()
-    d_keyBy_h2 = d_groupedBy_h2.map(gtr.create_x_matrix_y_array, preservesPartitioning=True)
+    d_groupedBy_h2 = d.groupBy(gp.group_partitionByh2, h2_partitions)
+    d_keyBy_h2 = d_groupedBy_h2.map(gtr.create_x_matrix_y_array)
     
     # Compute OLS estimates for reference    
     if(initial_vals == "ols"):
@@ -85,7 +85,7 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, d_key_h2, d_key_h2_
         # m1_ols_beta_i = m1_d_array_agg.map(gtr.get_ols_initialvals_beta_i, preservesPartitioning=True).keyBy(lambda (h2,h1,coff): (h2, h1))
         # h2, h1, ols_beta_i
         # OPTIMIZATION instead of preserving partitioning here, I keep it at the h2 level, so that we have a chance to 
-        m1_ols_beta_i = m1_d_array_agg.map(gtr.get_ols_initialvals_beta_i, preservesPartitioning=True).persist()
+        m1_ols_beta_i = m1_d_array_agg.map(gtr.get_ols_initialvals_beta_i).keyBy(lambda (h2,h1,coff): (h2))
         # print "Coefficients for LinearRegression ", m1_ols_beta_i.count()
         
         # Initial values of coefficients for each department_name (j).  Set crudely as OLS regression coefficients for each department_name (j).
@@ -95,7 +95,7 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, d_key_h2, d_key_h2_
         # OPTIMIZATION 2 , lets collect it and then we can transfer it to various nodes where the m1_ols_beta_i resides
         # h2, coeff
         # m1_ols_beta_j.keys().collect() : [u'"5"', u'"1"', u'"2"', u'"3"', u'"4"']
-        #m1_ols_beta_j = d_keyBy_h2.map(gtr.get_ols_initialvals_beta_j, preservesPartitioning=True).persist()
+        m1_ols_beta_j = d_keyBy_h2.map(gtr.get_ols_initialvals_beta_j).keyBy(lambda (h2,coff): (h2))
         # OPTIMIZATION 3, actually creating a collection of this small data set and preserving it with driver or
         # boradcasting it so as to have a highly distributed m1_ols_beta_i's stationary into their partitions 
         # and save shuffle costs
@@ -108,10 +108,10 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, d_key_h2, d_key_h2_
     if(initial_vals == "random"):
         # print "Draw random array samples of p elements from the uniform(-1,1) dist'n"
         # OPTIMIZATION SINCE we started doing group by partitionings its not so clear as to still have keyBy h2 h1 or not, Omitting it, till its needed.
-        #m1_ols_beta_i = m1_d_array_agg.map(gtr.get_random_initialvals_beta_i).keyBy(lambda (h2,h1,coff): (h2, h1))
+        m1_ols_beta_i = m1_d_array_agg.map(gtr.get_random_initialvals_beta_i).keyBy(lambda (h2,h1,coff): (h2))
         #m1_ols_beta_j = d_keyBy_h2.map(gtr.get_random_initialvals_beta_j).keyBy(lambda (h2,coff): (h2))
-        m1_ols_beta_i = m1_d_array_agg.map(gtr.get_random_initialvals_beta_i, preservesPartitioning=True).persist()
-        #m1_ols_beta_j = d_keyBy_h2.map(gtr.get_random_initialvals_beta_j, preservesPartitioning=True)
+        #m1_ols_beta_i = m1_d_array_agg.map(gtr.get_random_initialvals_beta_i, preservesPartitioning=True).persist()
+        m1_ols_beta_j = d_keyBy_h2.map(gtr.get_random_initialvals_beta_j).keyBy(lambda (h2,coff): (h2))
         m1_ols_beta_j_collection = d_keyBy_h2.map(gtr.get_random_initialvals_beta_j).collect()
         
     
@@ -121,13 +121,15 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, d_key_h2, d_key_h2_
     #   FOR EACH group i, with group j coefficients as priors, and
     #   then sum them to get back Vbeta_j_mu matrices
     # computing _Vbeta_j_mu  
-    joined_i_j = gtr.create_join_by_h2_only(m1_ols_beta_i.collect(), m1_ols_beta_j.collect())
+    #joined_i_j = gtr.create_join_by_h2_only(m1_ols_beta_i.collect(), m1_ols_beta_j.collect())
     # keyBy and groupBy will reduce the rows from 135 to 5 since there are only 5 hierarchy_level2's
     # joined_i_j_rdd.take(1) :  (u'"5"', <pyspark.resultiterable.ResultIterable object at 0x117be50>) similarly 5 others
-    joined_i_j_rdd = sc.parallelize(joined_i_j).keyBy(lambda (hierarchy_level2, hierarchy_level1, values_array_i, values_array_j): (hierarchy_level2)).groupByKey()
+    #joined_i_j_rdd = sc.parallelize(joined_i_j).keyBy(lambda (hierarchy_level2, hierarchy_level1, values_array_i, values_array_j): (hierarchy_level2)).groupByKey()
+    
+    joined_i_j_rdd = m1_ols_beta_i.cogroup(m1_ols_beta_j).map(lambda (x,y): (x, list(y[0]), list(y[1])[0][1])).groupBy(gp.partitionByh2, h2_partitions).persist()
     ## Data Structure m1_Vbeta_j_mu is symmetric along diagonal and have same dimensions as the one in HAWQ tables.
     # print "coefficients i and j", joined_i_j_rdd.take(1)
-    m1_Vbeta_j_mu = joined_i_j_rdd.map(lambda (x, y): (1, x, gtr.get_Vbeta_j_mu(y))) 
+    m1_Vbeta_j_mu = joined_i_j_rdd.map(lambda (x, y): (1, x, gtr.get_Vbeta_j_mu(y)), preserverPartitioning = True).persist() 
     # print " m1_Vbeta_j_mu count ", m1_Vbeta_j_mu.count() 
     # print " m1_Vbeta_j_mu take 1", m1_Vbeta_j_mu.take(1)
     
