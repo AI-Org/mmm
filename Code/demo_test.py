@@ -167,6 +167,8 @@ def load(source):
 
 # error in docker : string index out of range
 # In docker use
+
+
 def group_partitionByh2h1(obj):
     n = int(str(obj[2])[0]) % 5
     return getCode1(n,str(obj[1]))
