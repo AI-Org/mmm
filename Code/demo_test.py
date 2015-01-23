@@ -126,43 +126,43 @@ def load(source):
     return sc.textFile(source).map(lambda datapoint: parseData(datapoint))
 
 # key[h2,h1] => index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13    
-#def group_partitionByh2h1(obj):
-#    n = int(str(obj[2])[1]) % 5
-#    return getCode1(n,str(obj[1]))
-#    #return n*100 + h1_int
+def group_partitionByh2h1(obj):
+    n = int(str(obj[2])[1]) % 5
+    return getCode1(n,str(obj[1]))
+    #return n*100 + h1_int
 
-#def geth1(h1):
-#    if len(str(h1)) == 4:
-#        return int(str(h1)[2])
-#    else:
-#        return int(str(h1)[2:4])
-#
-#def getCode1(n,h1):
-#    if n == 1:
-#        if h1[1] == "A":
-#           return geth1(h1)
-#        else:
-#            return 15 + geth1(h1)
-#    if n == 2:
-#        if h1[1] == "A":
-#           return 30 + geth1(h1)
-#        else:
-#            return 45 + geth1(h1)
-#    if n == 3:
-#        if h1[1] == "A":
-#           return 60 + geth1(h1)
-#        else:
-#            return 75 + geth1(h1)
-#    if n == 4:
-#        if h1[1] == "A":
-#           return 90 + geth1(h1)
-#        else:
-#            return 105 + geth1(h1)
-#    if n == 0:
-#        if h1[1] == "B":
-#           return 120 + geth1(h1)
-#        else:
-#            return 135 + geth1(h1)
+def geth1(h1):
+    if len(str(h1)) == 4:
+        return int(str(h1)[2])
+    else:
+        return int(str(h1)[2:4])
+
+def getCode1(n,h1):
+    if n == 1:
+        if h1[1] == "A":
+           return geth1(h1)
+        else:
+            return 15 + geth1(h1)
+    if n == 2:
+        if h1[1] == "A":
+           return 30 + geth1(h1)
+        else:
+            return 45 + geth1(h1)
+    if n == 3:
+        if h1[1] == "A":
+           return 60 + geth1(h1)
+        else:
+            return 75 + geth1(h1)
+    if n == 4:
+        if h1[1] == "A":
+           return 90 + geth1(h1)
+        else:
+            return 105 + geth1(h1)
+    if n == 0:
+        if h1[1] == "B":
+           return 120 + geth1(h1)
+        else:
+            return 135 + geth1(h1)
 
 
 # error in docker : string index out of range
@@ -296,6 +296,10 @@ def get_ols_initialvals_beta_j(obj):
     return (obj[3], regr.coef_)
 
 m1_ols_beta_j = d_keyBy_h2.map(get_ols_initialvals_beta_j, preservesPartitioning=True)
+
+
+def group_partitionByh2(obj):
+    return int(str(obj[0])[0]) % 5
 
 # run as random -> it uses functions from transformations and from the udfs
 #m1_ols_beta_i = m1_d_array_agg.map(gtr.get_random_initialvals_beta_i, preservesPartitioning=True)
