@@ -85,7 +85,7 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, d_key_h2, d_key_h2_
         # m1_ols_beta_i = m1_d_array_agg.map(gtr.get_ols_initialvals_beta_i, preservesPartitioning=True).keyBy(lambda (h2,h1,coff): (h2, h1))
         # h2, h1, ols_beta_i
         # OPTIMIZATION instead of preserving partitioning here, I keep it at the h2 level, so that we have a chance to 
-        m1_ols_beta_i = m1_d_array_agg.map(gtr.get_ols_initialvals_beta_i, preservesPartitioning=True)
+        m1_ols_beta_i = m1_d_array_agg.map(gtr.get_ols_initialvals_beta_i, preservesPartitioning=True).persist()
         # print "Coefficients for LinearRegression ", m1_ols_beta_i.count()
         
         # Initial values of coefficients for each department_name (j).  Set crudely as OLS regression coefficients for each department_name (j).
@@ -95,7 +95,11 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, d_key_h2, d_key_h2_
         # OPTIMIZATION 2 , lets collect it and then we can transfer it to various nodes where the m1_ols_beta_i resides
         # h2, coeff
         # m1_ols_beta_j.keys().collect() : [u'"5"', u'"1"', u'"2"', u'"3"', u'"4"']
-        m1_ols_beta_j = d_keyBy_h2.map(gtr.get_ols_initialvals_beta_j, preservesPartitioning=True).persist()
+        #m1_ols_beta_j = d_keyBy_h2.map(gtr.get_ols_initialvals_beta_j, preservesPartitioning=True).persist()
+        # OPTIMIZATION 3, actually creating a collection of this small data set and preserving it with driver or
+        # boradcasting it so as to have a highly distributed m1_ols_beta_i's stationary into their partitions 
+        # and save shuffle costs
+        m1_ols_beta_j_collection = d_keyBy_h2.map(gtr.get_ols_initialvals_beta_j).collect()
 
         # print "Coefficients for LinearRegression after keyby H2", m1_ols_beta_j.count()
         
@@ -106,8 +110,9 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, d_key_h2, d_key_h2_
         # OPTIMIZATION SINCE we started doing group by partitionings its not so clear as to still have keyBy h2 h1 or not, Omitting it, till its needed.
         #m1_ols_beta_i = m1_d_array_agg.map(gtr.get_random_initialvals_beta_i).keyBy(lambda (h2,h1,coff): (h2, h1))
         #m1_ols_beta_j = d_keyBy_h2.map(gtr.get_random_initialvals_beta_j).keyBy(lambda (h2,coff): (h2))
-        m1_ols_beta_i = m1_d_array_agg.map(gtr.get_random_initialvals_beta_i, preservesPartitioning=True)
-        m1_ols_beta_j = d_keyBy_h2.map(gtr.get_random_initialvals_beta_j, preservesPartitioning=True)
+        m1_ols_beta_i = m1_d_array_agg.map(gtr.get_random_initialvals_beta_i, preservesPartitioning=True).persist()
+        #m1_ols_beta_j = d_keyBy_h2.map(gtr.get_random_initialvals_beta_j, preservesPartitioning=True)
+        m1_ols_beta_j_collection = d_keyBy_h2.map(gtr.get_random_initialvals_beta_j).collect()
         
     
     #-- Compute m1_Vbeta_j_mu 
