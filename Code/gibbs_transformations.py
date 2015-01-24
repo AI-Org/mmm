@@ -331,8 +331,9 @@ def get_beta_draw(obj):
         iteri = j[0]
         beta_mu_j = j[2]
     for r in obj[1][1]:
+        Vbeta_inv_j_draw = r[3]
         Sigmabeta_j = r[4]
-    return (iteri, key, gu.beta_draw(beta_mu_j, Sigmabeta_j))
+    return (iteri, key, gu.beta_draw(beta_mu_j, Sigmabeta_j), Vbeta_inv_j_draw)
     
 def pinv_Vbeta_i(xtx, Vbeta_inv_j_draw, s):
     return gu.matrix_add_plr(gu.matrix_scalarmult_plr(xtx, s), Vbeta_inv_j_draw)    
@@ -342,13 +343,13 @@ def get_Vbeta_i(obj):
     # key is hierarchy_level2 and 
     # cogrouped_iterable_object is <W1,W2>
     # where W2 is a ResultIterable having hierarchy_level2 => (iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j))
-    for r in obj[1]:
+    for r in obj[0]:
         h2 = r[1]
         Vbeta_inv_j_draw = r[3]
     rows = []
     #count = 1
     # obj[0] where W1 is a ResultIterable having obj[1][0]=hierarchy_level2, obj[1][1]=hierarchy_level1, xtx, xty
-    for r in obj[0]:
+    for r in obj[1]:
         hierarchy_level2 = r[0]
         if hierarchy_level2 != h2:
             raise NameError('Index not correct')
