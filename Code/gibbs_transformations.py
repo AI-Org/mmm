@@ -246,7 +246,7 @@ def get_m1_Vbeta_j_mu_pinv(obj):
     global df1_var
     seq = obj[0]
     hierarchy_level2 = obj[1][0]
-    Vbeta_j_mu = obj[1][2]
+    Vbeta_j_mu = obj[1][1]
     # Vbeta_inv_draw(nu, phi) where nu is df1_var & for phi matrix we have
     a = gu.matrix_scalarmult_plr(Vbeta_j_mu, df1_var)
     phi = np.linalg.pinv(a)
