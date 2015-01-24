@@ -55,8 +55,8 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     # this saves us one more scan of the table everytime we compute the childrens of key h2
     # [(u'1', 30), (u'3', 30), (u'5', 30), (u'2', 30), (u'4', 30)]
     # after sorted and new mod function we have [(1, 30), (2, 30), (3, 30), (4, 30), (5, 30)]    
-    m1_d_childcount = sorted(gtr.get_d_childcount_mod(d))
-    m1_d_childcount_b = sc.broadcast(m1_d_childcount.collect())
+    m1_d_childcount = sorted(gtr.get_d_childcount_mod(d).collect())
+    #m1_d_childcount_b = sc.broadcast(m1_d_childcount.collect())
     #m1_d_childcount = d_groupedBy_h1_h2.map(lambda (x,iter): (x, sum(1 for _ in set(iter))), preservesPartitioning=True).cache()
     # print "d_child_counts take : ", m1_d_childcount.take(1)
     # print "d_child_counts count : ", m1_d_childcount.count()
