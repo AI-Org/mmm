@@ -153,11 +153,11 @@ if __name__ == "__main__":
     
     # coef_means_prior_array' = Priors for coefficient means at the upper-most level of the hierarchy. 
     # coef_means_prior_array=sys.argv[5] if len(sys.argv) > 5 else [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-    coef_means_prior_array = sys.argv[8] if len(sys.argv) > 8 else [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    coef_means_prior_array = sys.argv[8] if len(sys.argv) > 8 else [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
     
     # coef_precision_prior_array = Priors for coefficient covariances at the upper-most level of the hierarchy. 
     # coef_precision_prior_array=sys.argv[5] if len(sys.argv) > 5 else [1,1,1,1,1,1,1,1,1,1,1,1,1]
-    coef_precision_prior_array = sys.argv[9] if len(sys.argv) > 9 else [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+    coef_precision_prior_array = sys.argv[9] if len(sys.argv) > 9 else [1,1,1,1,1,1,1,1,1,1,1,1,1,1]
     
     sample_size_deflator = sys.argv[10] if len(sys.argv) > 10 else 1
     
