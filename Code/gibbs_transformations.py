@@ -127,7 +127,7 @@ def create_x_matrix_y_array(recObj):
 def create_xtx_matrix_xty(obj):
     import numpy
     #recObj is of the form of [key, <Iterable of all values tuples>]
-    keys = obj[0] # partition value
+    #keys = obj[0] # partition value
     x_matrix = obj[1]
     x_matrix_t = numpy.transpose(x_matrix)
     xt_x = x_matrix_t * x_matrix
@@ -314,9 +314,10 @@ def get_substructure_beta_mu_j(obj):
 
 def add_coeff_j(hierarchy_level2, iterable_object):
     # where each iterable is like (hierarchy_level2, array[[]] of dim 1X13)
+    # Changed in OPTIMIZATIONS each iterable is like (hierarchy_level2, h1, array[[]] of dim 1X13)
     array_list = []
     for r in iterable_object:
-        array_list.append(r[1])
+        array_list.append(r[2])
     sum_coef_j = sum(array_list) 
     return (hierarchy_level2, sum_coef_j)
     
@@ -461,6 +462,7 @@ def get_sum_beta_i_draw_x2(y):
         ssr_sm = np.power(np.subtract(y_var, np.dot(beta_i_draw, x_var.getA1())), 2)
         lsts_squares_of_sub_of_dot.append(ssr_sm)
     ssr = sum(lsts_squares_of_sub_of_dot).item(0)
+    # hierarchy_level2, hierarchy_level1,iteri, ssr ,m1_d_count_grpby_level2_b
     return (y[0], y[1], y[4], ssr, y[6]) 
     
 def get_s2(y):
