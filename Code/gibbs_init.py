@@ -254,7 +254,7 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     
     ## -- Compute updated value of s2 to use in next section. 
     m1_beta_i_draw_group_by_h2_h1 = m1_beta_i_draw.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, beta_i_draw): (hierarchy_level2, hierarchy_level1))
-    m1_d_array_agg_key_by_h2_h1 = m1_d_array_agg.keyBy(lambda (keys, x_matrix, y_array, hierarchy_level2, hierarchy_level1) : (keys[0], keys[1]))
+    m1_d_array_agg_key_by_h2_h1 = m1_d_array_agg.keyBy(lambda (keys_from_partitioning, x_matrix, y_array, hierarchy_level2, hierarchy_level1) : (hierarchy_level2, hierarchy_level1))
     JOINED_m1_beta_i_draw_WITH_m1_d_array_agg = m1_d_array_agg_key_by_h2_h1.cogroup(m1_beta_i_draw_group_by_h2_h1)
     # print "JOINED_m1_beta_i_draw_WITH_m1_d_array_agg : 2 : ", JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.take(1)
     # hierarchy_level2, hierarchy_level1, x_array_var, y_var, iter, beta_i_draw , m1_d_count_grpby_level2_b.value[h2]
