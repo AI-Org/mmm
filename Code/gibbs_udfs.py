@@ -7,20 +7,24 @@ def final_median(anyarray):
 
 # Function to add two matrixes
 def matrix_add_plr(matrix1, matrix2):
+    import numpy as np
     return np.add(matrix1, matrix2)
 
 # Function to diagonalize 1d Array
 def matrix_diag_plr(anyarray):
+    import numpy as np
     return np.diag(anyarray)
 
 # Function to add a diagonal matrix created from a scalar value to any matrix
 def matrix_add_diag_plr(matrix, value):
+    import numpy as np
     a = np.zeros(matrix.shape, float)
     np.fill_diagonal(a, value)
     return np.add(matrix, a)
 
 # Function to multiply a scalar to a matrix
 def matrix_scalarmult_plr(matrix, value):
+    import numpy as np
     #print "multiply matrix : ", matrix ," with value ", value
     return np.multiply(matrix, value)
 
@@ -31,6 +35,7 @@ def matrix_scalarmult_plr(matrix, value):
 # hance we convert beta_i_diff to mat before multiplying
 
 def Vbeta_i_mu(beta_i, beta_mu):
+    import numpy as np
     beta_i_diff = np.subtract(beta_i, beta_mu)
     Vbeta_i_mu = np.multiply(beta_i_diff, np.mat(beta_i_diff).transpose())
     return Vbeta_i_mu
@@ -82,6 +87,7 @@ def beta_mu_prior(Sigmabeta_j, Vbeta_inv_j_draw, sum_coef_j, coef_means_prior_ar
     # used for computing the mean for beta_draws,
     # should be of order size of variables i.e 13
     # mat1 is a dot product of two arrays
+    import numpy as np
     mat1 = np.dot(coef_means_prior_array, coef_precision_prior_array)
     #mat2 is a matrix multiplication product of inv_j_draw and sum_coeff_j
     #sum_coef_j = sum_coef_j.reshape(13,1)
@@ -96,6 +102,7 @@ def beta_mu_prior(Sigmabeta_j, Vbeta_inv_j_draw, sum_coef_j, coef_means_prior_ar
 # numpy and its random package to perform the same operation
 
 def beta_draw(mean, cov):
+    import numpy as np
     # mean should be a 1 D array of means of variables
     # cov should be 2 D array of 
     return np.random.multivariate_normal(np.matrix(mean).getA1(), cov, 1)
@@ -105,6 +112,7 @@ def beta_draw(mean, cov):
 # The solve(mat1*%*mat2 + mat3) is finding the inverse of A where A = mat1 %*% mat2 + mat3
 
 def Vbeta_i(mat1, mat2, mat3):
+    import numpy as np
     mat1_r = np.dot(mat1, mat2)
     matr = np.add(mat1_r, mat3)
     return np.linalg.inv(matr)   
@@ -113,6 +121,7 @@ def Vbeta_i(mat1, mat2, mat3):
 # Only computed at lowest level of the hierarchy (i.e. the level that "mixes" directly with the data, namely X'y).
 
 def beta_i_mean(Vbeta_i, value, xty, Vbeta_i_inv_draw, beta_mu_j_draw):
+    import numpy as np
     #def beta_i_mean(mat1, value, mat2, mat3, mat4):
     # error was mat_r1 is 1 X 13 instead of 13 X 1 but with T it will be not
     mat_r1 = np.dot(np.matrix(Vbeta_i_inv_draw), np.matrix(beta_mu_j_draw).getA1()).T
@@ -127,15 +136,18 @@ def beta_i_mean(Vbeta_i, value, xty, Vbeta_i_inv_draw, beta_mu_j_draw):
 # numpy.random.gamma(shape, scale=1.0, size=None) is equivalent to rgamma(n, shape, rate = 1, scale = 1/rate)
 
 def h_draw(m, v):
+    import numpy as np
     shape_g = v/2
     rate_g = v / (2 * m)
     scale_g = 1/ rate_g
     return np.random.gamma(shape_g, scale_g, 1 )
      
+
+
 # Function to draw random array sample of p elements from the uniform(-1,1) dist'n
-# numpy.random.uniform(low=0.0, high=1.0, size=None)
-     
+# numpy.random.uniform(low=0.0, high=1.0, size=None)     
 def initial_vals_random(p):
+    import numpy as np
     return np.random.uniform(-1,1,p)
     
 

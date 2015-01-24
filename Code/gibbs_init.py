@@ -53,7 +53,9 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     # for Example : Considering h2 as departments and h1 as the stores get_d_childcount computes the number of stores for each department
     # OPTIMIZATION using broadcast variable instead of the RDD so as to not compute it ever again
     # this saves us one more scan of the table everytime we compute the childrens of key h2
-    m1_d_childcount = gtr.get_d_childcount(d)
+    # [(u'1', 30), (u'3', 30), (u'5', 30), (u'2', 30), (u'4', 30)]
+    # after sorted and new mod function we have [(1, 30), (2, 30), (3, 30), (4, 30), (5, 30)]    
+    m1_d_childcount = sorted(gtr.get_d_childcount_mod(d))
     m1_d_childcount_b = sc.broadcast(m1_d_childcount.collect())
     #m1_d_childcount = d_groupedBy_h1_h2.map(lambda (x,iter): (x, sum(1 for _ in set(iter))), preservesPartitioning=True).cache()
     # print "d_child_counts take : ", m1_d_childcount.take(1)
@@ -126,16 +128,16 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     # joined_i_j_rdd.take(1) :  (u'"5"', <pyspark.resultiterable.ResultIterable object at 0x117be50>) similarly 5 others
     #joined_i_j_rdd = sc.parallelize(joined_i_j).keyBy(lambda (hierarchy_level2, hierarchy_level1, values_array_i, values_array_j): (hierarchy_level2)).groupByKey()
     
-    joined_i_j_rdd = m1_ols_beta_i.cogroup(m1_ols_beta_j).map(lambda (x,y): (x, list(y[0]), list(y[1])[0][1])).groupBy(gp.partitionByh2, h2_partitions).persist()
+    joined_i_j_rdd = m1_ols_beta_i.cogroup(m1_ols_beta_j).map(lambda (x,y): (x, list(y[0]), list(y[1])[0][1])).groupBy(lambda x : gp.partitionByh2(x[0]), h2_partitions).persist()
     ## Data Structure m1_Vbeta_j_mu is symmetric along diagonal and have same dimensions as the one in HAWQ tables.
     # print "coefficients i and j", joined_i_j_rdd.take(1)
-    m1_Vbeta_j_mu = joined_i_j_rdd.map(lambda (x, y): (1, x, gtr.get_Vbeta_j_mu(y)), preserverPartitioning = True).persist() 
+    m1_Vbeta_j_mu = joined_i_j_rdd.map(lambda (x, y): (1, gtr.get_Vbeta_j_mu(y)), preservesPartitioning = True).persist() 
     # print " m1_Vbeta_j_mu count ", m1_Vbeta_j_mu.count() 
-    # print " m1_Vbeta_j_mu take 1", m1_Vbeta_j_mu.take(1)
+    # print " m1_Vbeta_j_mu take 1", m1_Vbeta_j_mu.take(1) # 1, (h2, vbeta_j_mu)
     
     ###-- Draw Vbeta_inv and compute resulting sigmabeta using the above functions for each j    
-    m1_Vbeta_j_mu_pinv = m1_Vbeta_j_mu.map(gtr.get_m1_Vbeta_j_mu_pinv).keyBy(lambda (seq, hierarchy_level2, Vbeta_inv_j_draw) : (hierarchy_level2)).groupByKey() 
-    m1_d_childcount_groupBy_h2 = m1_d_childcount.keyBy(lambda (hierarchy_level2, n1) : hierarchy_level2).groupByKey()
+    #>>> m1_Vbeta_j_mu_pinv = m1_Vbeta_j_mu.map(gtr.get_m1_Vbeta_j_mu_pinv, preservesPartitioning = True).keyBy(lambda (seq, hierarchy_level2, Vbeta_inv_j_draw) : (hierarchy_level2)).groupByKey() 
+    #>>> m1_d_childcount_groupBy_h2 = m1_d_childcount.keyBy(lambda (hierarchy_level2, n1) : hierarchy_level2).groupByKey()
     #  print "m1_d_childcount_groupBy_h2 ", m1_d_childcount_groupBy_h2.collect()
     #  here vals are iter, h2,
     #  y[0][0] = iter or seq from m1_Vbeta_j_mu_pinv
@@ -144,15 +146,24 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     #  y[0][2] = Vbeta_inv_j_draw from m1_Vbeta_j_mu_pinv, pinv_Vbeta_inv_Sigmabeta_j_draw()
     #  error 'ResultIterable' object does not support indexing
     #  map(lambda (x,y): (x, sum(fun(list(y)))), joined_i_j_rdd.take(1))
-    joined_Vbeta_i_j = sorted(m1_Vbeta_j_mu_pinv.cogroup(m1_d_childcount_groupBy_h2).collect())
+    #>>> joined_Vbeta_i_j = sorted(m1_Vbeta_j_mu_pinv.cogroup(m1_d_childcount_groupBy_h2).collect())
     # print " cogroup counts: ", len(joined_Vbeta_i_j)
     # print " Vbeta_i_j cogroup take 1", joined_Vbeta_i_j[1]
     # print "map ", map(lambda (x,y): (x, (y for y in list(y[0]))), joined_Vbeta_i_j)
     # m1_Vbeta_inv_Sigmabeta_j_draw : iter, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j
-    m1_Vbeta_inv_Sigmabeta_j_draw = sc.parallelize(map(lambda (x,y): gtr.get_m1_Vbeta_inv_Sigmabeta_j_draw(list(y)), joined_Vbeta_i_j)) 
+    #>>> m1_Vbeta_inv_Sigmabeta_j_draw = sc.parallelize(map(lambda (x,y): gtr.get_m1_Vbeta_inv_Sigmabeta_j_draw(list(y)), joined_Vbeta_i_j)) 
     # print " m1_Vbeta_inv_Sigmabeta_j_draw Take 1: ", m1_Vbeta_inv_Sigmabeta_j_draw[1]
     # print " m1_Vbeta_inv_Sigmabeta_j_draw Count: ", len(m1_Vbeta_inv_Sigmabeta_j_draw)
-    m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2 = m1_Vbeta_inv_Sigmabeta_j_draw.keyBy(lambda (iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j): (hierarchy_level2)) 
+    #>>> m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2 = m1_Vbeta_inv_Sigmabeta_j_draw.keyBy(lambda (iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j): (hierarchy_level2)) 
+    # OPTIMIZATION FOR m1_Vbeta_inv_Sigmabeta_j_draw
+    # seq, hierarchy_level2, Vbeta_inv_j_draw
+    m1_Vbeta_j_mu_pinv = m1_Vbeta_j_mu.map(gtr.get_m1_Vbeta_j_mu_pinv, preservesPartitioning = True)
+    # instead of m1_d_childcount I will be using m1_d_childcount_b
+    # (iter, h2, n1, Vbeta_inv_j_draw, pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, n1, coef_precision_prior_array_var))
+    m1_Vbeta_inv_Sigmabeta_j_draw = m1_Vbeta_j_mu_pinv.map(lambda (seq, hierarchy_level2, Vbeta_inv_j_draw): (seq, hierarchy_level2, m1_d_childcount[int(str(hierarchy_level2)[0]) -1][1], Vbeta_inv_j_draw, pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, m1_d_childcount[int(str(hierarchy_level2)[0]) -1][1], coef_precision_prior_array)), preservesPartitioning = True).persist()
+    print " m1_Vbeta_inv_Sigmabeta_j_draw Take 1: ", m1_Vbeta_inv_Sigmabeta_j_draw.take(1)
+    print " m1_Vbeta_inv_Sigmabeta_j_draw Count: ", m1_Vbeta_inv_Sigmabeta_j_draw.count()
+    
     
     ##-- m1_beta_mu_j : Compute mean pooled coefficient vector to use in drawing a new pooled coefficient vector.  
     ##-- Get back one coefficient vector for each j (i.e. J  coefficient vectors are returned).

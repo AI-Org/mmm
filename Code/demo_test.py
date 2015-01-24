@@ -252,13 +252,20 @@ def create_xtx_matrix_xty(obj):
 
 #h1_h2_partitions = 135
 h1_h2_partitions = 150
-d_groupedBy_h1_h2 = d.groupBy(group_partitionByh2h1, h1_h2_partitions).persist()
-m1_d_array_agg = d_groupedBy_h1_h2.map(create_x_matrix_y_array, preservesPartitioning=True).persist()    
+d_groupedBy_h1_h2 = d.groupBy(group_partitionByh2h1, h1_h2_partitions)
+m1_d_array_agg = d_groupedBy_h1_h2.map(create_x_matrix_y_array) 
     
-m1_d_array_agg_constants = m1_d_array_agg.map(create_xtx_matrix_xty, preservesPartitioning=True).persist()
+m1_d_array_agg_constants = m1_d_array_agg.map(create_xtx_matrix_xty)
     
 # AS BROADCAST ONLY m1_d_childcount = d_groupedBy_h1_h2.map(lambda (x,iter): (x, sum(1 for _ in set(iter))), preservesPartitioning=True).cache()
 # following goes on the cluster node
+
+def get_d_childcount_mod(obj):
+    keyBy_h2_to_h1 = obj.map(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2, hierarchy_level1)).groupByKey()
+    # returns DS with key hierarchy_level2 and value <hierarchy_level2, n1>
+    return keyBy_h2_to_h1.map(lambda (x,iter): (int(str(x)[0]), sum(1 for _ in set(iter))))
+
+m1_d_childcount = get_d_childcount_mod(d).collect()
 #def group_partitionByh2(obj):
 #    return int(str(obj[2])[1]) % 5 
     
@@ -269,8 +276,8 @@ def group_partitionByh2(obj):
 
 h2_partitions = 5
 
-d_groupedBy_h2 = d.groupBy(group_partitionByh2, h2_partitions).persist()
-d_keyBy_h2 = d_groupedBy_h2.map(create_x_matrix_y_array, preservesPartitioning=True).persist()
+d_groupedBy_h2 = d.groupBy(group_partitionByh2, h2_partitions)
+d_keyBy_h2 = d_groupedBy_h2.map(create_x_matrix_y_array)
 
 ## do OLS
 # beta_i
@@ -284,7 +291,7 @@ def get_ols_initialvals_beta_i(obj):
 
    
 
-m1_ols_beta_i = m1_d_array_agg.map(get_ols_initialvals_beta_i, preservesPartitioning=True)
+m1_ols_beta_i = m1_d_array_agg.map(get_ols_initialvals_beta_i).keyBy(lambda (h2,h1,coff): (h2))
 
 ## beta_j
 def get_ols_initialvals_beta_j(obj):
@@ -295,7 +302,7 @@ def get_ols_initialvals_beta_j(obj):
     #hierarchy_level2 = a matrix obj[3] of same values in hierarchy_level2
     return (obj[3], regr.coef_)
 
-m1_ols_beta_j = d_keyBy_h2.map(get_ols_initialvals_beta_j, preservesPartitioning=True)
+m1_ols_beta_j = d_keyBy_h2.map(get_ols_initialvals_beta_j).keyBy(lambda (h2,coff): (h2))
 
 
 def group_partitionByh2(obj):
@@ -307,3 +314,31 @@ def group_partitionByh2(obj):
 
 
 ## stuck at m1_ols_beta_i.coalesce(5, shuffle = False).glom().take(2) as it does not honor the conditioned partitioning
+
+def get_Vbeta_i_mu_coeff_i_coeff_j(list_coeff_i, coeff_j):
+    #<h2,list<h1,h2,coef_i>,coef_j>
+    Vbeta_i_mu_ar = []
+    for r in list_coeff_i:
+        values_array_i = r[2]    
+        Vbeta_i_mu_ar.append(Vbeta_i_mu(values_array_i, coeff_j))
+    return Vbeta_i_mu_ar
+
+
+def get_Vbeta_j_mu(y):
+    # now y is an ResultIterable object pointing to a collection of arrays
+    # where each array has a structure like <h2,list<h1,h2,coef_i>,coef_j>
+    result_Iterable_list = list(y)[0]
+    Vbeta_i_mu_ar = get_Vbeta_i_mu_coeff_i_coeff_j(result_Iterable_list[1], result_Iterable_list[2])
+    # one can also obtain Vbeta_i_mu_sum as  map(lambda (x,y): (x, sum(fun(list(y)))), joined_i_j_rdd.take(1))
+    # corresponding to each one of the h2 level
+    Vbeta_i_mu_sum = sum(Vbeta_i_mu_ar)
+    Vbeta_j_mu = matrix_add_diag_plr(Vbeta_i_mu_sum, 14)
+    # iter, hierarchy_level2, Vbeta_j_mu
+    return result_Iterable_list[0],Vbeta_j_mu
+    
+
+
+m1_Vbeta_j_mu = joined_i_j_rdd.map(lambda (x, y): (1, get_Vbeta_j_mu(y)), preservesPartitioning = True).persist() 
+m1_Vbeta_j_mu.take(1) 
+
+m1_Vbeta_j_mu.map(lambda (x,y): int(str(y[0])[0])).take(1)  # [h2 in int form] 

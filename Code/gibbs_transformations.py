@@ -143,6 +143,14 @@ def get_d_childcount(obj):
     # returns DS with key hierarchy_level2 and value <hierarchy_level2, n1>
     return keyBy_h2_to_h1.map(lambda (x,iter): (x, sum(1 for _ in set(iter))))
 
+
+# as per the level 2 in integer mode
+def get_d_childcount_mod(obj):
+    keyBy_h2_to_h1 = obj.map(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2, hierarchy_level1)).groupByKey()
+    # returns DS with key hierarchy_level2 and value <hierarchy_level2, n1>
+    return keyBy_h2_to_h1.map(lambda (x,iter): (int(str(x)[0]), sum(1 for _ in set(iter))))
+
+
 def get_d_count_grpby_level2(obj):
     keyBy_h2_week = obj.map(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2, week))
     return keyBy_h2_week
@@ -199,26 +207,26 @@ def create_join_by_h2_only(t1,t2):
 
 # funciton used to compute an appended list of coeff_i and coeff_j for the same
 # hierarchical level. Used in get_Vbeta_j_mu
-def get_Vbeta_i_mu_coeff_i_coeff_j(result_Iterable_list):
+def get_Vbeta_i_mu_coeff_i_coeff_j(list_coeff_i, coeff_j):
+    #<h2,list<h1,h2,coef_i>,coef_j>
     Vbeta_i_mu_ar = []
-    for r in result_Iterable_list:
-        values_array_i = r[2]
-        values_array_j = r[3]
-        Vbeta_i_mu_ar.append(gu.Vbeta_i_mu(values_array_i, values_array_j))
+    for r in list_coeff_i:
+        values_array_i = r[2]    
+        Vbeta_i_mu_ar.append(gu.Vbeta_i_mu(values_array_i, coeff_j))
     return Vbeta_i_mu_ar
 
 
 def get_Vbeta_j_mu(y):
     # now y is an ResultIterable object pointing to a collection of arrays
-    # where each array has a structure like <h2,h1,coef_i,coef_j>
-    result_Iterable_list = list(y)
-    Vbeta_i_mu_ar = get_Vbeta_i_mu_coeff_i_coeff_j(result_Iterable_list)
+    # where each array has a structure like <h2,list<h1,h2,coef_i>,coef_j>
+    result_Iterable_list = list(y)[0]
+    Vbeta_i_mu_ar = get_Vbeta_i_mu_coeff_i_coeff_j(result_Iterable_list[1], result_Iterable_list[2])
     # one can also obtain Vbeta_i_mu_sum as  map(lambda (x,y): (x, sum(fun(list(y)))), joined_i_j_rdd.take(1))
     # corresponding to each one of the h2 level
     Vbeta_i_mu_sum = sum(Vbeta_i_mu_ar)
     Vbeta_j_mu = gu.matrix_add_diag_plr(Vbeta_i_mu_sum, p_var)
     # iter, hierarchy_level2, Vbeta_j_mu
-    return Vbeta_j_mu
+    return result_Iterable_list[0], Vbeta_j_mu
     
 def get_Vbeta_j_mu_next(y):
     # now y is an ResultIterable object pointing RI1, RI2
@@ -237,8 +245,8 @@ def get_m1_Vbeta_j_mu_pinv(obj):
     import nearPD as npd
     global df1_var
     seq = obj[0]
-    hierarchy_level2 = obj[1]
-    Vbeta_j_mu = obj[2]
+    hierarchy_level2 = obj[1][0]
+    Vbeta_j_mu = obj[1][2]
     # Vbeta_inv_draw(nu, phi) where nu is df1_var & for phi matrix we have
     a = gu.matrix_scalarmult_plr(Vbeta_j_mu, df1_var)
     phi = np.linalg.pinv(a)
