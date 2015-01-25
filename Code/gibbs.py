@@ -228,9 +228,11 @@ def gibbs_iter(sc, begin_iter, end_iter, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta
         #foo3 = foo2.groupByKey().map(lambda (x, y): get_s2(list(y)))
         # iteri, hierarchy_level2, m1_d_count_grpby_level2_b, s2
         m1_s2_next = foo2.groupByKey().map(lambda (x, y): gtr.get_s2(list(y)))
-        m1_s2 = m1_s2.union(m1_s2_next)
-        print "m1_s2 : ", m1_s2.take(1)
-        print "m1_s2 : ", m1_s2.count()
+        # OPTIMIZATION no need for union witht he previous step as it is not required in further iterations 
+        # it is computed new each time.
+        ##?}>>>m1_s2 = m1_s2.union(m1_s2_next)
+        #print "m1_s2 : ", m1_s2.take(1)
+        #print "m1_s2 : ", m1_s2.count()
         
         ## Updating values of h_draw based on current iteration
         # -- Draw h from gamma dist'n.  Note that h=1/(s^2)
