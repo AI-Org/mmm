@@ -65,7 +65,7 @@ def gibbs_iter(sc, begin_iter, end_iter, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta
         # Don’t spill to disk unless the functions that computed your datasets are expensive, or they filter a large amount of the data. 
         # Otherwise, recomputing a partition may be as fast as reading it from disk.        
         
-        # compute next values of m1_Vbeta_i : (h2, [(count, hierarchy_level2, hierarchy_level1, Vbeta_i)])
+        # compute next values of m1_Vbeta_i : (h2, [(sequence, hierarchy_level2, hierarchy_level1, Vbeta_i)])
         m1_Vbeta_i_keyBy_h2_long_next = m1_d_array_agg_constants_key_by_h2_join_joined_simplified.map(lambda (x,y): (x, gtr.get_Vbeta_i_next(y, s)))
         # the Unified table is the actual table that reflects all the rows of m1_Vbeta_i in correct format.
         m1_Vbeta_i_keyBy_h2_long_next_cached = sc.parallelize(m1_Vbeta_i_keyBy_h2_long_next.values().reduce(add),135)

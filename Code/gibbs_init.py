@@ -258,19 +258,22 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     JOINED_m1_beta_i_draw_WITH_m1_d_array_agg = m1_d_array_agg_key_by_h2_h1.cogroup(m1_beta_i_draw_group_by_h2_h1)
     # print "JOINED_m1_beta_i_draw_WITH_m1_d_array_agg : 2 : ", JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.take(1)
     # hierarchy_level2, hierarchy_level1, x_array_var, y_var, iter, beta_i_draw , m1_d_count_grpby_level2_b.value[h2]
-    JOINED_m1_beta_i_draw_WITH_m1_d_array_agg = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.map(lambda (x, y): (x[0], x[1], list(y[0])[0][1], list(y[0])[0][2] ,list(y[1])[0][0], list(y[1])[0][3], m1_d_count_grpby_level2_b.value[x[0]]), preservesPartitioning = True)
+    JOINED_m1_beta_i_draw_WITH_m1_d_array_agg = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.map(lambda (x, y): ((x[0], x[1]), list(y[0])[0][1], list(y[0])[0][2] ,list(y[1])[0][0], list(y[1])[0][3], m1_d_count_grpby_level2_b.value[x[0]]))
     # print "JOINED_m1_beta_i_draw_WITH_m1_d_array_agg : 3 :", JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.take(1)
     # JOINED_m1_beta_i_draw_WITH_m1_d_array_agg = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.map(lambda (x, y): (x[0], x[1], list(list(y[0])[0])[1], list(list(y[0])[0])[2], list(y[1])[0][0], list(y[1])[0][3], m1_d_count_grpby_level2_b.value[x[0]]))
-    foo = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.keyBy(lambda (hierarchy_level2, hierarchy_level1, x_array_var, y_var, iteri, beta_i_draw, m1_d_count_grpby_level2_b): (hierarchy_level2, hierarchy_level1, iteri))
+    ### OPTIMIZATION Saving on KEYBY Step as coupling the keys as it is from groupby
+    ### foo = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.keyBy(lambda (hierarchy_level2, hierarchy_level1, x_array_var, y_var, iteri, beta_i_draw, m1_d_count_grpby_level2_b): (hierarchy_level2, hierarchy_level1, iteri))
     # print "foo : 4 : ", foo.take(1)
     # print "foo : 4 : ", foo.count()
     # foo2 is group by hierarchy_level2, hierarchy_level1, iteri and has structure as ey => ( hierarchy_level2, hierarchy_level1, iteri, ssr, m1_d_count_grpby_level2_b )
-    foo2 = foo.map(lambda (x, y): gtr.get_sum_beta_i_draw_x2(y)).keyBy(lambda (hierarchy_level2, hierarchy_level1, iteri, ssr, m1_d_count_grpby_level2_b): (hierarchy_level2, iteri, m1_d_count_grpby_level2_b))
+    ## OPTIMIZATION Following is a reduciton of partitioning step.
+    foo2 = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.map(lambda (x, y): gtr.get_sum_beta_i_draw_x2(y)).keyBy(lambda (hierarchy_level2, hierarchy_level1, iteri, ssr, m1_d_count_grpby_level2_b): (hierarchy_level2, iteri, m1_d_count_grpby_level2_b))
     # print "foo2 : 5 : ", foo2.take(1)
     # print "foo2 : 5 : ", foo2.count()
     # foo3 = foo2.groupByKey().map(lambda (x, y): get_s2(list(y)))
     # iteri, hierarchy_level2, m1_d_count_grpby_level2_b, s2
-    m1_s2 = foo2.groupByKey().map(lambda (x, y): gtr.get_s2(list(y)), preservesPartitioning = True).persist()
+    ### optimization m1_s2 is never used in further iteration steps as such we dont need to persist it in memory.
+    m1_s2 = foo2.groupByKey().map(lambda (x, y): gtr.get_s2(list(y))) 
     print "m1_s2 : 5 : ", m1_s2.take(1)
     print "m1_s2 : 5 : ", m1_s2.count() 
     
