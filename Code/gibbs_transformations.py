@@ -333,25 +333,7 @@ def add_coeff_j_next(hierarchy_level2, iterable_object):
         array_list.append(r[3])
     sum_coef_j = sum(array_list) 
     return (hierarchy_level2, sum_coef_j)
-    
 
-def get_beta_draw(obj):
-    #key = obj[0]
-    # OPT remvoed
-    # key is hierarchy_level2 and 
-    # cogrouped_iterable_object is <W1,W2>
-    # where W1 is a ResultIterable having iter, hierarchy_level2, beta_mu_j
-    # and W2 is another ResultIterable having iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j
-    # opt RMOVED
-    # OPTIMIZATION iteri, hierarchy_level2, beta_mu_j, Vbeta_inv_j_draw, Sigmabeta_j as a tuple
-    #    for j in obj[1][0]:
-    #        iteri = j[0]
-    #        beta_mu_j = j[2]
-    #    for r in obj[1][1]:
-    #        Vbeta_inv_j_draw = r[3]
-    #        Sigmabeta_j = r[4]
-    
-    return (iteri, key, gu.beta_draw(beta_mu_j, Sigmabeta_j), Vbeta_inv_j_draw)
     
 def pinv_Vbeta_i(xtx, Vbeta_inv_j_draw, h_draw):
     return gu.matrix_add_plr(gu.matrix_scalarmult_plr(xtx, h_draw), Vbeta_inv_j_draw)    
