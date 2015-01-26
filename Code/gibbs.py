@@ -232,7 +232,7 @@ def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitio
         # OPTIMIZATION as m1_ols_beta_i_sum_coef_j = m1_ols_beta_i.groupByKey().map(lambda (key, value) : gtr.add_coeff_j(key, value))
         # m1_beta_i_draw_keyby_h2 has a key-value structure h2 -> (s, h2, h1, beta_i_draw) into h2 -> h2, sum_coef_j
         ###>>>m1_beta_i_draw_next_key_by_h2_sum_coef_j = m1_beta_i_draw_next_key_by_h2.map(lambda (x,y): (x, y[3])).keyBy(lambda (h2, coeff): h2).groupByKey().map(lambda (key, value) : gtr.add_coeff_j(key,value))
-        m1_beta_i_draw_next_key_by_h2_sum_coef_j = m1_beta_i_draw_key_by_h2.groupByKey().map(lambda (key, value) : gtr.add_coeff_j(key,value))
+        m1_beta_i_draw_next_key_by_h2_sum_coef_j = m1_beta_i_draw_key_by_h2.groupByKey().map(lambda (key, value) : gtr.add_coeff_j_next(key,value))
         # NEXT 
         # Join m1_Vbeta_inv_Sigmabeta_j_draw (with iteration == s, i.e., m1_Vbeta_inv_Sigmabeta_j_draw_next, select *) 
         # & m1_beta_i_draw (with iteration == s, i.e., m1_beta_i_draw_next_key_by_h2_sum_coef_j, select h2, sum_coef_j)

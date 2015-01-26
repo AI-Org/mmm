@@ -325,6 +325,15 @@ def add_coeff_j(hierarchy_level2, iterable_object):
     sum_coef_j = sum(array_list) 
     return (hierarchy_level2, sum_coef_j)
     
+def add_coeff_j_next(hierarchy_level2, iterable_object):
+    # where each iterable is like (hierarchy_level2, array[[]] of dim 1X13)
+    # Changed in OPTIMIZATIONS each iterable is like (sequence, hierarchy_level2, h1, array[[]] of dim 1X13)
+    array_list = []
+    for r in iterable_object:
+        array_list.append(r[3])
+    sum_coef_j = sum(array_list) 
+    return (hierarchy_level2, sum_coef_j)
+    
 
 def get_beta_draw(obj):
     #key = obj[0]
