@@ -18,9 +18,6 @@ def add(x,y):
 #                  d, hierarchy_level1, hierarchy_level2, p, df1, y_var_index, x_var_indexes, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, begin_iter, end_iter
 def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitions, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_inv_Sigmabeta_j_draw_collection, m1_Vbeta_j_mu):
     
-    #m1_beta_mu_j_draw has tuples : iteri, key, gu.beta_draw(beta_mu_j, Sigmabeta_j), Vbeta_inv_j_draw)
-    m1_beta_mu_j_draw = m1_beta_mu_j_draw.keyBy(lambda (iter, hierarchy_level2, beta_mu_j_draw, Vbeta_inv_j_draw): hierarchy_level2)
-    
     m1_d_array_agg_key_by_h2_h1 = m1_d_array_agg.keyBy(lambda (keys_from_partitioning, x_matrix, y_array, hierarchy_level2, hierarchy_level1) : (hierarchy_level2, hierarchy_level1))
     # OPTIMIZED into grpby_level2    
     m1_d_count_grpby_level2_b = m1_d_count_grpby_level2
@@ -152,6 +149,7 @@ def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitio
         print "insert into beta_i_draw"
         # After cogroup of above two Data Structures we can easily compute bet_draw directly from the map function
         # structure : s, h2, h1, beta_draw 
+        # m1_beta_i_draw_long_next is required for computing the Gewke estimations
         m1_beta_i_draw_long_next = m1_beta_i_draw.map(gtr.get_beta_i_draw_long).reduce(add)
         m1_beta_i_draw.unpersist()
         ## USING THE OPTIMIZATION OF PREVIOUS init functions where only m1_beta_i_mean_by_current_iteration was used. 
@@ -171,6 +169,8 @@ def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitio
         m1_beta_i_draw_key_by_h2 = m1_beta_i_draw.keyBy(lambda (s, h2, h1, beta_i_draw): h2)
         # S2 : h2, beta_mu_j_draw from m1_beta_mu_j_draw where iter= s-1 and also key it by h2
         # m1_beta_mu_j_draw_by_previous_iteration = hierarchy_level2 -> (s-1, hierarchy_level2, beta_mu_j_draw)
+        #m1_beta_mu_j_draw has tuples : iteri, key, gu.beta_draw(beta_mu_j, Sigmabeta_j), Vbeta_inv_j_draw)
+        m1_beta_mu_j_draw = m1_beta_mu_j_draw.keyBy(lambda (iter, hierarchy_level2, beta_mu_j_draw, Vbeta_inv_j_draw): hierarchy_level2)
         JOINED_m1_beta_i_draw_next_key_by_h2_WITH_m1_beta_mu_j_draw_by_previous_iteration = m1_beta_i_draw_key_by_h2.cogroup(m1_beta_mu_j_draw).map(lambda (x,y): (x, list(y[0]), list(y[1])[0][2])).groupBy(lambda x : gp.partitionByh2(x[0]), h2_partitions).persist()
         ## OPTIMIZATION onf JOINED to get it grouped by the GroupedBy clause to build upon further iterations on top of it, which have the same partitioning
         ## .map(lambda (x,y): (x, list(y[0]), list(y[1])[0][1])).groupBy(lambda x : gp.partitionByh2(x[0]), h2_partitions).persist()
@@ -247,12 +247,12 @@ def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitio
         # now the cogroup
         Joined_m1_beta_mu_j_next_keyBy_h2_WITH_m1_Vbeta_inv_Sigmabeta_j_draw_next_keyBy_h2 = m1_beta_mu_j_next_keyBy_h2.cogroup(m1_Vbeta_inv_Sigmabeta_j_draw_next_keyBy_h2)
         m1_beta_mu_j_draw.unpersist()
-        m1_beta_mu_j_draw_next = Joined_m1_beta_mu_j_next_keyBy_h2_WITH_m1_Vbeta_inv_Sigmabeta_j_draw_next_keyBy_h2.map(gtr.get_beta_draw, preservesPartitioning = True).persist()
+        m1_beta_mu_j_draw = Joined_m1_beta_mu_j_next_keyBy_h2_WITH_m1_Vbeta_inv_Sigmabeta_j_draw_next_keyBy_h2.map(gtr.get_beta_draw, preservesPartitioning = True).persist()
         #print "count  m1_beta_mu_j_draw_next   ", m1_beta_mu_j_draw_next.count()
         #print "take 1 m1_beta_mu_j_draw_next ", m1_beta_mu_j_draw_next.take(1)
         #OPTIMIZATION : NO NEED for unions m1_beta_mu_j_draw = m1_beta_mu_j_draw.union(m1_beta_mu_j_draw_next)
         # beta_mu_j_draw keyed by h2
-        m1_beta_mu_j_draw = m1_beta_mu_j_draw_next.keyBy(lambda (iter, hierarchy_level2, beta_mu_j_draw, Vbeta_inv_j_draw): hierarchy_level2)
+        #m1_beta_mu_j_draw = m1_beta_mu_j_draw_next.keyBy(lambda (iter, hierarchy_level2, beta_mu_j_draw, Vbeta_inv_j_draw): hierarchy_level2)
         
         # Update values of s2
         ##-- Compute updated value of s2 to use in next section.
