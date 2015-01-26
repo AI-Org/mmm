@@ -234,13 +234,14 @@ def get_Vbeta_j_mu_next(y):
     # OPTI and RI2 is a single tuple iter, hierarchy_level2, beta_mu_j_draw
     # y is tuple of as I put a map on cogroup h2, <all of beta_i_draw>, beta_mu_j_draw
     beta_mu_j_draw = list(y)[0][2]
+    h2 = list(y)[0][0]
     Vbeta_i_mu_ar = []
     for rec in list(y)[0][1]:
         # rec : s, h2, h1, beta_i_draw
         beta_i_draw = rec[3]
         Vbeta_i_mu_ar.append(gu.Vbeta_i_mu(beta_i_draw, beta_mu_j_draw))
     Vbeta_j_mu = gu.matrix_add_diag_plr(sum(Vbeta_i_mu_ar) ,p_var) 
-    return Vbeta_j_mu
+    return h2, Vbeta_j_mu
 
 def get_m1_Vbeta_j_mu_pinv(obj):
     import numpy as np
