@@ -229,12 +229,14 @@ def get_Vbeta_j_mu(y):
     return result_Iterable_list[0], Vbeta_j_mu
     
 def get_Vbeta_j_mu_next(y):
-    # now y is an ResultIterable object pointing RI1, RI2
-    # where RI1 is a collection of tuples with h2, h1, beta_i_draw
-    # and RI2 is a single tuple iter, hierarchy_level2, beta_mu_j_draw
-    beta_mu_j_draw = list(y[1])[0][2]
+    # OPTI now y is an ResultIterable object pointing RI1, RI2
+    # OPTI where RI1 is a collection of tuples with h2, h1, beta_i_draw
+    # OPTI and RI2 is a single tuple iter, hierarchy_level2, beta_mu_j_draw
+    # y is h2, <all of beta_i_draw>, beta_mu_j_draw
+    beta_mu_j_draw = list(y)[2]
     Vbeta_i_mu_ar = []
-    for rec in list(y[0]):
+    for rec in list(y)[1]:
+        # rec : s, h2, h1, beta_i_draw
         beta_i_draw = rec[3]
         Vbeta_i_mu_ar.append(gu.Vbeta_i_mu(beta_i_draw, beta_mu_j_draw))
     Vbeta_j_mu = gu.matrix_add_diag_plr(sum(Vbeta_i_mu_ar) ,p_var) 
@@ -336,8 +338,8 @@ def get_beta_draw(obj):
         Sigmabeta_j = r[4]
     return (iteri, key, gu.beta_draw(beta_mu_j, Sigmabeta_j), Vbeta_inv_j_draw)
     
-def pinv_Vbeta_i(xtx, Vbeta_inv_j_draw, s):
-    return gu.matrix_add_plr(gu.matrix_scalarmult_plr(xtx, s), Vbeta_inv_j_draw)    
+def pinv_Vbeta_i(xtx, Vbeta_inv_j_draw, h_draw):
+    return gu.matrix_add_plr(gu.matrix_scalarmult_plr(xtx, h_draw), Vbeta_inv_j_draw)    
     #return (type(xtx), type(Vbeta_inv_j_draw))
     
 def get_Vbeta_i(obj):
