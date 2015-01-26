@@ -127,6 +127,7 @@ def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitio
         ## using the gu function gu.beta_i_mean(Vbeta_i, h_draw, xty, Vbeta_inv_j_draw, beta_mu_j_draw) directly over the following functions as 
         ###>>>m1_beta_i_mean_keyBy_h2_long_next = JOINED_part_1_by_keyBy_h2.cogroup(JOINED_part_2_by_keyBy_h2).map(lambda (x,y): (x, gtr.get_beta_i_mean_next(y, s)))
         m1_beta_i_mean.unpersist()
+        # m1_beta_i_mean is a collection of (sequence, h2,h1,beta_i_mean)
         m1_beta_i_mean = m1_Vbeta_i.map(lambda (sequence, h2, h1, Vbeta_i, xty): (sequence, h2, h1, gu.beta_i_mean(Vbeta_i, m1_Vbeta_inv_Sigmabeta_j_draw_collection[int(str(h2)[0]) -1][4], xty,  m1_beta_mu_j_draw_collection[int(str(h2)[0]) -1][4], m1_beta_mu_j_draw_collection[int(str(h2)[0]) -1][3]), m1_beta_mu_j_draw_collection[int(str(h2)[0]) -1][4]), preservesPartitioning = True).persist()
     
         # the Unified table is the actual table that reflects all rows of m1_beta_i_draw in correct format.
@@ -135,7 +136,7 @@ def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitio
         ## m1_beta_i_mean = m1_beta_i_mean.union(sc.parallelize(m1_beta_i_mean_keyBy_h2_long_next.values().reduce(add)))
         #print "count  m1_Vbeta_i_unified   ", m1_beta_i_draw_unified.count()
         #print "take 1 m1_Vbeta_i_unified ", m1_beta_i_draw_unified.take(1)
-        m1_beta_i_mean_keyBy_h2_h1 = m1_beta_i_mean.keyBy(lambda (sequence, hierarchy_level2, hierarchy_level1, beta_i_mean): (hierarchy_level2, hierarchy_level1))
+        m1_beta_i_mean_keyBy_h2_h1 = m1_beta_i_mean.keyBy(lambda (sequence, hierarchy_level2, hierarchy_level1, beta_i_mean, Vbeta_i): (hierarchy_level2, hierarchy_level1))
         
         # insert into beta_i, using iter=s-1 values.  Draw from mvnorm dist'n.
         #print "insert into beta_i"
@@ -154,7 +155,10 @@ def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitio
         m1_beta_i_draw.unpersist()
         ## USING THE OPTIMIZATION OF PREVIOUS init functions where only m1_beta_i_mean_by_current_iteration was used. 
         ##>>m1_beta_i_draw = m1_beta_i_mean_by_current_iteration.cogroup(m1_Vbeta_i_keyby_h2_h1_current_iteration).map(lambda (x,y): (s, x[0], x[1], gu.beta_draw(list(y[0])[0][3], list(y[1])[0][3])), preservesPartitioning = True).persist()
-        m1_beta_i_draw = m1_beta_i_mean_keyBy_h2_h1.cogroup(m1_Vbeta_i_keyby_h2_h1).map(lambda (x,y): (s, x[0], x[1], gu.beta_draw(list(y[0])[0][3], list(y[1])[0][3])), preservesPartitioning = True).persist()
+        m1_beta_i_draw = m1_beta_i_mean.map(lambda (sequence, h2, h1, beta_i_mean, Vbeta_i): (sequence, h2, h1, gu.beta_draw(beta_i_mean, Vbeta_i)), preservesPartitioning = True).persist()
+        print "m1_beta_i_draw take ", m1_beta_i_draw.take(1) 
+        print "m1_beta_i_draw count ", m1_beta_i_draw.count()        
+        #OPTIMIZATION : NO NEED TO COgroup as m1_beta_i_mean has Vbeta_i too : m1_beta_i_draw = m1_beta_i_mean_keyBy_h2_h1.cogroup(m1_Vbeta_i_keyby_h2_h1).map(lambda (x,y): (s, x[0], x[1], gu.beta_draw(list(y[0])[0][3], list(y[1])[0][3])), preservesPartitioning = True).persist()
         #print "count  m1_beta_i_draw_next   ", m1_beta_i_draw_next.count()
         #print "take 1 m1_beta_i_draw_next ", m1_beta_i_draw_next.take(1)
         #Optimization on union save m1_beta_i_draw = m1_beta_i_draw.union(m1_beta_i_draw_next)
@@ -276,21 +280,21 @@ def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitio
         
         #foo3 = foo2.groupByKey().map(lambda (x, y): get_s2(list(y)))
         # iteri, hierarchy_level2, m1_d_count_grpby_level2_b, s2
-        m1_s2_next = foo2.groupByKey().map(lambda (x, y): gtr.get_s2(list(y)))
+        m1_s2 = foo2.groupByKey().map(lambda (x, y): gtr.get_s2(list(y)))
         # OPTIMIZATION no need for union witht he previous step as it is not required in further iterations 
         # it is computed new each time.
         ##?}>>>m1_s2 = m1_s2.union(m1_s2_next)
-        #print "m1_s2 : ", m1_s2.take(1)
-        #print "m1_s2 : ", m1_s2.count()
+        print "m1_s2 : ", m1_s2.take(1)
+        print "m1_s2 : ", m1_s2.count()
         
         ## Updating values of h_draw based on current iteration
         # -- Draw h from gamma dist'n.  Note that h=1/(s^2)
         ## from iteri, hierarchy_level2, m1_d_count_grpby_level2_b, s2
         ## m1_h_draw = iteri, h2, h_draw
-        m1_h_draw_next = m1_s2_next.map(gtr.get_h_draw).keyBy(lambda (iteri, h2, h_draw): h2).persist()
+        m1_h_draw = m1_s2_next.map(gtr.get_h_draw).keyBy(lambda (iteri, h2, h_draw): h2).persist()
         # optimization we dont need to persist the previous draws with new ones 
         ## so removing the persistence and creating new persistence
-        m1_h_draw = m1_h_draw.union(m1_h_draw_next)
+        # OPTIMIZATION : SAVED over unions , only next values used in iterations m1_h_draw = m1_h_draw.union(m1_h_draw_next)
         print "m1_h_draw : ", m1_h_draw.take(1)
         print "m1_h_draw : ", m1_h_draw.count()
         

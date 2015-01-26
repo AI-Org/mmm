@@ -229,7 +229,7 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     m1_beta_mu_j_draw_collection = m1_beta_mu_j_draw.map(lambda (sequence, hierarchy_level2, beta_mu_j_draw, Vbeta_inv_j_draw): (int(str(hierarchy_level2)[0]), sequence, hierarchy_level2, beta_mu_j_draw, Vbeta_inv_j_draw), preservesPartitioning = True).collect()
     #m1_beta_mu_j_draw_collection = sorted(map(lambda (sequence, h2, beta_mu_j_draw, Vbeta_inv_j_draw): (int(str(hierarchy_level2)[0]), sequence, h2, beta_mu_j_draw.all(), Vbeta_inv_j_draw.all()), m1_beta_mu_j_draw_collection))
     m1_beta_mu_j_draw_collection = sorted(m1_beta_mu_j_draw_collection)
-    print "m1_beta_mu_j_draw_collection ", m1_beta_mu_j_draw_collection
+    #print "m1_beta_mu_j_draw_collection ", m1_beta_mu_j_draw_collection
     ###>>>m1_beta_i_mean_keyBy_h2_long = JOINED_part_1_by_keyBy_h2.cogroup(JOINED_part_2_by_keyBy_h2).map(lambda (x,y): (x, gtr.get_beta_i_mean(y)))
     ### OPTIMIZATIONS the function from gibbs UDFs beta_i_mean() has following parameters : Vbeta_i, 1, xty, Vbeta_inv_j_draw, beta_mu_j_draw
     ### for Computing next coefficient variable m1_beta_i_draw we are keeping the covariance Vbeta_inv_j_draw with m1_beta_i_mean data set ( which is m1_beta_mu_j_draw_collection[int(str(hierarchy_level2)[0]) -1][4])
@@ -249,8 +249,8 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     ###>>>m1_beta_i_draw = m1_beta_i_mean_keyBy_h2_h1.cogroup(m1_Vbeta_i_keyby_h2_h1).map(lambda (x,y): (list(y[0])[0][0], x[0], x[1], gu.beta_draw(list(y[0])[0][3], list(y[1])[0][3])))
     # OPTIMIZATION gu.beta_draw(mean, cov) relies only on mean and covariance and can be build on same partitions as m1_beta_i_mean
     m1_beta_i_draw = m1_beta_i_mean.map(lambda (sequence, h2, h1, beta_i_mean, Vbeta_i): (sequence, h2, h1, gu.beta_draw(beta_i_mean, Vbeta_i)), preservesPartitioning = True).persist()
-    print "m1_beta_i_draw take ", m1_beta_i_draw.take(1) 
-    print "m1_beta_i_draw count ", m1_beta_i_draw.count() # 135
+    #print "m1_beta_i_draw take ", m1_beta_i_draw.take(1) 
+    #print "m1_beta_i_draw count ", m1_beta_i_draw.count() # 135
     
     ## -- Compute updated value of s2 to use in next section. 
     m1_beta_i_draw_group_by_h2_h1 = m1_beta_i_draw.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, beta_i_draw): (hierarchy_level2, hierarchy_level1))
