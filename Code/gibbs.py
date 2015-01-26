@@ -48,14 +48,14 @@ def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitio
         # We can use m1_Vbeta_inv_Sigmabeta_j_draw_previous_iteration instead of m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration
         # m1_Vbeta_inv_Sigmabeta_j_draw_previous_iteration = m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration = m1_Vbeta_inv_Sigmabeta_j_draw.filter(lambda (iteri, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): iteri == s - 1 ).keyBy(lambda (iteri, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): h2)
         
-        m1_Vbeta_inv_Sigmabeta_j_draw_key_by_h2 = m1_Vbeta_inv_Sigmabeta_j_draw.keyBy(lambda (iteri, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): h2)      
+        ## OPTIMIZATION SAVED m1_Vbeta_inv_Sigmabeta_j_draw_key_by_h2 = m1_Vbeta_inv_Sigmabeta_j_draw.keyBy(lambda (iteri, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): h2)      
         # filter m1_h_draw taking only |s| -1 into account
-        m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration_join_m1_h_draw_filter_by_iteration = m1_Vbeta_inv_Sigmabeta_j_draw_key_by_h2.cogroup(m1_h_draw)
+        ## OPTIMIZATION SAVED m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration_join_m1_h_draw_filter_by_iteration = m1_Vbeta_inv_Sigmabeta_j_draw_key_by_h2.cogroup(m1_h_draw)
         
         # Creating a new structure joined_simplified : iteri, h2, Vbeta_inv_j_draw, h_draw, which is a simplified version of what the original structure looks.
         ## OPTIMIZATION lets collect it and distribute over m1_d_array_constants
         # Following is (1,<objc>)(2,<objc>)... where each objc is (h2, Vbeta_inv_j_draw, sequence, no_n1 Sigmabeta_j, h_draw)
-        joined_simplified = m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration_join_m1_h_draw_filter_by_iteration.map(lambda (x,y): (int(str(x)[0]), list(y[0])[0][3], list(y[0])[0][0], list(y[0])[0][4], list(y[1])[0][2]), preservesPartitioning = True).collect()
+        # OPTIOMIZATION : NO NEED FOR JOINED simplified : joined_simplified = m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration_join_m1_h_draw_filter_by_iteration.map(lambda (x,y): (int(str(x)[0]), list(y[0])[0][3], list(y[0])[0][0], list(y[0])[0][4], list(y[1])[0][2]), preservesPartitioning = True).collect()
         m1_Vbeta_inv_Sigmabeta_j_draw_collection = sorted(m1_Vbeta_inv_Sigmabeta_j_draw_collection) 
         #>>joined_simplified_key_by_h2 = joined_simplified.keyBy(lambda (iteri, h2, Vbeta_inv_j_draw, h_draw): h2)
         #??joined_simplified_key_by_h2_collection = joined_simplified_key_by_h2.collect()
@@ -82,7 +82,7 @@ def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitio
         ###>>>m1_Vbeta_i = m1_Vbeta_i.union(m1_Vbeta_i_keyBy_h2_long_next_cached)
         #print "count  m1_Vbeta_i_unified   ", m1_Vbeta_i_unified.count()
         #print "take 1 m1_Vbeta_i_unified ", m1_Vbeta_i_unified.take(1)
-        m1_Vbeta_i_keyby_h2_h1 = m1_Vbeta_i.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, Vbeta_i): (hierarchy_level2, hierarchy_level1))
+        ## OPTIMIZATION SAVED m1_Vbeta_i_keyby_h2_h1 = m1_Vbeta_i.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, Vbeta_i): (hierarchy_level2, hierarchy_level1))
         ## OPTIMIZATION OF Previous functions as
     
        
@@ -136,7 +136,7 @@ def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitio
         ## m1_beta_i_mean = m1_beta_i_mean.union(sc.parallelize(m1_beta_i_mean_keyBy_h2_long_next.values().reduce(add)))
         #print "count  m1_Vbeta_i_unified   ", m1_beta_i_draw_unified.count()
         #print "take 1 m1_Vbeta_i_unified ", m1_beta_i_draw_unified.take(1)
-        m1_beta_i_mean_keyBy_h2_h1 = m1_beta_i_mean.keyBy(lambda (sequence, hierarchy_level2, hierarchy_level1, beta_i_mean, Vbeta_i): (hierarchy_level2, hierarchy_level1))
+        # OPTIMIZATIOn : NO NEED FOR USING IT. m1_beta_i_mean_keyBy_h2_h1 = m1_beta_i_mean.keyBy(lambda (sequence, hierarchy_level2, hierarchy_level1, beta_i_mean, Vbeta_i): (hierarchy_level2, hierarchy_level1))
         
         # insert into beta_i, using iter=s-1 values.  Draw from mvnorm dist'n.
         #print "insert into beta_i"
@@ -302,8 +302,9 @@ def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitio
         # lists of tuples : s, h2, h1, beta_i_draw[:,i][0], driver_x_array[i], hierarchy_level2_hierarchy_level1_driver        
         m1_beta_i_draw_long_next = m1_beta_i_draw.map(gtr.get_beta_i_draw_long).reduce(add)
         print "reduce count ", len(m1_beta_i_draw_long_next)
-        print "reduce ", m1_beta_i_draw_long_next[0]
+        #print "reduce ", m1_beta_i_draw_long_next[0]
         m1_beta_i_draw_long = m1_beta_i_draw_long + m1_beta_i_draw_long_next
+        print "end iteration", s
 
      
     # structured as (h2, h1, driver) -> (s, h2, h1, beta_draw[i], x_array[i], h2_h1_driver)    
