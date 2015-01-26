@@ -186,7 +186,7 @@ def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitio
         #print "take 1 m1_Vbeta_j_mu_next ", m1_Vbeta_j_mu_next.take(1)
         ## OPTIMIZATION no need for unions m1_Vbeta_j_mu = m1_Vbeta_j_mu.union(m1_Vbeta_j_mu_next)
         #print "count  m1_Vbeta_j_mu   ", m1_Vbeta_j_mu.count()
-        print "take 1 m1_Vbeta_j_mu, s ", m1_Vbeta_j_mu.take(1), "WITH S ", s
+        print "take 1 m1_Vbeta_j_mu, s ", m1_Vbeta_j_mu.collect(), "WITH S ", s
         
         ## inserting into m1_Vbeta_inv_Sigmabeta_j_draw
         print "inserting into m1_Vbeta_inv_Sigmabeta_j_draw"
