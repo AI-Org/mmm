@@ -175,7 +175,7 @@ def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitio
         ## OPTIMIZATION onf JOINED to get it grouped by the GroupedBy clause to build upon further iterations on top of it, which have the same partitioning
         ## .map(lambda (x,y): (x, list(y[0]), list(y[1])[0][1])).groupBy(lambda x : gp.partitionByh2(x[0]), h2_partitions).persist()
         m1_Vbeta_j_mu.unpersist()
-        m1_Vbeta_j_mu = JOINED_m1_beta_i_draw_next_key_by_h2_WITH_m1_beta_mu_j_draw_by_previous_iteration.map(lambda (h2, y): (s, h2, gtr.get_Vbeta_j_mu_next(y)), preservePartitioning = True).persist()
+        m1_Vbeta_j_mu = JOINED_m1_beta_i_draw_next_key_by_h2_WITH_m1_beta_mu_j_draw_by_previous_iteration.map(lambda (h2, y): (s, h2, gtr.get_Vbeta_j_mu_next(y)), preservesPartitioning = True).persist()
         #print "count  m1_Vbeta_j_mu_next   ", m1_Vbeta_j_mu_next.count()
         #print "take 1 m1_Vbeta_j_mu_next ", m1_Vbeta_j_mu_next.take(1)
         ## OPTIMIZATION no need for unions m1_Vbeta_j_mu = m1_Vbeta_j_mu.union(m1_Vbeta_j_mu_next)
