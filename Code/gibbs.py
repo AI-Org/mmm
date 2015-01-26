@@ -32,7 +32,7 @@ def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitio
     ## OPTIMIZATION : m1_h_draw is already persisted with keyby so we dont need to keyby it : m1_h_draw_previous_iteration = m1_h_draw.keyBy(lambda (iteri, h2, h_draw): h2)
     ##>> OPTMIZATION it is understood that m1_Vbeta_inv_Sigmabeta_j_draw will be previous iteration when assigned and deassigned values for each iteration.
     ##>> ONLY SAVING it for KeyBy TODO COnvert m1_Vbeta_inv_Sigmabeta_j_draw_previous_iteration to collections only and then keep using that one.
-    
+    m1_beta_i_draw_long = m1_beta_i_draw.map(gtr.get_beta_i_draw_long).reduce(add)
     
     for s in range(begin_iter, end_iter+1):
         
@@ -151,7 +151,6 @@ def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitio
         # After cogroup of above two Data Structures we can easily compute bet_draw directly from the map function
         # structure : s, h2, h1, beta_draw 
         # m1_beta_i_draw_long_next is required for computing the Gewke estimations
-        m1_beta_i_draw_long_next = m1_beta_i_draw.map(gtr.get_beta_i_draw_long).reduce(add)
         m1_beta_i_draw.unpersist()
         ## USING THE OPTIMIZATION OF PREVIOUS init functions where only m1_beta_i_mean_by_current_iteration was used. 
         ##>>m1_beta_i_draw = m1_beta_i_mean_by_current_iteration.cogroup(m1_Vbeta_i_keyby_h2_h1_current_iteration).map(lambda (x,y): (s, x[0], x[1], gu.beta_draw(list(y[0])[0][3], list(y[1])[0][3])), preservesPartitioning = True).persist()
@@ -291,7 +290,7 @@ def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitio
         # -- Draw h from gamma dist'n.  Note that h=1/(s^2)
         ## from iteri, hierarchy_level2, m1_d_count_grpby_level2_b, s2
         ## m1_h_draw = iteri, h2, h_draw
-        m1_h_draw = m1_s2_next.map(gtr.get_h_draw).keyBy(lambda (iteri, h2, h_draw): h2).persist()
+        m1_h_draw = m1_s2.map(gtr.get_h_draw).keyBy(lambda (iteri, h2, h_draw): h2).persist()
         # optimization we dont need to persist the previous draws with new ones 
         ## so removing the persistence and creating new persistence
         # OPTIMIZATION : SAVED over unions , only next values used in iterations m1_h_draw = m1_h_draw.union(m1_h_draw_next)
@@ -304,11 +303,8 @@ def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitio
         m1_beta_i_draw_long_next = m1_beta_i_draw.map(gtr.get_beta_i_draw_long).reduce(add)
         print "reduce count ", len(m1_beta_i_draw_long_next)
         print "reduce ", m1_beta_i_draw_long_next[0]
-        print "reduce ", m1_beta_i_draw_long_next[1]
-        if 'm1_beta_i_draw_long' in locals():
-            m1_beta_i_draw_long = m1_beta_i_draw_long + m1_beta_i_draw_long_next
-        else:
-            m1_beta_i_draw_long = m1_beta_i_draw_long_next
+        m1_beta_i_draw_long = m1_beta_i_draw_long + m1_beta_i_draw_long_next
+
      
     # structured as (h2, h1, driver) -> (s, h2, h1, beta_draw[i], x_array[i], h2_h1_driver)    
     m1_beta_i_draw_long = sc.parallelize(m1_beta_i_draw_long)
