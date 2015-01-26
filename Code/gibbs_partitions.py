@@ -7,6 +7,7 @@ Created on Wed Jan 1 10:13:16 2015
 #h2_partitions
 def partitionByh2(h2):
     return int(str(h2)[0]) % 5
+    #return int(str(h2)[3]) % 5
 
 def group_partitionByh2(obj):
     return int(str(obj[2])[0]) % 5    
