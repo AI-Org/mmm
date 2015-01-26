@@ -187,7 +187,7 @@ def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitio
         ## computing Vbeta_inv_j_draw from m1_Vbeta_j_mu where iteration == s
         ## returns s, h2, Vbeta_inv_j_draw
         
-        m1_Vbeta_j_mu_pinv = m1_Vbeta_j_mu.map(gtr.get_m1_Vbeta_j_mu_pinv, preservePartitioning = True).keyBy(lambda (s, h2, Vbeta_inv_j_draw): h2)
+        m1_Vbeta_j_mu_pinv = m1_Vbeta_j_mu.map(gtr.get_m1_Vbeta_j_mu_pinv, preservesPartitioning = True).keyBy(lambda (s, h2, Vbeta_inv_j_draw): h2)
         #print "count  m1_Vbeta_j_mu_pinv   ", m1_Vbeta_j_mu_pinv.count()
         #print "take 1 m1_Vbeta_j_mu_pinv ", m1_Vbeta_j_mu_pinv.take(1)
         
