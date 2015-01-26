@@ -232,7 +232,7 @@ def get_Vbeta_j_mu_next(y):
     # OPTI now y is an ResultIterable object pointing RI1, RI2
     # OPTI where RI1 is a collection of tuples with h2, h1, beta_i_draw
     # OPTI and RI2 is a single tuple iter, hierarchy_level2, beta_mu_j_draw
-    # y is tuple of as I put a map on cogroup h2, <all of beta_i_draw>, beta_mu_j_draw
+    # y is tuple of as I put a map on cogroup  y : h2, <all of beta_i_draw>, beta_mu_j_draw
     beta_mu_j_draw = list(y)[0][2]
     h2 = list(y)[0][0]
     Vbeta_i_mu_ar = []
