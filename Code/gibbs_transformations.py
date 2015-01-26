@@ -313,7 +313,8 @@ def get_substructure_beta_mu_j(obj):
     for r in obj[1][1]:
         sum_coef_j = r[0]
     beta_mu_j = gu.beta_mu_prior(Sigmabeta_j, Vbeta_inv_j_draw, sum_coef_j, coef_means_prior_array_var, coef_precision_prior_array_var)
-    return (iteri, hierarchy_level2, beta_mu_j)
+    ## OPTIMIZATION adding Sigmabeta_j), Vbeta_inv_j_draw to the end of this return as to save cogroup on beta_i_draws
+    return (iteri, hierarchy_level2, beta_mu_j, Vbeta_inv_j_draw, Sigmabeta_j)
 
 def add_coeff_j(hierarchy_level2, iterable_object):
     # where each iterable is like (hierarchy_level2, array[[]] of dim 1X13)
@@ -326,17 +327,21 @@ def add_coeff_j(hierarchy_level2, iterable_object):
     
 
 def get_beta_draw(obj):
-    key = obj[0]
+    #key = obj[0]
+    # OPT remvoed
     # key is hierarchy_level2 and 
     # cogrouped_iterable_object is <W1,W2>
     # where W1 is a ResultIterable having iter, hierarchy_level2, beta_mu_j
     # and W2 is another ResultIterable having iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j
-    for j in obj[1][0]:
-        iteri = j[0]
-        beta_mu_j = j[2]
-    for r in obj[1][1]:
-        Vbeta_inv_j_draw = r[3]
-        Sigmabeta_j = r[4]
+    # opt RMOVED
+    # OPTIMIZATION iteri, hierarchy_level2, beta_mu_j, Vbeta_inv_j_draw, Sigmabeta_j as a tuple
+    #    for j in obj[1][0]:
+    #        iteri = j[0]
+    #        beta_mu_j = j[2]
+    #    for r in obj[1][1]:
+    #        Vbeta_inv_j_draw = r[3]
+    #        Sigmabeta_j = r[4]
+    
     return (iteri, key, gu.beta_draw(beta_mu_j, Sigmabeta_j), Vbeta_inv_j_draw)
     
 def pinv_Vbeta_i(xtx, Vbeta_inv_j_draw, h_draw):
