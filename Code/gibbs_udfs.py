@@ -78,7 +78,7 @@ def Vbeta_inv_draw(nu, phi):
     wishart.setScale(phi)
     #wishart.dof = nu
     #wishart.scale = phi
-    return wishart.sample()
+    return wishart.sample_R(nu, phi)
 
 # Function to compute mean pooled coefficient vector to use in drawing a new pooled coefficient vector.  
 # This function allows for user-specified priors on the coefficients.  
