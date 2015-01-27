@@ -96,6 +96,19 @@ class Wishart:
     result_draw = numpy.dot(numpy.dot(numpy.dot(self.cholesky,a),a.T),self.cholesky.T)
     print "result_draw" , result_draw
     return result_draw
+    
+  def sample_R(self, dof, sigma):
+    """Returns a draw from the distribution - will be a symmetric positive definite matrix."""
+    n = sigma.shape[0]
+    A = numpy.zeros((n,n),dtype=numpy.float32) 
+    chol = numpy.linalg.cholesky(sigma)
+    alpha = numpy.zeros((n,n),dtype=numpy.float32)
+    
+    for i in range(0, dof):
+        #rnorm(Sigma.rows(), 1, 0, 1); with mean 1 and sd 0
+        alpha = np.dot(chol, numpy.random.normal(1, 0, size=(n,dof)))
+        A = np.add(A, np.dot(alpha, alpha.T))
+    return A    
 
 
   def __str__(self):

@@ -254,8 +254,8 @@ def get_m1_Vbeta_j_mu_pinv(obj):
     a = gu.matrix_scalarmult_plr(Vbeta_j_mu, df1_var)
     phi = np.linalg.pinv(a)
     # is phi is not positive definiate matrix than compute a nearPD for it
-    #if np.all(np.linalg.eigvals(phi) > 0) != True:
-    phi = npd.nearPD(phi)
+    if np.all(np.linalg.eigvals(phi) > 0) != True:
+        phi = npd.nearPD(phi)
     Vbeta_inv_j_draw = gu.Vbeta_inv_draw(df1_var, phi)
     return (seq, hierarchy_level2, Vbeta_inv_j_draw.real)
 
