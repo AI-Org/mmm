@@ -131,7 +131,7 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     # m1_Vbeta_j_mu a matrix with dimensions 14 X 14.
     m1_Vbeta_j_mu = joined_i_j_rdd.map(lambda (x, y): (1, gtr.get_Vbeta_j_mu_next(y, 1)), preservesPartitioning = True).persist() 
     # print " m1_Vbeta_j_mu count ", m1_Vbeta_j_mu.count() 
-    print " m1_Vbeta_j_mu take 1", m1_Vbeta_j_mu.collect() # 1, (h2, vbeta_j_mu)
+    print " m1_Vbeta_j_mu take 1", m1_Vbeta_j_mu.take(1) # 1, (h2, vbeta_j_mu)
     
     ###-- Draw Vbeta_inv and compute resulting sigmabeta using the above functions for each j    
     #>>> m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2 = m1_Vbeta_inv_Sigmabeta_j_draw.keyBy(lambda (iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j): (hierarchy_level2)) 
@@ -142,7 +142,7 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     # (iter, h2, n1, Vbeta_inv_j_draw, pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, n1, coef_precision_prior_array_var))
     # Vbeta_inv_j_draw & sigmabeta_j_draw are both matrixs with dimensions 14 X 14.
     m1_Vbeta_inv_Sigmabeta_j_draw = m1_Vbeta_j_mu_pinv.map(lambda (seq, hierarchy_level2, Vbeta_inv_j_draw): (seq, hierarchy_level2, m1_d_childcount[int(str(hierarchy_level2)[0]) -1][1], Vbeta_inv_j_draw, gtr.pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, m1_d_childcount[int(str(hierarchy_level2)[0]) -1][1], coef_precision_prior_array)), preservesPartitioning = True).persist()
-    print " m1_Vbeta_inv_Sigmabeta_j_draw Take 1: ", m1_Vbeta_inv_Sigmabeta_j_draw.collect()
+    print " m1_Vbeta_inv_Sigmabeta_j_draw Take 1: ", m1_Vbeta_inv_Sigmabeta_j_draw.take(1)
     #print " m1_Vbeta_inv_Sigmabeta_j_draw Count: ", m1_Vbeta_inv_Sigmabeta_j_draw.count()
     
     
@@ -164,11 +164,12 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     # Should be of the sort 1 | 2 - h2    | beta_mu_j's 14 in number {{0.033996451199021},{-0.00269410910553663},{0.00195692265956014},{-0.0516
     #738812915295},{0.044345093747864},{-0.0723802983866767},{-0.00498343429394017},{0.0318392345056568},{
     #0.0512096930745475},{0.0392051054253572},{-0.101261603210072},{-0.100422896665969},{-0.0924698571499521},{0.0450261724340683}}
+    # Here we have iteri, hierarchy_level2, beta_mu_j, Vbeta_inv_j_draw, Sigmabeta_j)
     m1_beta_mu_j = joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j.map(gtr.get_substructure_beta_mu_j, preservesPartitioning = True).persist()
     # hierarchy_level2=> (iter, hierarchy_level2, beta_mu_j)
     #>>>  computing keybys on the fly and not with persistence m1_beta_mu_j_keyBy_h2 = m1_beta_mu_j.keyBy(lambda (iter, hierarchy_level2, beta_mu_j): hierarchy_level2)
     #print "counts of m1_beta_mu_j ", m1_beta_mu_j.count() # number is 5 on both sides
-    #print "take 1 of m1_beta_mu_j ", m1_beta_mu_j.take(1)
+    print "take 1 of m1_beta_mu_j ", m1_beta_mu_j.take(1)
     
     ## -- m1_beta_mu_j_draw : Draw beta_mu from mvnorm dist'n.  Get back J vectors of beta_mu, one for each J.
     ## Simply creates a join on  m1_beta_mu_j and  m1_Vbeta_inv_Sigmabeta_j_draw (the RDD keyby h2 equivalent is m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2 )
@@ -183,7 +184,7 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     # count of 5    
     #print "count m1_beta_mu_j_draw", m1_beta_mu_j_draw.count()
     # take 1 of <h2> => (iter, h2, beta_mu_j_draw, Vbeta_inv_j_draw)    
-    #print "take 1 m1_beta_mu_j_draw", m1_beta_mu_j_draw.take(1)
+    print "take 1 m1_beta_mu_j_draw", m1_beta_mu_j_draw.take(1)
     
     ## -- Compute Vbeta_i
     ## OPTIMIZATION : Vbeta_i is partitioned over h2 and h1 as such we can leverage the use of m1_d_array_agg_constants
