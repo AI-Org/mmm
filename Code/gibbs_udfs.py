@@ -98,7 +98,7 @@ def beta_mu_prior(Sigmabeta_j, Vbeta_inv_j_draw, sum_coef_j, coef_means_prior_ar
     mat2 = np.dot(Vbeta_inv_j_draw, sum_coef_j)
     mat3 = np.add(mat2, np.mat(mat1))
     # NOTE : for the return value to be one D the sum_coef_j should be a 1 D matrix.
-    # return np.dot(Sigmabeta_j, mat3.T) there is no T in the original computation
+    # Changed only : return np.dot(Sigmabeta_j, mat3.T) there is no T in the original computation
     return np.dot(Sigmabeta_j, mat3)
 
 
