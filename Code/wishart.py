@@ -101,12 +101,16 @@ class Wishart:
     """Returns a draw from the distribution - will be a symmetric positive definite matrix."""
     n = sigma.shape[0]
     A = numpy.zeros((n,n),dtype=numpy.float32) 
-    chol = numpy.linalg.cholesky(sigma)
+    try:
+        chol = numpy.linalg.cholesky(sigma)
+    except:
+        print "Sigma as ", sigma
+        print "eigs", np.all(np.linalg.eigvals(sigma) > 0)
     alpha = numpy.zeros((n,n),dtype=numpy.float32)
     
     for i in range(0, dof):
         #rnorm(Sigma.rows(), 1, 0, 1); with mean 1 and sd 0
-        alpha = np.dot(chol, numpy.random.normal(1, 0, size=(n,dof)))
+        alpha = np.dot(chol, np.random.normal(size=(n,dof)))
         A = np.add(A, np.dot(alpha, alpha.T))
     return A    
 

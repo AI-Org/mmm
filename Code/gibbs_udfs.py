@@ -74,8 +74,8 @@ def Vbeta_inv_draw(nu, phi):
     # import a lib MCMCpack and return rwish(arg1,arg2)
     import wishart as rwish
     wishart = rwish.Wishart(nu)
-    wishart.setDof(nu)
-    wishart.setScale(phi)
+    #wishart.setDof(nu)
+    #wishart.setScale(phi)
     #wishart.dof = nu
     #wishart.scale = phi
     return wishart.sample_R(nu, phi)
