@@ -319,10 +319,10 @@ def get_substructure_beta_mu_j(obj):
 def add_coeff_j(hierarchy_level2, iterable_object):
     # where each iterable is like (hierarchy_level2, array[[]] of dim 1X13)
     # Changed in OPTIMIZATIONS each iterable is like (hierarchy_level2, h1, array[[]] of dim 1X13)
-    array_list = []
+    ols_beta_i = []
     for r in iterable_object:
-        array_list.append(r[2])
-    sum_coef_j = sum(array_list) 
+        ols_beta_i.append(r[2])
+    sum_coef_j = sum(ols_beta_i) 
     return (hierarchy_level2, sum_coef_j)
     
 def add_coeff_j_next(hierarchy_level2, iterable_object):

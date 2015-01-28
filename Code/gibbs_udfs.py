@@ -26,7 +26,7 @@ def matrix_add_diag_plr(matrix, value):
 def matrix_scalarmult_plr(matrix, value):
     import numpy as np
     #print "multiply matrix : ", matrix ," with value ", value
-    return np.multiply(matrix, value)
+    return np.dot(matrix, value)
 
 # Function to compute var-cov matrix for the pooled model, as defined in Equation 7.27 of Koop pp.156-157
 # beta_i is a float8[] matrix or numpy.array or numpy.matrix
@@ -37,7 +37,9 @@ def matrix_scalarmult_plr(matrix, value):
 def Vbeta_i_mu(beta_i, beta_mu):
     import numpy as np
     beta_i_diff = np.subtract(beta_i, beta_mu)
-    Vbeta_i_mu = np.multiply(beta_i_diff, np.mat(beta_i_diff).transpose())
+    #Vbeta_i_mu = np.multiply(beta_i_diff, np.mat(beta_i_diff).transpose())
+    #Vbeta_i_mu = np.dot(beta_i_diff, np.mat(beta_i_diff).transpose())
+    Vbeta_i_mu = np.dot(beta_i_diff, beta_i_diff.T)
     return Vbeta_i_mu
 
 ## Same usage as mentioned by the function Vbeta_inv_draw
@@ -78,7 +80,7 @@ def Vbeta_inv_draw(nu, phi):
     #wishart.setScale(phi)
     #wishart.dof = nu
     #wishart.scale = phi
-    return wishart.sample_R(nu, phi)
+    return wishart.sample_wishart(nu, phi)
 
 # Function to compute mean pooled coefficient vector to use in drawing a new pooled coefficient vector.  
 # This function allows for user-specified priors on the coefficients.  
@@ -90,13 +92,14 @@ def beta_mu_prior(Sigmabeta_j, Vbeta_inv_j_draw, sum_coef_j, coef_means_prior_ar
     # should be of order size of variables i.e 13
     # mat1 is a dot product of two arrays
     import numpy as np
-    mat1 = np.dot(coef_means_prior_array, coef_precision_prior_array)
-    #mat2 is a matrix multiplication product of inv_j_draw and sum_coeff_j
+    mat1 = np.multiply(coef_means_prior_array, coef_precision_prior_array)
+    #mat2 is a matrix multiplication product of Vbeta_inv_j_draw and sum_coeff_j
     #sum_coef_j = sum_coef_j.reshape(13,1)
     mat2 = np.dot(Vbeta_inv_j_draw, sum_coef_j)
     mat3 = np.add(mat2, np.mat(mat1))
     # NOTE : for the return value to be one D the sum_coef_j should be a 1 D matrix.
-    return np.dot(Sigmabeta_j, mat3.T)
+    # return np.dot(Sigmabeta_j, mat3.T) there is no T in the original computation
+    return np.dot(Sigmabeta_j, mat3)
 
 
 # beta_draws are samples from mvrnprm or multivariate normal distribution.
@@ -112,23 +115,35 @@ def beta_draw(mean, cov):
 # Function to compute Vbeta_i, as defined in Equation (7.25) of Koop pp.156.   
 # Only computed at lowest level of the hierarchy (i.e. the level that "mixes" directly with the data, namely X'X).
 # The solve(mat1*%*mat2 + mat3) is finding the inverse of A where A = mat1 %*% mat2 + mat3
-
-def Vbeta_i(mat1, mat2, mat3):
+# Vbeta_i<- solve(arg1*arg2+arg3)
+def Vbeta_i(value, mat2, mat3):
     import numpy as np
-    mat1_r = np.dot(mat1, mat2)
+    mat1_r = np.multiply(value, mat2)
     matr = np.add(mat1_r, mat3)
     return np.linalg.inv(matr)   
 
 # Function to compute beta_i_mean, as defined in (7.25) of Koop pp.156.
 # Only computed at lowest level of the hierarchy (i.e. the level that "mixes" directly with the data, namely X'y).
 
-def beta_i_mean(Vbeta_i, value, xty, Vbeta_i_inv_draw, beta_mu_j_draw):
+def beta_i_mean_old(Vbeta_i, value, xty, Vbeta_i_inv_draw, beta_mu_j_draw):
     import numpy as np
     #def beta_i_mean(mat1, value, mat2, mat3, mat4):
     # error was mat_r1 is 1 X 13 instead of 13 X 1 but with T it will be not
     mat_r1 = np.dot(np.matrix(Vbeta_i_inv_draw), np.matrix(beta_mu_j_draw).getA1()).T
     # mat_r2 is 13 X 1
     mat_r2 = np.dot(value, xty)
+    # mat_r3 is 13 X 1 == 13 X 13 + 13 X 1
+    mat_r3 = np.dot(Vbeta_i, np.add(mat_r2, mat_r1))
+    return mat_r3
+    
+def beta_i_mean(Vbeta_i, value, xty, Vbeta_i_inv_draw, beta_mu_j_draw):
+    import numpy as np
+    #def beta_i_mean(mat1, value, mat2, mat3, mat4):
+    # error was mat_r1 is 1 X 13 instead of 13 X 1 but with T it will be not
+    #mat_r1 = np.dot(np.matrix(Vbeta_i_inv_draw), np.matrix(beta_mu_j_draw).getA1()).T
+    mat_r1 = np.dot(Vbeta_i_inv_draw, beta_mu_j_draw)
+    # mat_r2 is 13 X 1
+    mat_r2 = np.multiply(value, xty)
     # mat_r3 is 13 X 1 == 13 X 13 + 13 X 1
     mat_r3 = np.dot(Vbeta_i, np.add(mat_r2, mat_r1))
     return mat_r3

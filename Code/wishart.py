@@ -118,7 +118,7 @@ class Wishart:
     return A    
 
 
-  def sample_wishart(dof, sigma):
+  def sample_wishart(self, dof, sigma):
     '''
     Returns a sample from the Wishart distn, conjugate prior for precision matrices.
     '''
