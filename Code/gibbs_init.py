@@ -165,6 +165,8 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     #738812915295},{0.044345093747864},{-0.0723802983866767},{-0.00498343429394017},{0.0318392345056568},{
     #0.0512096930745475},{0.0392051054253572},{-0.101261603210072},{-0.100422896665969},{-0.0924698571499521},{0.0450261724340683}}
     # Here we have iteri, hierarchy_level2, beta_mu_j, Vbeta_inv_j_draw, Sigmabeta_j)
+    # Vbeta_inv_j_draw : 14 X 14
+    # Sigmabeta_j : 14 X 14
     m1_beta_mu_j = joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j.map(gtr.get_substructure_beta_mu_j, preservesPartitioning = True).persist()
     # hierarchy_level2=> (iter, hierarchy_level2, beta_mu_j)
     #>>>  computing keybys on the fly and not with persistence m1_beta_mu_j_keyBy_h2 = m1_beta_mu_j.keyBy(lambda (iter, hierarchy_level2, beta_mu_j): hierarchy_level2)
@@ -179,6 +181,7 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     #  m1_beta_mu_j_draw <h2> => (iter, h2, beta_mu_j_draw, Vbeta_inv_j_draw)
     ## OPTIMIZATION for computing m1_beta_i_mean : including Vbeta_inv_j_draw with m1_beta_mu_j_draw for further computations
     ##m1_beta_mu_j_draw = m1_beta_mu_j.map(gtr.get_beta_draw, preservesPartitioning = True).persist()
+    # m1_beta_mu_j_draw is array of 14 elements
     m1_beta_mu_j_draw = m1_beta_mu_j.map(lambda (seq, hierarchy_level2, beta_mu_j, Vbeta_inv_j_draw, Sigmabeta_j): (seq, hierarchy_level2, gu.beta_draw(beta_mu_j, Sigmabeta_j), Vbeta_inv_j_draw), preservesPartitioning = True).persist()
     #>> m1_beta_mu_j_draw_keyBy_h2 = m1_beta_mu_j_draw.keyBy(lambda (iter, hierarchy_level2, beta_mu_j_draw, Vbeta_inv_j_draw): hierarchy_level2)
     # count of 5    
@@ -211,7 +214,8 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     #m1_Vbeta_inv_Sigmabeta_j_draw_collection = sorted(map(lambda (sequence, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): (int(str(hierarchy_level2)[0]), Vbeta_inv_j_draw.all(), sequence, n1,  Sigmabeta_j.all()), m1_Vbeta_inv_Sigmabeta_j_draw_collection))
     m1_Vbeta_inv_Sigmabeta_j_draw_collection = sorted(m1_Vbeta_inv_Sigmabeta_j_draw_collection)    
     #print "m1_Vbeta_inv_Sigmabeta_j_draw_collection ",  m1_Vbeta_inv_Sigmabeta_j_draw_collection  
-    # distributed over the same partitions as (m1_d_array_agg_constants), the format of m1_Vbeta_i should look like (sequence, h2, h1, Vbeta_i, xty)    
+    # distributed over the same partitions as (m1_d_array_agg_constants), the format of m1_Vbeta_i should look like (sequence, h2, h1, Vbeta_i, xty) 
+    # Vbeta_i is 14 X 14 and xty is 14 X 1 matrix
     m1_Vbeta_i = m1_d_array_agg_constants.map(lambda (hierarchy_level2, hierarchy_level1, xtx, xty): (m1_Vbeta_inv_Sigmabeta_j_draw_collection[int(str(hierarchy_level2)[0]) -1][2], hierarchy_level2, hierarchy_level1, gtr.pinv_Vbeta_i(xtx, m1_Vbeta_inv_Sigmabeta_j_draw_collection[int(str(hierarchy_level2)[0]) -1][1], 1), xty), preservesPartitioning = True).persist()    
     #print "count m1_Vbeta_i", m1_Vbeta_i.count() # 135 or 150 if the data is extended version
     print "take 1 m1_Vbeta_i", m1_Vbeta_i.take(1)

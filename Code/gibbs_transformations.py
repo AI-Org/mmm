@@ -393,6 +393,7 @@ def get_Vbeta_i_next(obj, s):
 def get_beta_i_mean(y):
     # y[0] is iterable results of a list of tuples <h2, h1, Vbeta_i, xty>
     # y[1] is iterable results of a tuple with values <h2, iter, Vbeta_inv_j_draw, beta_mu_j_draw>
+    # beta_mu_j_draw is an array of 14 elements: 1 X 14, Vbeta_inv_j_draw is matrix 14 X 14.     
     for r in y[1]:
       hierarchy_level2 = r[0]
       i = r[1]
@@ -403,6 +404,7 @@ def get_beta_i_mean(y):
         hierarchy_level1 = j[1]
         Vbeta_i = j[2]
         xty = j[3]
+        # Vbeta_i is 14 X 14, xty is 14 X 1,Vbeta_inv_j_draw is 14 X 14 , beta_mu_j_draw array of 14 elements 
         beta_i_mean = gu.beta_i_mean(Vbeta_i, 1, xty, Vbeta_inv_j_draw, beta_mu_j_draw)
         row = (i, hierarchy_level2, hierarchy_level1, beta_i_mean)
         result_list.append(row)
