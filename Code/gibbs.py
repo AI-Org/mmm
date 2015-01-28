@@ -5,7 +5,7 @@
 
 import gibbs_udfs as gu
 import gibbs_transformations as gtr
-from pyspark.storagelevel import StorageLevel
+#from pyspark.storagelevel import StorageLevel
 import gibbs_partitions as gp
 
 def gibbs_iteration_text():

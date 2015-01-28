@@ -98,17 +98,18 @@ class Wishart:
     return result_draw
     
   def sample_R(self, dof, sigma):
-    import scipy as sc
+    import numpy as np
+    from scipy import linalg
     """Returns a draw from the distribution - will be a symmetric positive definite matrix."""
     n = sigma.shape[0]
-    A = numpy.zeros((n,n),dtype=numpy.float32) 
-    try:
-        chol = sc.linalg.cholesky(sigma, lower=True)
+    A = np.zeros((n,n),dtype=np.float32) 
+    #try:
+    chol = linalg.cholesky(sigma, lower=True)
         #chol = numpy.linalg.cholesky(sigma)
-    except:
-        print "Sigma as ", sigma
-        print "eigs", np.all(np.linalg.eigvals(sigma) > 0)
-    alpha = numpy.zeros((n,n),dtype=numpy.float32)
+    #except:
+    #    print "Sigma as ", sigma
+    #    print "eigs", np.all(np.linalg.eigvals(sigma) > 0)
+    alpha = np.zeros((n,n),dtype=np.float32)
     
     for i in range(0, dof):
         #rnorm(Sigma.rows(), 1, 0, 1); with mean 1 and sd 0
@@ -117,6 +118,23 @@ class Wishart:
     return A    
 
 
+  def sample_wishart(dof, sigma):
+    '''
+    Returns a sample from the Wishart distn, conjugate prior for precision matrices.
+    '''
+    n = sigma.shape[0]
+    chol = np.linalg.cholesky(sigma)
+    
+    # use matlab's heuristic for choosing between the two different sampling schemes
+    if (dof <= 81+n) and (dof == round(dof)):
+        #direct
+        X = np.dot(chol,np.random.normal(size=(n,dof)))
+    else:
+        A = np.diag(np.sqrt(np.random.chisquare(dof - np.arange(0,n),size=n)))
+        A[np.tri(n,k=-1,dtype=bool)] = np.random.normal(size=(n*(n-1)/2.))
+        X = np.dot(chol,A)
+    return np.dot(X,X.T)
+  
   def __str__(self):
     return '{dof:%f, scale:%s}'%(self.dof, str(self.scale))
     
