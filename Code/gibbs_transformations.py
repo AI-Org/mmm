@@ -216,7 +216,7 @@ def get_Vbeta_i_mu_coeff_i_coeff_j(list_coeff_i, coeff_j):
     return Vbeta_i_mu_ar
 
 
-def get_Vbeta_j_mu(y):
+def get_Vbeta_j_mu_wrong(y):
     # now y is an ResultIterable object pointing to a collection of arrays
     # where each array has a structure like <h2,list<h1,h2,coef_i>,coef_j>
     result_Iterable_list = list(y)[0]
