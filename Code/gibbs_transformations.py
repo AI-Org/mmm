@@ -263,7 +263,7 @@ def get_m1_Vbeta_j_mu_pinv(obj):
 def pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, n1, coef_precision_prior_array):
     import numpy as np
     temp = gu.matrix_scalarmult_plr(Vbeta_inv_j_draw, n1) # (14 X 14)
-    temp_add = gu.matrix_scalarmult_plr(temp, gu.matrix_diag_plr(coef_precision_prior_array))
+    temp_add = gu.matrix_add_plr(temp, gu.matrix_diag_plr(coef_precision_prior_array))
     return np.linalg.pinv(temp_add)
     
 def get_m1_Vbeta_inv_Sigmabeta_j_draw(lst):

@@ -115,7 +115,7 @@ if __name__ == "__main__":
     sc = SparkContext(appName="GibbsSampler")
     
     sourcefile = sys.argv[1] if len(sys.argv) > 1 else "hdfs:///user/ssoni/data/d.csv"    
-    
+    # sourcefile = sys.argv[1] if len(sys.argv) > 1 else "hdfs://hdm1.gphd.local:8020/user/ssoni/data/d.csv
     h2_partitions = load_key_h2(sourcefile).groupByKey().keys().count()
     h1_h2_partitions = load_key_h1_h2(sourcefile).groupByKey().keys().count()
     # get all the keys by load_key_h1_h2(sourcefile).groupByKey().keys().sortByKey().collect()
