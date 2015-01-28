@@ -5,7 +5,7 @@
 
 import gibbs_udfs as gu
 import gibbs_transformations as gtr
-#from pyspark.storagelevel import StorageLevel
+from pyspark.storagelevel import StorageLevel
 import gibbs_partitions as gp
 
 def gibbs_iteration_text():
@@ -37,39 +37,8 @@ def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitio
     for s in range(begin_iter, end_iter+1):
         
         ## Inserting into m1_beta_i
-        print "Inserting into m1_beta_i"
+        print "Inserting into m1_Vbeta_i"
         ## optimization for m1_h_draw_filter_by_iteration
-        ## m1_h_draw = iteri, h2, h_draw
-        # instead of using m1_h_draw_filter_by_iteration we can use the m1_h_draw_previous_iteration which is already keyed by h2.
-        # m1_h_draw_previous_iteration = m1_h_draw_filter_by_iteration = m1_h_draw.filter(lambda (iteri, h2, h_draw): iteri == s - 1 ).keyBy(lambda (iteri, h2, h_draw): h2)
-        #print "m1_h_draw_filter_by_iteration", m1_h_draw_filter_by_iteration.collect()
-        
-        # applying the same previous iteration trick here that we applied for m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration  
-        # We can use m1_Vbeta_inv_Sigmabeta_j_draw_previous_iteration instead of m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration
-        # m1_Vbeta_inv_Sigmabeta_j_draw_previous_iteration = m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration = m1_Vbeta_inv_Sigmabeta_j_draw.filter(lambda (iteri, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): iteri == s - 1 ).keyBy(lambda (iteri, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): h2)
-        
-        ## OPTIMIZATION SAVED m1_Vbeta_inv_Sigmabeta_j_draw_key_by_h2 = m1_Vbeta_inv_Sigmabeta_j_draw.keyBy(lambda (iteri, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): h2)      
-        # filter m1_h_draw taking only |s| -1 into account
-        ## OPTIMIZATION SAVED m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration_join_m1_h_draw_filter_by_iteration = m1_Vbeta_inv_Sigmabeta_j_draw_key_by_h2.cogroup(m1_h_draw)
-        
-        # Creating a new structure joined_simplified : iteri, h2, Vbeta_inv_j_draw, h_draw, which is a simplified version of what the original structure looks.
-        ## OPTIMIZATION lets collect it and distribute over m1_d_array_constants
-        # Following is (1,<objc>)(2,<objc>)... where each objc is (h2, Vbeta_inv_j_draw, sequence, no_n1 Sigmabeta_j, h_draw)
-        # OPTIOMIZATION : NO NEED FOR JOINED simplified : joined_simplified = m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration_join_m1_h_draw_filter_by_iteration.map(lambda (x,y): (int(str(x)[0]), list(y[0])[0][3], list(y[0])[0][0], list(y[0])[0][4], list(y[1])[0][2]), preservesPartitioning = True).collect()
-        
-        #>>joined_simplified_key_by_h2 = joined_simplified.keyBy(lambda (iteri, h2, Vbeta_inv_j_draw, h_draw): h2)
-        #??joined_simplified_key_by_h2_collection = joined_simplified_key_by_h2.collect()
-        ## m1_d_array_agg_constants is RDD of tuples h2, h1, xtx, xty
-        ## joined_simplified is RDD of tuples h2 -> iteri, h2, Vbeta_inv_j_draw, h_draw 
-        # join the m1_d_array_agg_constants_key_by_h2 with join_simplified
-        #>>>m1_d_array_agg_constants_key_by_h2_join_joined_simplified = m1_d_array_agg_constants_key_by_h2.cogroup(joined_simplified_key_by_h2)
-        #print "count and take 1", m1_d_array_agg_constants_key_by_h2_join_joined_simplified.count(), m1_d_array_agg_constants_key_by_h2_join_joined_simplified.take(1)
-        # following two lines of mapped RDD are for testing : m1_d_array_agg_constants_key_by_h2_join_joined_simplified
-        #m1_d_array_agg_constants_key_by_h2_join_joined_simplified_mapped = m1_d_array_agg_constants_key_by_h2_join_joined_simplified.map(lambda (x,y): (x, list(y[0])[0], list(y[1])[0]))
-        #print "m1_d_array_agg_constants_key_by_h2_join_joined_simplified_mapped", m1_d_array_agg_constants_key_by_h2_join_joined_simplified_mapped.take(1)
-        
-        # Don’t spill to disk unless the functions that computed your datasets are expensive, or they filter a large amount of the data. 
-        # Otherwise, recomputing a partition may be as fast as reading it from disk.        
         
         # OPTIMIZATION is to compute next values of m1_Vbeta_i : (h2, [(sequence, hierarchy_level2, hierarchy_level1, Vbeta_i)]) 
         # pinv_Vbeta_i(xtx, Vbeta_inv_j_draw, h_draw):
@@ -77,8 +46,11 @@ def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitio
         
         #m1_Vbeta_inv_Sigmabeta_j_draw_collection = sorted(m1_Vbeta_inv_Sigmabeta_j_draw_collection) 
         ## CHECK IF m1_Vbeta_inv_Sigmabeta_j_draw_collection is sorted & collected in each iteration or not.
-        m1_Vbeta_i.unpersist()
-        m1_Vbeta_i = m1_d_array_agg_constants.map(lambda (hierarchy_level2, hierarchy_level1, xtx, xty): (s, hierarchy_level2, hierarchy_level1, gtr.pinv_Vbeta_i(xtx, m1_Vbeta_inv_Sigmabeta_j_draw_collection[int(str(hierarchy_level2)[0]) -1][1], m1_Vbeta_inv_Sigmabeta_j_draw_collection[int(str(hierarchy_level2)[0]) -1][4]), xty), preservesPartitioning = True)    
+        if s % 10 == 0:
+            m1_Vbeta_i.persist(StorageLevel.OFF_HEAP)
+        else:
+            m1_Vbeta_i.unpersist()
+        m1_Vbeta_i = m1_d_array_agg_constants.map(lambda (hierarchy_level2, hierarchy_level1, xtx, xty): (s, hierarchy_level2, hierarchy_level1, gtr.pinv_Vbeta_i(xtx, m1_Vbeta_inv_Sigmabeta_j_draw_collection[int(str(hierarchy_level2)[0]) -1][1], m1_Vbeta_inv_Sigmabeta_j_draw_collection[int(str(hierarchy_level2)[0]) -1][4]), xty))    
         #>>>m1_Vbeta_i_keyBy_h2_long_next = m1_d_array_agg_constants_key_by_h2_join_joined_simplified.map(lambda (x,y): (x, gtr.get_Vbeta_i_next(y, s)))
         # the Unified table is the actual table that reflects all the rows of m1_Vbeta_i in correct format.
         ##>>>m1_Vbeta_i_keyBy_h2_long_next_cached = sc.parallelize(m1_Vbeta_i_keyBy_h2_long_next.values().reduce(add),135)
@@ -91,47 +63,23 @@ def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitio
        
         ### Inserting into beta_i_mean
         print "Inserting into beta_i_mean"
-        #m1_Vbeta_i_unified_filter_iter_s = m1_Vbeta_i.filter(lambda (i, hierarchy_level2, hierarchy_level1, Vbeta_i) : i == s)
-        # for m1_Vbeta_i_keyby_h2_h1_current_iteration dont want to persist the current iterations in memory as it is a relatively small data structure and can be moved across nodes where keyed partitions live
-        #m1_Vbeta_i_keyby_h2_h1_current_iteration = m1_Vbeta_i_keyBy_h2_long_next_cached.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, Vbeta_i, xty): (hierarchy_level2, hierarchy_level1))
-        #print "count  m1_Vbeta_i_keyby_h2_h1   ", m1_Vbeta_i_keyby_h2_h1.count()
-        #print "take 1 m1_Vbeta_i_keyby_h2_h1 ", m1_Vbeta_i_keyby_h2_h1.take(1)    
-        #  JOINED_m1_Vbeta_i_keyby_h2_h1_WITH_m1_d_array_agg_constants_key_by_h2_h1 of tuples : hierarchy_level2, hierarchy_level1, Vbeta_i,xty 
-        # following is the foo of computer beta_i_mean
-        ##OPTIMIZED INTO m1_Vbeta_i_keyby_h2_h1_current_iteration itself 
-        ##>>>JOINED_m1_Vbeta_i_keyby_h2_h1_WITH_m1_d_array_agg_constants_key_by_h2_h1 = m1_Vbeta_i_keyby_h2_h1_current_iteration.cogroup(m1_d_array_agg_constants_key_by_h2_h1).map(lambda (x,y): (list(y[0])[0][1], list(y[0])[0][2], list(y[0])[0][3], list(y[1])[0][3]))
-        ##>>>JOINED_part_1_by_keyBy_h2 = JOINED_m1_Vbeta_i_keyby_h2_h1_WITH_m1_d_array_agg_constants_key_by_h2_h1.keyBy(lambda (hierarchy_level2, hierarchy_level1, Vbeta_i, xty): hierarchy_level2)
-        
-        # m1_Vbeta_inv_Sigmabeta_j_draw_by_iteration joined with m1_beta_mu_j_draw_by_previous_iteration
-        # m1_beta_mu_j_draw = hierarchy_level2 -> (iter, hierarchy_level2, beta_mu_j_draw)
-        # OPTIMIZATION m1_beta_mu_j_draw is actually the previous iteration itself
-        #m1_beta_mu_j_draw_by_previous_iteration = m1_beta_mu_j_draw_keyBy_h2.filter(lambda (x,y): y[0] == s - 1)
-        #print "count  m1_beta_mu_j_draw_by_previous_iteration   ", m1_beta_mu_j_draw_by_previous_iteration.count()
-        #print "take 1 m1_beta_mu_j_draw_by_previous_iteration ", m1_beta_mu_j_draw_by_previous_iteration.take(1)
-        # Following is computed from h2 ->(resIter1, resIter2) <=> where 
-        # resIter1 is (iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j)
-        # resIter2 is (iter, hierarchy_level2, beta_mu_j_draw)
-        # strucuture is  ( h2, iter, Vbeta_inv_j_draw, beta_mu_j_draw )
-        ##>>JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw = m1_Vbeta_inv_Sigmabeta_j_draw_previous_iteration.cogroup(m1_beta_mu_j_draw).map(lambda (x,y): (x, list(y[0])[0][0], list(y[0])[0][3], list(y[1])[0][2])).keyBy(lambda (hierarchy_level2, iteri, Vbeta_inv_j_draw, beta_mu_j_draw): hierarchy_level2)
-        # Cogroup above structure h2 -> h2, iter, Vbeta_inv_j_draw, beta_mu_j_draw with m1_h_draw_filter_by_iteration,  h2 -> (iteri, h2, h_draw)
-        ###>>>JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw_join_WITH_h_draw = JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw.cogroup(m1_h_draw).map(lambda (x, y): (list(y[0])[0][0], list(y[1])[0][2], list(y[0])[0][2], list(y[0])[0][3]))
-        ###>>>JOINED_part_2_by_keyBy_h2 = JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw_join_WITH_h_draw.keyBy(lambda (hierarchy_level2, h_draw, Vbeta_inv_j_draw, beta_mu_j_draw): hierarchy_level2)
-        #print "take 1 ", JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw_join_WITH_h_draw.take(1) 
-        #print "count 1 ", JOINED_m1_Vbeta_inv_Sigmabeta_j_draw_WITH_m1_with_m1_beta_mu_j_draw_join_WITH_h_draw.count()
-        
+        ## Needs optimization 
         ##OPTIMIZATION over JOINED #>> above
         ##  (h2, Vbeta_inv_j_draw, sequence, no_n1 Sigmabeta_j, h_draw) is already collected in previous coefficient(m1_Vbeta_i) computation 
         ## we only need beta_mu_j_draw so collecting it over.
-        m1_beta_mu_j_draw_collection = m1_beta_mu_j_draw.map(lambda (sequence, hierarchy_level2, beta_mu_j_draw, Vbeta_inv_j_draw): (int(str(hierarchy_level2)[0]), sequence, hierarchy_level2, beta_mu_j_draw, Vbeta_inv_j_draw), preservesPartitioning = True).collect()
+        m1_beta_mu_j_draw_collection = m1_beta_mu_j_draw.map(lambda (sequence, hierarchy_level2, beta_mu_j_draw, Vbeta_inv_j_draw): (int(str(hierarchy_level2)[0]), sequence, hierarchy_level2, beta_mu_j_draw, Vbeta_inv_j_draw)).collect()
         #m1_beta_mu_j_draw_collection = sorted(map(lambda (sequence, h2, beta_mu_j_draw, Vbeta_inv_j_draw): (int(str(hierarchy_level2)[0]), sequence, h2, beta_mu_j_draw.all(), Vbeta_inv_j_draw.all()), m1_beta_mu_j_draw_collection))
         m1_beta_mu_j_draw_collection = sorted(m1_beta_mu_j_draw_collection)
-        print "m1_beta_mu_j_draw_collection ", m1_beta_mu_j_draw_collection
+        #print "m1_beta_mu_j_draw_collection ", m1_beta_mu_j_draw_collection
         
         ## using the gu function gu.beta_i_mean(Vbeta_i, h_draw, xty, Vbeta_inv_j_draw, beta_mu_j_draw) directly over the following functions as 
         ###>>>m1_beta_i_mean_keyBy_h2_long_next = JOINED_part_1_by_keyBy_h2.cogroup(JOINED_part_2_by_keyBy_h2).map(lambda (x,y): (x, gtr.get_beta_i_mean_next(y, s)))
-        m1_beta_i_mean.unpersist()
+        if s % 10 == 0:
+            m1_beta_i_mean.persist(StorageLevel.OFF_HEAP)
+        else:
+            m1_beta_i_mean.unpersist()
         # m1_beta_i_mean is a collection of (sequence, h2,h1,beta_i_mean)
-        m1_beta_i_mean = m1_Vbeta_i.map(lambda (sequence, h2, h1, Vbeta_i, xty): (s, h2, h1, gu.beta_i_mean(Vbeta_i, m1_Vbeta_inv_Sigmabeta_j_draw_collection[int(str(h2)[0]) -1][4], xty,  m1_beta_mu_j_draw_collection[int(str(h2)[0]) -1][4], m1_beta_mu_j_draw_collection[int(str(h2)[0]) -1][3]), m1_beta_mu_j_draw_collection[int(str(h2)[0]) -1][4]), preservesPartitioning = True)
+        m1_beta_i_mean = m1_Vbeta_i.map(lambda (sequence, h2, h1, Vbeta_i, xty): (s, h2, h1, gu.beta_i_mean(Vbeta_i, m1_Vbeta_inv_Sigmabeta_j_draw_collection[int(str(h2)[0]) -1][4], xty,  m1_beta_mu_j_draw_collection[int(str(h2)[0]) -1][4], m1_beta_mu_j_draw_collection[int(str(h2)[0]) -1][3]), m1_beta_mu_j_draw_collection[int(str(h2)[0]) -1][4]))
     
         # the Unified table is the actual table that reflects all rows of m1_beta_i_draw in correct format.
         # strucutured as iter or s, h2, h1, beta_i_mean
@@ -154,12 +102,15 @@ def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitio
         # After cogroup of above two Data Structures we can easily compute bet_draw directly from the map function
         # structure : s, h2, h1, beta_draw 
         # m1_beta_i_draw_long_next is required for computing the Gewke estimations
-        m1_beta_i_draw.unpersist()
+        if s % 10 == 0:
+            m1_beta_i_draw.persist(StorageLevel.OFF_HEAP)
+        else:
+            m1_beta_i_draw.unpersist()
         ## USING THE OPTIMIZATION OF PREVIOUS init functions where only m1_beta_i_mean_by_current_iteration was used. 
         ##>>m1_beta_i_draw = m1_beta_i_mean_by_current_iteration.cogroup(m1_Vbeta_i_keyby_h2_h1_current_iteration).map(lambda (x,y): (s, x[0], x[1], gu.beta_draw(list(y[0])[0][3], list(y[1])[0][3])), preservesPartitioning = True)
-        m1_beta_i_draw = m1_beta_i_mean.map(lambda (sequence, h2, h1, beta_i_mean, Vbeta_i): (s, h2, h1, gu.beta_draw(beta_i_mean, Vbeta_i)), preservesPartitioning = True)
-        print "m1_beta_i_draw take ", m1_beta_i_draw.take(1) 
-        print "m1_beta_i_draw count ", m1_beta_i_draw.count()        
+        m1_beta_i_draw = m1_beta_i_mean.map(lambda (sequence, h2, h1, beta_i_mean, Vbeta_i): (s, h2, h1, gu.beta_draw(beta_i_mean, Vbeta_i)), preservesPartitioning = True).persist()
+        #print "m1_beta_i_draw take ", m1_beta_i_draw.take(1) 
+        #print "m1_beta_i_draw count ", m1_beta_i_draw.count()        
         #OPTIMIZATION : NO NEED TO COgroup as m1_beta_i_mean has Vbeta_i too : m1_beta_i_draw = m1_beta_i_mean_keyBy_h2_h1.cogroup(m1_Vbeta_i_keyby_h2_h1).map(lambda (x,y): (s, x[0], x[1], gu.beta_draw(list(y[0])[0][3], list(y[1])[0][3])), preservesPartitioning = True)
         #print "count  m1_beta_i_draw_next   ", m1_beta_i_draw_next.count()
         #print "take 1 m1_beta_i_draw_next ", m1_beta_i_draw_next.take(1)
@@ -169,6 +120,7 @@ def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitio
         
         # insert into Vbeta_j_mu table 
         print "Inserting into Vbeta_j_mu"
+        # needs optimization
         # using using the most "recent" values of the beta_i_draw coefficients
         # The values of beta_mu_j_draw and Vbeta_j_mu have not yet been updated at this stage, so their values at iter=s-1 are taken.
         # S1 : h2, h1, beta_i_draw  from m1_beta_i_draw where iteri == s ==> m1_beta_i_draw_next => key it by h2
@@ -180,20 +132,23 @@ def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitio
         JOINED_m1_beta_i_draw_next_key_by_h2_WITH_m1_beta_mu_j_draw_by_previous_iteration = m1_beta_i_draw_key_by_h2.cogroup(m1_beta_mu_j_draw).map(lambda (x,y): (x, list(y[0]), list(y[1])[0][2])).groupBy(lambda x : gp.partitionByh2(x), h2_partitions)
         ## OPTIMIZATION onf JOINED to get it grouped by the GroupedBy clause to build upon further iterations on top of it, which have the same partitioning
         ## .map(lambda (x,y): (x, list(y[0]), list(y[1])[0][1])).groupBy(lambda x : gp.partitionByh2(x[0]), h2_partitions)
-        m1_Vbeta_j_mu.unpersist()
-        m1_Vbeta_j_mu = JOINED_m1_beta_i_draw_next_key_by_h2_WITH_m1_beta_mu_j_draw_by_previous_iteration.map(lambda (h2_int, y): (s, gtr.get_Vbeta_j_mu_next(y, s)), preservesPartitioning = True)
+        if s % 10 == 0:
+            m1_Vbeta_j_mu.persist(StorageLevel.OFF_HEAP)
+        else:
+            m1_Vbeta_j_mu.unpersist()
+        m1_Vbeta_j_mu = JOINED_m1_beta_i_draw_next_key_by_h2_WITH_m1_beta_mu_j_draw_by_previous_iteration.map(lambda (h2_int, y): (s, gtr.get_Vbeta_j_mu_next(y, s)))
         #print "count  m1_Vbeta_j_mu_next   ", m1_Vbeta_j_mu_next.count()
         #print "take 1 m1_Vbeta_j_mu_next ", m1_Vbeta_j_mu_next.take(1)
         ## OPTIMIZATION no need for unions m1_Vbeta_j_mu = m1_Vbeta_j_mu.union(m1_Vbeta_j_mu_next)
         #print "count  m1_Vbeta_j_mu   ", m1_Vbeta_j_mu.count()
-        print "take 1 m1_Vbeta_j_mu, s ", m1_Vbeta_j_mu.collect(), "WITH S ", s
+        #print "take 1 m1_Vbeta_j_mu, s ", m1_Vbeta_j_mu.collect(), "WITH S ", s
         
         ## inserting into m1_Vbeta_inv_Sigmabeta_j_draw
-        print "inserting into m1_Vbeta_inv_Sigmabeta_j_draw"
+        #print "inserting into m1_Vbeta_inv_Sigmabeta_j_draw"
         ## computing Vbeta_inv_j_draw from m1_Vbeta_j_mu where iteration == s
         ## returns s, h2, Vbeta_inv_j_draw
         
-        m1_Vbeta_j_mu_pinv = m1_Vbeta_j_mu.map(gtr.get_m1_Vbeta_j_mu_pinv, preservesPartitioning = True)
+        m1_Vbeta_j_mu_pinv = m1_Vbeta_j_mu.map(gtr.get_m1_Vbeta_j_mu_pinv)
         #print "count  m1_Vbeta_j_mu_pinv   ", m1_Vbeta_j_mu_pinv.count()
         #print "take 1 m1_Vbeta_j_mu_pinv ", m1_Vbeta_j_mu_pinv.take(1)
         
@@ -209,11 +164,14 @@ def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitio
         ## optimization directly using the space of Vbeta_j_mu_pinv
         # iteri, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j
         ##>>>m1_Vbeta_inv_Sigmabeta_j_draw_next = JOINED_m1_Vbeta_j_mu_pinv_WITH_m1_d_childcount_groupBy_h2_simplified.map(gtr.get_m1_Vbeta_inv_Sigmabeta_j_draw_next)
-        m1_Vbeta_inv_Sigmabeta_j_draw.unpersist()
-        m1_Vbeta_inv_Sigmabeta_j_draw = m1_Vbeta_j_mu_pinv.map(lambda (seq, hierarchy_level2, Vbeta_inv_j_draw): (s, hierarchy_level2, m1_d_childcount[int(str(hierarchy_level2)[0]) -1][1], Vbeta_inv_j_draw, gtr.pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, m1_d_childcount[int(str(hierarchy_level2)[0]) -1][1], coef_precision_prior_array)), preservesPartitioning = True)
+        if s % 10 == 0:
+            m1_Vbeta_inv_Sigmabeta_j_draw.persist(StorageLevel.OFF_HEAP)
+        else:
+            m1_Vbeta_inv_Sigmabeta_j_draw.unpersist()
+        m1_Vbeta_inv_Sigmabeta_j_draw = m1_Vbeta_j_mu_pinv.map(lambda (seq, hierarchy_level2, Vbeta_inv_j_draw): (s, hierarchy_level2, m1_d_childcount[int(str(hierarchy_level2)[0]) -1][1], Vbeta_inv_j_draw, gtr.pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, m1_d_childcount[int(str(hierarchy_level2)[0]) -1][1], coef_precision_prior_array)), preservesPartitioning = True).persist()
         
         # Reassigning the collections values
-        m1_Vbeta_inv_Sigmabeta_j_draw_collection = m1_Vbeta_inv_Sigmabeta_j_draw.map(lambda (sequence, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j): (int(str(hierarchy_level2)[0]), Vbeta_inv_j_draw, sequence, n1,  Sigmabeta_j), preservesPartitioning = True).collect()
+        m1_Vbeta_inv_Sigmabeta_j_draw_collection = m1_Vbeta_inv_Sigmabeta_j_draw.map(lambda (sequence, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j): (int(str(hierarchy_level2)[0]), Vbeta_inv_j_draw, sequence, n1,  Sigmabeta_j)).collect()
         # (1,<objc>)(2,<objc>)...
         #m1_Vbeta_inv_Sigmabeta_j_draw_collection = sorted(map(lambda (sequence, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): (int(str(hierarchy_level2)[0]), Vbeta_inv_j_draw.all(), sequence, n1,  Sigmabeta_j.all()), m1_Vbeta_inv_Sigmabeta_j_draw_collection))
         m1_Vbeta_inv_Sigmabeta_j_draw_collection = sorted(m1_Vbeta_inv_Sigmabeta_j_draw_collection)        
@@ -240,7 +198,10 @@ def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitio
         joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j = m1_Vbeta_inv_Sigmabeta_j_draw_next_keyBy_h2.cogroup(m1_beta_i_draw_next_key_by_h2_sum_coef_j)
         # Using same function as was used in the gibbs_init
         # s, h2, beta_mu_j
-        m1_beta_mu_j.unpersist()
+        if s % 10 == 0:
+            m1_beta_mu_j.persist(StorageLevel.OFF_HEAP)
+        else:
+            m1_beta_mu_j.unpersist()
         #OPTIMIZATION from init iteri, hierarchy_level2, beta_mu_j, Vbeta_inv_j_draw, Sigmabeta_j
         m1_beta_mu_j = joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j.map(gtr.get_substructure_beta_mu_j, preservesPartitioning = True)
         ## OPTIMIZATION : NO NEED for unions m1_beta_mu_j = m1_beta_mu_j.union(m1_beta_mu_j_next)
@@ -260,7 +221,10 @@ def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitio
         #m1_beta_mu_j_next_keyBy_h2 = m1_beta_mu_j.keyBy(lambda (s, h2, beta_mu_j): h2)
         # now the cogroup
         #Joined_m1_beta_mu_j_next_keyBy_h2_WITH_m1_Vbeta_inv_Sigmabeta_j_draw_next_keyBy_h2 = m1_beta_mu_j_next_keyBy_h2.cogroup(m1_Vbeta_inv_Sigmabeta_j_draw_next_keyBy_h2)
-        m1_beta_mu_j_draw.unpersist()
+        if s % 10 == 0:
+            m1_beta_mu_j_draw.persist(StorageLevel.OFF_HEAP)
+        else:
+            m1_beta_mu_j_draw.unpersist()
         #m1_beta_mu_j_draw = Joined_m1_beta_mu_j_next_keyBy_h2_WITH_m1_Vbeta_inv_Sigmabeta_j_draw_next_keyBy_h2.map(gtr.get_beta_draw, preservesPartitioning = True)
         m1_beta_mu_j_draw = m1_beta_mu_j.map(lambda (seq, hierarchy_level2, beta_mu_j, Vbeta_inv_j_draw, Sigmabeta_j): (seq, hierarchy_level2, gu.beta_draw(beta_mu_j, Sigmabeta_j), Vbeta_inv_j_draw), preservesPartitioning = True)
         #print "count  m1_beta_mu_j_draw_next   ", m1_beta_mu_j_draw_next.count()
@@ -295,31 +259,40 @@ def gibbs_iter(sc, begin_iter, end_iter, coef_precision_prior_array, h2_partitio
         # OPTIMIZATION no need for union witht he previous step as it is not required in further iterations 
         # it is computed new each time.
         ##?}>>>m1_s2 = m1_s2.union(m1_s2_next)
-        print "m1_s2 : ", m1_s2.take(1)
-        print "m1_s2 : ", m1_s2.count()
+        #print "m1_s2 : ", m1_s2.take(1)
+        #print "m1_s2 : ", m1_s2.count()
         
         ## Updating values of h_draw based on current iteration
         # -- Draw h from gamma dist'n.  Note that h=1/(s^2)
         ## from iteri, hierarchy_level2, m1_d_count_grpby_level2_b, s2
         ## m1_h_draw = iteri, h2, h_draw
+        if s % 10 == 0:
+            m1_h_draw.persist(StorageLevel.OFF_HEAP)
+        else:
+            m1_h_draw.unpersist()
         m1_h_draw = m1_s2.map(gtr.get_h_draw).keyBy(lambda (iteri, h2, h_draw): h2)
+        if s % 10 == 0:
+            m1_s2.persist(StorageLevel.OFF_HEAP)
+        else:
+            m1_s2.unpersist()
         # optimization we dont need to persist the previous draws with new ones 
         ## so removing the persistence and creating new persistence
         # OPTIMIZATION : SAVED over unions , only next values used in iterations m1_h_draw = m1_h_draw.union(m1_h_draw_next)
-        print "m1_h_draw : ", m1_h_draw.take(1)
-        print "m1_h_draw : ", m1_h_draw.count()
+        #print "m1_h_draw : ", m1_h_draw.take(1)
+        #print "m1_h_draw : ", m1_h_draw.count()
         
         ## Creating vertical draws
         ## -- Convert the array-based draws from the Gibbs Sampler into a "vertically long" format by unnesting the arrays.
         # lists of tuples : s, h2, h1, beta_i_draw[:,i][0], driver_x_array[i], hierarchy_level2_hierarchy_level1_driver        
         m1_beta_i_draw_long_next = m1_beta_i_draw.map(gtr.get_beta_i_draw_long).reduce(add)
-        print "reduce count ", len(m1_beta_i_draw_long_next)
+        #print "reduce count ", len(m1_beta_i_draw_long_next)
         #print "reduce ", m1_beta_i_draw_long_next[0]
         m1_beta_i_draw_long = m1_beta_i_draw_long + m1_beta_i_draw_long_next
         print "end iteration", s
 
      
-    # structured as (h2, h1, driver) -> (s, h2, h1, beta_draw[i], x_array[i], h2_h1_driver)    
+    # structured as (h2, h1, driver) -> (s, h2, h1, beta_draw[i], x_array[i], h2_h1_driver)
+    print "m1_beta_i_draw_long  as ", len(m1_beta_i_draw_long)
     m1_beta_i_draw_long = sc.parallelize(m1_beta_i_draw_long)
     #.keyBy(lambda (s, h2, h1, beta_i_draw, driver, h2_h1_driver): (h2, h1, driver))
     print "m1_beta_i_draw_long count :", m1_beta_i_draw_long.count()
