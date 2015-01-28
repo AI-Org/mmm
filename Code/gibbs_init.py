@@ -34,14 +34,14 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     # OPTIMIZATION 3 : create m1_d_arry_agg values on each partitioned block of data which is keyed by h2 h1 
     #m1_d_array_agg = d_key_h2_h1.groupByKey().map(gtr.create_x_matrix_y_array)
     #### OR h2,h1, x_matrix, y_array
-    d_groupedBy_h1_h2 = d.groupBy(gp.group_partitionByh2h1, h1_h2_partitions).persist()
-    m1_d_array_agg = d_groupedBy_h1_h2.map(gtr.create_x_matrix_y_array, preservesPartitioning = True).persist()
+    d_groupedBy_h1_h2 = d.groupBy(gp.group_partitionByh2h1, h1_h2_partitions)
+    m1_d_array_agg = d_groupedBy_h1_h2.map(gtr.create_x_matrix_y_array, preservesPartitioning = True)
     
     #  Compute constants of X'X and X'y for computing 
     #  m1_Vbeta_i & beta_i_mean
     #  m1_d_array_agg_constants : list of tuples of (h2, h1, xtx, xty)
     # OPTIMIZATION preserving the values on partitions
-    m1_d_array_agg_constants = m1_d_array_agg.map(gtr.create_xtx_matrix_xty, preservesPartitioning = True).persist()
+    m1_d_array_agg_constants = m1_d_array_agg.map(gtr.create_xtx_matrix_xty, preservesPartitioning = True)
     # print "m1_d_array_agg_constants take ",m1_d_array_agg_constants.take(1)
     # print "m1_d_array_agg_constants count",m1_d_array_agg_constants.count()
     
@@ -112,7 +112,7 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
         # OPTIMIZATION SINCE we started doing group by partitionings its not so clear as to still have keyBy h2 h1 or not, Omitting it, till its needed.
         m1_ols_beta_i = m1_d_array_agg.map(gtr.get_random_initialvals_beta_i).keyBy(lambda (h2,h1,coff): (h2))
         #m1_ols_beta_j = d_keyBy_h2.map(gtr.get_random_initialvals_beta_j).keyBy(lambda (h2,coff): (h2))
-        #m1_ols_beta_i = m1_d_array_agg.map(gtr.get_random_initialvals_beta_i, preservesPartitioning=True).persist()
+        #m1_ols_beta_i = m1_d_array_agg.map(gtr.get_random_initialvals_beta_i, preservesPartitioning=True)
         m1_ols_beta_j = d_keyBy_h2.map(gtr.get_random_initialvals_beta_j).keyBy(lambda (h2,coff): (h2))
         #m1_ols_beta_j_collection = d_keyBy_h2.map(gtr.get_random_initialvals_beta_j).collect()
         
@@ -124,12 +124,12 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     #   then sum them to get back Vbeta_j_mu matrices
     # computing _Vbeta_j_mu  
     # Never do a join here, its not what is used in computations, It will result in wrong values always
-    #joined_i_j_rdd = m1_ols_beta_i.join(m1_ols_beta_j).map(lambda (x,y): (x, y[0][2], y[1][1])).groupBy(lambda x : gp.partitionByh2(x), h2_partitions).persist()
-    joined_i_j_rdd = m1_ols_beta_i.cogroup(m1_ols_beta_j).map(lambda (x,y): (x, list(y[0]), list(y[1])[0][1])).groupBy(lambda x : gp.partitionByh2(x), h2_partitions).persist()
+    #joined_i_j_rdd = m1_ols_beta_i.join(m1_ols_beta_j).map(lambda (x,y): (x, y[0][2], y[1][1])).groupBy(lambda x : gp.partitionByh2(x), h2_partitions)
+    joined_i_j_rdd = m1_ols_beta_i.cogroup(m1_ols_beta_j).map(lambda (x,y): (x, list(y[0]), list(y[1])[0][1])).groupBy(lambda x : gp.partitionByh2(x), h2_partitions)
     ## Data Structure m1_Vbeta_j_mu is symmetric along diagonal and have same dimensions as the one in HAWQ tables.
     # print "coefficients i and j", joined_i_j_rdd.take(1)
     # m1_Vbeta_j_mu a matrix with dimensions 14 X 14.
-    m1_Vbeta_j_mu = joined_i_j_rdd.map(lambda (x, y): (1, gtr.get_Vbeta_j_mu_next(y, 1)), preservesPartitioning = True).persist() 
+    m1_Vbeta_j_mu = joined_i_j_rdd.map(lambda (x, y): (1, gtr.get_Vbeta_j_mu_next(y, 1)), preservesPartitioning = True) 
     # print " m1_Vbeta_j_mu count ", m1_Vbeta_j_mu.count() 
     print " m1_Vbeta_j_mu take 1", m1_Vbeta_j_mu.take(1) # 1, (h2, vbeta_j_mu)
     
@@ -141,7 +141,7 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     # instead of m1_d_childcount I will be using m1_d_childcount_b
     # (iter, h2, n1, Vbeta_inv_j_draw, pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, n1, coef_precision_prior_array_var))
     # Vbeta_inv_j_draw & sigmabeta_j_draw are both matrixs with dimensions 14 X 14.
-    m1_Vbeta_inv_Sigmabeta_j_draw = m1_Vbeta_j_mu_pinv.map(lambda (seq, hierarchy_level2, Vbeta_inv_j_draw): (seq, hierarchy_level2, m1_d_childcount[int(str(hierarchy_level2)[0]) -1][1], Vbeta_inv_j_draw, gtr.pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, m1_d_childcount[int(str(hierarchy_level2)[0]) -1][1], coef_precision_prior_array)), preservesPartitioning = True).persist()
+    m1_Vbeta_inv_Sigmabeta_j_draw = m1_Vbeta_j_mu_pinv.map(lambda (seq, hierarchy_level2, Vbeta_inv_j_draw): (seq, hierarchy_level2, m1_d_childcount[int(str(hierarchy_level2)[0]) -1][1], Vbeta_inv_j_draw, gtr.pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, m1_d_childcount[int(str(hierarchy_level2)[0]) -1][1], coef_precision_prior_array)), preservesPartitioning = True)
     print " m1_Vbeta_inv_Sigmabeta_j_draw Take 1: ", m1_Vbeta_inv_Sigmabeta_j_draw.take(1)
     #print " m1_Vbeta_inv_Sigmabeta_j_draw Count: ", m1_Vbeta_inv_Sigmabeta_j_draw.count()
     
@@ -167,7 +167,7 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     # Here we have iteri, hierarchy_level2, beta_mu_j, Vbeta_inv_j_draw, Sigmabeta_j)
     # Vbeta_inv_j_draw : 14 X 14
     # Sigmabeta_j : 14 X 14
-    m1_beta_mu_j = joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j.map(gtr.get_substructure_beta_mu_j, preservesPartitioning = True).persist()
+    m1_beta_mu_j = joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j.map(gtr.get_substructure_beta_mu_j, preservesPartitioning = True)
     # hierarchy_level2=> (iter, hierarchy_level2, beta_mu_j)
     #>>>  computing keybys on the fly and not with persistence m1_beta_mu_j_keyBy_h2 = m1_beta_mu_j.keyBy(lambda (iter, hierarchy_level2, beta_mu_j): hierarchy_level2)
     #print "counts of m1_beta_mu_j ", m1_beta_mu_j.count() # number is 5 on both sides
@@ -180,9 +180,9 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     # joined_m1_beta_mu_j_with_m1_Vbeta_inv_Sigmabeta_j_draw_rdd = m1_beta_mu_j.keyBy(lambda (iter, hierarchy_level2, beta_mu_j): hierarchy_level2).cogroup(m1_Vbeta_inv_Sigmabeta_j_draw.keyBy(lambda (iter, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): h2))
     #  m1_beta_mu_j_draw <h2> => (iter, h2, beta_mu_j_draw, Vbeta_inv_j_draw)
     ## OPTIMIZATION for computing m1_beta_i_mean : including Vbeta_inv_j_draw with m1_beta_mu_j_draw for further computations
-    ##m1_beta_mu_j_draw = m1_beta_mu_j.map(gtr.get_beta_draw, preservesPartitioning = True).persist()
+    ##m1_beta_mu_j_draw = m1_beta_mu_j.map(gtr.get_beta_draw, preservesPartitioning = True)
     # m1_beta_mu_j_draw is array of 14 elements
-    m1_beta_mu_j_draw = m1_beta_mu_j.map(lambda (seq, hierarchy_level2, beta_mu_j, Vbeta_inv_j_draw, Sigmabeta_j): (seq, hierarchy_level2, gu.beta_draw(beta_mu_j, Sigmabeta_j), Vbeta_inv_j_draw), preservesPartitioning = True).persist()
+    m1_beta_mu_j_draw = m1_beta_mu_j.map(lambda (seq, hierarchy_level2, beta_mu_j, Vbeta_inv_j_draw, Sigmabeta_j): (seq, hierarchy_level2, gu.beta_draw(beta_mu_j, Sigmabeta_j), Vbeta_inv_j_draw), preservesPartitioning = True)
     #>> m1_beta_mu_j_draw_keyBy_h2 = m1_beta_mu_j_draw.keyBy(lambda (iter, hierarchy_level2, beta_mu_j_draw, Vbeta_inv_j_draw): hierarchy_level2)
     # count of 5    
     #print "count m1_beta_mu_j_draw", m1_beta_mu_j_draw.count()
@@ -204,7 +204,7 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     # print "count joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw ", joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw.count()
     # print "take 1 m1_beta_mu_j_draw", joined_m1_d_array_agg_constants_with_m1_Vbeta_inv_Sigmabeta_j_draw.take(1)
     # m1_Vbeta_i : each RDD is a list of  (1, hierarchy_level2, hierarchy_level1, Vbeta_i)
-    #>> m1_Vbeta_i_keyBy_h2_long = joined_m1_Vbeta_inv_Sigmabeta_j_draw_with_m1_d_array_agg_constants.map(lambda (x,y): (x, gtr.get_Vbeta_i(y)), preservesPartitioning = True).persist()
+    #>> m1_Vbeta_i_keyBy_h2_long = joined_m1_Vbeta_inv_Sigmabeta_j_draw_with_m1_d_array_agg_constants.map(lambda (x,y): (x, gtr.get_Vbeta_i(y)), preservesPartitioning = True)
     ## OPTIMIZATION since m1_d_array_constants are already grouped into partitions and are persisted across cluster, we might want to use their persistence level
     ## collection of this will save a lot of in memory shuffle.
     # m1_Vbeta_inv_Sigmabeta_j_draw_collection will be a list of (iter, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j)
@@ -216,7 +216,7 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     #print "m1_Vbeta_inv_Sigmabeta_j_draw_collection ",  m1_Vbeta_inv_Sigmabeta_j_draw_collection  
     # distributed over the same partitions as (m1_d_array_agg_constants), the format of m1_Vbeta_i should look like (sequence, h2, h1, Vbeta_i, xty) 
     # Vbeta_i is 14 X 14 and xty is 14 X 1 matrix
-    m1_Vbeta_i = m1_d_array_agg_constants.map(lambda (hierarchy_level2, hierarchy_level1, xtx, xty): (m1_Vbeta_inv_Sigmabeta_j_draw_collection[int(str(hierarchy_level2)[0]) -1][2], hierarchy_level2, hierarchy_level1, gtr.pinv_Vbeta_i(xtx, m1_Vbeta_inv_Sigmabeta_j_draw_collection[int(str(hierarchy_level2)[0]) -1][1], 1), xty), preservesPartitioning = True).persist()    
+    m1_Vbeta_i = m1_d_array_agg_constants.map(lambda (hierarchy_level2, hierarchy_level1, xtx, xty): (m1_Vbeta_inv_Sigmabeta_j_draw_collection[int(str(hierarchy_level2)[0]) -1][2], hierarchy_level2, hierarchy_level1, gtr.pinv_Vbeta_i(xtx, m1_Vbeta_inv_Sigmabeta_j_draw_collection[int(str(hierarchy_level2)[0]) -1][1], 1), xty), preservesPartitioning = True)    
     #print "count m1_Vbeta_i", m1_Vbeta_i.count() # 135 or 150 if the data is extended version
     print "take 1 m1_Vbeta_i", m1_Vbeta_i.take(1)
       
@@ -249,7 +249,7 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     ###>>>m1_beta_i_mean_keyBy_h2_long = JOINED_part_1_by_keyBy_h2.cogroup(JOINED_part_2_by_keyBy_h2).map(lambda (x,y): (x, gtr.get_beta_i_mean(y)))
     ### OPTIMIZATIONS the function from gibbs UDFs beta_i_mean() has following parameters : Vbeta_i, 1, xty, Vbeta_inv_j_draw, beta_mu_j_draw
     ### for Computing next coefficient variable m1_beta_i_draw we are keeping the covariance Vbeta_inv_j_draw with m1_beta_i_mean data set ( which is m1_beta_mu_j_draw_collection[int(str(hierarchy_level2)[0]) -1][4])
-    m1_beta_i_mean = m1_Vbeta_i.map(lambda (sequence, h2, h1, Vbeta_i, xty): (sequence, h2, h1, gu.beta_i_mean(Vbeta_i, 1, xty, m1_beta_mu_j_draw_collection[int(str(hierarchy_level2)[0]) -1][4], m1_beta_mu_j_draw_collection[int(str(hierarchy_level2)[0]) -1][3]), m1_beta_mu_j_draw_collection[int(str(hierarchy_level2)[0]) -1][4]), preservesPartitioning = True).persist()
+    m1_beta_i_mean = m1_Vbeta_i.map(lambda (sequence, h2, h1, Vbeta_i, xty): (sequence, h2, h1, gu.beta_i_mean(Vbeta_i, 1, xty, m1_beta_mu_j_draw_collection[int(str(hierarchy_level2)[0]) -1][4], m1_beta_mu_j_draw_collection[int(str(hierarchy_level2)[0]) -1][3]), m1_beta_mu_j_draw_collection[int(str(hierarchy_level2)[0]) -1][4]), preservesPartitioning = True)
     # beta_i_mean = JOINED_part_1_by_keyBy_h2.cogroup(JOINED_part_2_by_keyBy_h2).map(lambda (x,y): (x, list(y[0]),list(y[1])))
     print "beta_i_mean take ", m1_beta_i_mean.take(1) 
     #print "beta_i_mean count ", m1_beta_i_mean.count()
@@ -264,7 +264,7 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     # m1_beta_i_draw : (iter, h2, h1, beta_i_draw)
     ###>>>m1_beta_i_draw = m1_beta_i_mean_keyBy_h2_h1.cogroup(m1_Vbeta_i_keyby_h2_h1).map(lambda (x,y): (list(y[0])[0][0], x[0], x[1], gu.beta_draw(list(y[0])[0][3], list(y[1])[0][3])))
     # OPTIMIZATION gu.beta_draw(mean, cov) relies only on mean and covariance and can be build on same partitions as m1_beta_i_mean
-    m1_beta_i_draw = m1_beta_i_mean.map(lambda (sequence, h2, h1, beta_i_mean, Vbeta_i): (sequence, h2, h1, gu.beta_draw(beta_i_mean, Vbeta_i)), preservesPartitioning = True).persist()
+    m1_beta_i_draw = m1_beta_i_mean.map(lambda (sequence, h2, h1, beta_i_mean, Vbeta_i): (sequence, h2, h1, gu.beta_draw(beta_i_mean, Vbeta_i)), preservesPartitioning = True)
     #print "m1_beta_i_draw take ", m1_beta_i_draw.take(1) 
     #print "m1_beta_i_draw count ", m1_beta_i_draw.count() # 135
     
@@ -298,7 +298,7 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     ## from iteri, hierarchy_level2, m1_d_count_grpby_level2_b, s2
     ## m1_h_draw = iteri, h2, h_draw
     ## optimization we can keyby persist it here as it has no defined custom partitioning levels, as such its better as to assign our keyby and then ask Spark to persist it.
-    m1_h_draw = m1_s2.map(gtr.get_h_draw).keyBy(lambda (iteri, h2, h_draw): h2).persist()
+    m1_h_draw = m1_s2.map(gtr.get_h_draw).keyBy(lambda (iteri, h2, h_draw): h2)
     print "m1_h_draw : 5 : ", m1_h_draw.take(1)
     print "m1_h_draw : 5 : ", m1_h_draw.count() 
     
