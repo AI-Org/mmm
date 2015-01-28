@@ -98,11 +98,13 @@ class Wishart:
     return result_draw
     
   def sample_R(self, dof, sigma):
+    import scipy as sc
     """Returns a draw from the distribution - will be a symmetric positive definite matrix."""
     n = sigma.shape[0]
     A = numpy.zeros((n,n),dtype=numpy.float32) 
     try:
-        chol = numpy.linalg.cholesky(sigma)
+        chol = sc.linalg.cholesky(sigma, lower=True)
+        #chol = numpy.linalg.cholesky(sigma)
     except:
         print "Sigma as ", sigma
         print "eigs", np.all(np.linalg.eigvals(sigma) > 0)
