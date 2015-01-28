@@ -214,7 +214,7 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     # distributed over the same partitions as (m1_d_array_agg_constants), the format of m1_Vbeta_i should look like (sequence, h2, h1, Vbeta_i, xty)    
     m1_Vbeta_i = m1_d_array_agg_constants.map(lambda (hierarchy_level2, hierarchy_level1, xtx, xty): (m1_Vbeta_inv_Sigmabeta_j_draw_collection[int(str(hierarchy_level2)[0]) -1][2], hierarchy_level2, hierarchy_level1, gtr.pinv_Vbeta_i(xtx, m1_Vbeta_inv_Sigmabeta_j_draw_collection[int(str(hierarchy_level2)[0]) -1][1], 1), xty), preservesPartitioning = True).persist()    
     #print "count m1_Vbeta_i", m1_Vbeta_i.count() # 135 or 150 if the data is extended version
-    #print "take 1 m1_Vbeta_i", m1_Vbeta_i.take(1)
+    print "take 1 m1_Vbeta_i", m1_Vbeta_i.take(1)
       
     # -- Compute beta_i_mean
     ## SUPER EXAMPLE
@@ -247,7 +247,7 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     ### for Computing next coefficient variable m1_beta_i_draw we are keeping the covariance Vbeta_inv_j_draw with m1_beta_i_mean data set ( which is m1_beta_mu_j_draw_collection[int(str(hierarchy_level2)[0]) -1][4])
     m1_beta_i_mean = m1_Vbeta_i.map(lambda (sequence, h2, h1, Vbeta_i, xty): (sequence, h2, h1, gu.beta_i_mean(Vbeta_i, 1, xty, m1_beta_mu_j_draw_collection[int(str(hierarchy_level2)[0]) -1][4], m1_beta_mu_j_draw_collection[int(str(hierarchy_level2)[0]) -1][3]), m1_beta_mu_j_draw_collection[int(str(hierarchy_level2)[0]) -1][4]), preservesPartitioning = True).persist()
     # beta_i_mean = JOINED_part_1_by_keyBy_h2.cogroup(JOINED_part_2_by_keyBy_h2).map(lambda (x,y): (x, list(y[0]),list(y[1])))
-    #print "beta_i_mean take ", m1_beta_i_mean.take(1) 
+    print "beta_i_mean take ", m1_beta_i_mean.take(1) 
     #print "beta_i_mean count ", m1_beta_i_mean.count()
     
     #-- compute m1_beta_i_draw by  Draw beta_i from mvnorm dist'n

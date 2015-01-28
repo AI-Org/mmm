@@ -110,14 +110,16 @@ def beta_mu_prior(Sigmabeta_j, Vbeta_inv_j_draw, sum_coef_j, coef_means_prior_ar
 
 def beta_draw(mean, cov):
     import numpy as np
-    # mean should be a 1 D array of means of variables
-    # cov should be 2 D array of 
+    # mean should be a 1 D array of means of variables : 1 X 14
+    # cov should be 2 D array of 14 X 14
+    # returns an array of 14 elements
     return np.random.multivariate_normal(np.matrix(mean).getA1(), cov, 1)
 
 # Function to compute Vbeta_i, as defined in Equation (7.25) of Koop pp.156.   
 # Only computed at lowest level of the hierarchy (i.e. the level that "mixes" directly with the data, namely X'X).
 # The solve(mat1*%*mat2 + mat3) is finding the inverse of A where A = mat1 %*% mat2 + mat3
 # Vbeta_i<- solve(arg1*arg2+arg3)
+## TODO
 def Vbeta_i(value, mat2, mat3):
     import numpy as np
     mat1_r = np.multiply(value, mat2)
