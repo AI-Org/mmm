@@ -228,7 +228,7 @@ def get_Vbeta_j_mu_wrong(y):
     # iter, hierarchy_level2, Vbeta_j_mu
     return result_Iterable_list[0], Vbeta_j_mu
     
-def get_Vbeta_j_mu_next(y):
+def get_Vbeta_j_mu_next(y, s):
     # OPTI now y is an ResultIterable object pointing RI1, RI2
     # OPTI where RI1 is a collection of tuples with h2, h1, beta_i_draw
     # OPTI and RI2 is a single tuple iter, hierarchy_level2, beta_mu_j_draw
@@ -238,7 +238,10 @@ def get_Vbeta_j_mu_next(y):
     Vbeta_i_mu_ar = []
     for rec in list(y)[0][1]:
         # rec : s, h2, h1, beta_i_draw
-        beta_i_draw = rec[3]
+        if s == 1:
+            beta_i_draw = rec[2]
+        else:
+            beta_i_draw = rec[3]
         Vbeta_i_mu_ar.append(gu.Vbeta_i_mu(beta_i_draw, beta_mu_j_draw))
     Vbeta_j_mu = gu.matrix_add_diag_plr(sum(Vbeta_i_mu_ar) ,p_var) 
     return h2, Vbeta_j_mu
