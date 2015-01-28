@@ -125,13 +125,13 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     # computing _Vbeta_j_mu  
     # Never do a join here, its not what is used in computations, It will result in wrong values always
     #joined_i_j_rdd = m1_ols_beta_i.join(m1_ols_beta_j).map(lambda (x,y): (x, y[0][2], y[1][1])).groupBy(lambda x : gp.partitionByh2(x), h2_partitions).persist()
-    joined_i_j_rdd = m1_ols_beta_i.cogroup(m1_ols_beta_j).map(lambda (x,y): (x, y[0][2], y[1][1])).groupBy(lambda x : gp.partitionByh2(x), h2_partitions).persist()
+    joined_i_j_rdd = m1_ols_beta_i.cogroup(m1_ols_beta_j).map(lambda (x,y): (x, list(y[0])[0][2], list(y[1])[0][1])).groupBy(lambda x : gp.partitionByh2(x), h2_partitions).persist()
     ## Data Structure m1_Vbeta_j_mu is symmetric along diagonal and have same dimensions as the one in HAWQ tables.
     # print "coefficients i and j", joined_i_j_rdd.take(1)
     # m1_Vbeta_j_mu a matrix with dimensions 14 X 14.
     m1_Vbeta_j_mu = joined_i_j_rdd.map(lambda (x, y): (1, gtr.get_Vbeta_j_mu(y)), preservesPartitioning = True).persist() 
     # print " m1_Vbeta_j_mu count ", m1_Vbeta_j_mu.count() 
-    # print " m1_Vbeta_j_mu take 1", m1_Vbeta_j_mu.take(1) # 1, (h2, vbeta_j_mu)
+    print " m1_Vbeta_j_mu take 1", m1_Vbeta_j_mu.collect() # 1, (h2, vbeta_j_mu)
     
     ###-- Draw Vbeta_inv and compute resulting sigmabeta using the above functions for each j    
     #>>> m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2 = m1_Vbeta_inv_Sigmabeta_j_draw.keyBy(lambda (iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j): (hierarchy_level2)) 
@@ -141,8 +141,8 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     # instead of m1_d_childcount I will be using m1_d_childcount_b
     # (iter, h2, n1, Vbeta_inv_j_draw, pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, n1, coef_precision_prior_array_var))
     m1_Vbeta_inv_Sigmabeta_j_draw = m1_Vbeta_j_mu_pinv.map(lambda (seq, hierarchy_level2, Vbeta_inv_j_draw): (seq, hierarchy_level2, m1_d_childcount[int(str(hierarchy_level2)[0]) -1][1], Vbeta_inv_j_draw, gtr.pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, m1_d_childcount[int(str(hierarchy_level2)[0]) -1][1], coef_precision_prior_array)), preservesPartitioning = True).persist()
-    # print " m1_Vbeta_inv_Sigmabeta_j_draw Take 1: ", m1_Vbeta_inv_Sigmabeta_j_draw.take(1)
-    # print " m1_Vbeta_inv_Sigmabeta_j_draw Count: ", m1_Vbeta_inv_Sigmabeta_j_draw.count()
+    print " m1_Vbeta_inv_Sigmabeta_j_draw Take 1: ", m1_Vbeta_inv_Sigmabeta_j_draw.collect()
+    #print " m1_Vbeta_inv_Sigmabeta_j_draw Count: ", m1_Vbeta_inv_Sigmabeta_j_draw.count()
     
     
     ##-- m1_beta_mu_j : Compute mean pooled coefficient vector to use in drawing a new pooled coefficient vector.  
