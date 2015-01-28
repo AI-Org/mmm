@@ -315,6 +315,7 @@ def get_substructure_beta_mu_j(obj):
         Sigmabeta_j = r[4]
     for r in obj[1][1]:
         sum_coef_j = r[0]
+    
     beta_mu_j = gu.beta_mu_prior(Sigmabeta_j, Vbeta_inv_j_draw, sum_coef_j, coef_means_prior_array_var, coef_precision_prior_array_var)
     ## OPTIMIZATION adding Sigmabeta_j), Vbeta_inv_j_draw to the end of this return as to save cogroup on beta_i_draws
     return (iteri, hierarchy_level2, beta_mu_j, Vbeta_inv_j_draw, Sigmabeta_j)

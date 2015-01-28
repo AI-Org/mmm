@@ -36,10 +36,10 @@ def matrix_scalarmult_plr(matrix, value):
 
 def Vbeta_i_mu(beta_i, beta_mu):
     import numpy as np
-    beta_i_diff = np.subtract(beta_i, beta_mu)
-    #Vbeta_i_mu = np.multiply(beta_i_diff, np.mat(beta_i_diff).transpose())
+    beta_i_diff = np.mat(np.subtract(beta_i, beta_mu))
+    Vbeta_i_mu = np.multiply(beta_i_diff, np.mat(beta_i_diff).transpose())
     #Vbeta_i_mu = np.dot(beta_i_diff, np.mat(beta_i_diff).transpose())
-    Vbeta_i_mu = np.dot(beta_i_diff, beta_i_diff.T)
+    #Vbeta_i_mu = np.dot(beta_i_diff, beta_i_diff.T)
     return Vbeta_i_mu
 
 ## Same usage as mentioned by the function Vbeta_inv_draw
@@ -89,16 +89,18 @@ def Vbeta_inv_draw(nu, phi):
 def beta_mu_prior(Sigmabeta_j, Vbeta_inv_j_draw, sum_coef_j, coef_means_prior_array, coef_precision_prior_array):
     #beta_mu<- arg1%*%(arg2%*%arg3+as.matrix(arg4*arg5))
     # used for computing the mean for beta_draws,
-    # should be of order size of variables i.e 13
+    # should be of order size of variables i.e 14
     # mat1 is a dot product of two arrays
     import numpy as np
+    # both arrays are 1 X 14 so multiply is 1 X 14
     mat1 = np.multiply(coef_means_prior_array, coef_precision_prior_array)
     #mat2 is a matrix multiplication product of Vbeta_inv_j_draw and sum_coeff_j
-    #sum_coef_j = sum_coef_j.reshape(13,1)
+    sum_coef_j = sum_coef_j.reshape(14,1)
     mat2 = np.dot(Vbeta_inv_j_draw, sum_coef_j)
     mat3 = np.add(mat2, np.mat(mat1))
     # NOTE : for the return value to be one D the sum_coef_j should be a 1 D matrix.
     # Changed only : return np.dot(Sigmabeta_j, mat3.T) there is no T in the original computation
+    # return value should be 14 X 1    
     return np.dot(Sigmabeta_j, mat3)
 
 
@@ -128,23 +130,23 @@ def Vbeta_i(value, mat2, mat3):
 def beta_i_mean_old(Vbeta_i, value, xty, Vbeta_i_inv_draw, beta_mu_j_draw):
     import numpy as np
     #def beta_i_mean(mat1, value, mat2, mat3, mat4):
-    # error was mat_r1 is 1 X 13 instead of 13 X 1 but with T it will be not
+    # error was mat_r1 is 1 X 14 instead of 14 X 1 but with T it will be not
     mat_r1 = np.dot(np.matrix(Vbeta_i_inv_draw), np.matrix(beta_mu_j_draw).getA1()).T
-    # mat_r2 is 13 X 1
+    # mat_r2 is 14 X 1
     mat_r2 = np.dot(value, xty)
-    # mat_r3 is 13 X 1 == 13 X 13 + 13 X 1
+    # mat_r3 is 14 X 1 == 14 X 14 + 14 X 1
     mat_r3 = np.dot(Vbeta_i, np.add(mat_r2, mat_r1))
     return mat_r3
     
 def beta_i_mean(Vbeta_i, value, xty, Vbeta_i_inv_draw, beta_mu_j_draw):
     import numpy as np
     #def beta_i_mean(mat1, value, mat2, mat3, mat4):
-    # error was mat_r1 is 1 X 13 instead of 13 X 1 but with T it will be not
+    # error was mat_r1 is 1 X 14 instead of 14 X 1 but with T it will be not
     #mat_r1 = np.dot(np.matrix(Vbeta_i_inv_draw), np.matrix(beta_mu_j_draw).getA1()).T
     mat_r1 = np.dot(Vbeta_i_inv_draw, beta_mu_j_draw)
-    # mat_r2 is 13 X 1
+    # mat_r2 is 14 X 1
     mat_r2 = np.multiply(value, xty)
-    # mat_r3 is 13 X 1 == 13 X 13 + 13 X 1
+    # mat_r3 is 14 X 1 == 14 X 14 + 14 X 1
     mat_r3 = np.dot(Vbeta_i, np.add(mat_r2, mat_r1))
     return mat_r3
 
