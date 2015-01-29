@@ -5,6 +5,7 @@
 import gibbs_udfs as gu
 import gibbs_transformations as gtr
 import gibbs_partitions as gp
+from pyspark.storagelevel import StorageLevel
 
 def gibbs_init_text():
     text_output = 'Done: Gibbs Sampler for model m1 is initialized.  Proceed to run updates of the sampler by using the gibbs() function.  All objects associated with this model are named with a m1 prefix.'
@@ -34,14 +35,14 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     # OPTIMIZATION 3 : create m1_d_arry_agg values on each partitioned block of data which is keyed by h2 h1 
     #m1_d_array_agg = d_key_h2_h1.groupByKey().map(gtr.create_x_matrix_y_array)
     #### OR h2,h1, x_matrix, y_array
-    d_groupedBy_h1_h2 = d.groupBy(gp.group_partitionByh2h1, h1_h2_partitions).persist()
-    m1_d_array_agg = d_groupedBy_h1_h2.map(gtr.create_x_matrix_y_array, preservesPartitioning = True).persist()
+    d_groupedBy_h1_h2 = d.groupBy(gp.group_partitionByh2h1, h1_h2_partitions)
+    m1_d_array_agg = d_groupedBy_h1_h2.map(gtr.create_x_matrix_y_array, preservesPartitioning = True).persist(StorageLevel.MEMORY_ONLY_2)
     
     #  Compute constants of X'X and X'y for computing 
     #  m1_Vbeta_i & beta_i_mean
     #  m1_d_array_agg_constants : list of tuples of (h2, h1, xtx, xty)
     # OPTIMIZATION preserving the values on partitions
-    m1_d_array_agg_constants = m1_d_array_agg.map(gtr.create_xtx_matrix_xty, preservesPartitioning = True).persist()
+    m1_d_array_agg_constants = m1_d_array_agg.map(gtr.create_xtx_matrix_xty, preservesPartitioning = True).persist(StorageLevel.MEMORY_ONLY_2)
     # print "m1_d_array_agg_constants take ",m1_d_array_agg_constants.take(1)
     # print "m1_d_array_agg_constants count",m1_d_array_agg_constants.count()
     
@@ -125,7 +126,7 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     # computing _Vbeta_j_mu  
     # Never do a join here, its not what is used in computations, It will result in wrong values always
     #joined_i_j_rdd = m1_ols_beta_i.join(m1_ols_beta_j).map(lambda (x,y): (x, y[0][2], y[1][1])).groupBy(lambda x : gp.partitionByh2(x), h2_partitions).persist()
-    joined_i_j_rdd = m1_ols_beta_i.cogroup(m1_ols_beta_j).map(lambda (x,y): (x, list(y[0]), list(y[1])[0][1])).groupBy(lambda x : gp.partitionByh2(x), h2_partitions).persist()
+    joined_i_j_rdd = m1_ols_beta_i.cogroup(m1_ols_beta_j).map(lambda (x,y): (x, list(y[0]), list(y[1])[0][1])).groupBy(lambda x : gp.partitionByh2(x), h2_partitions)
     ## Data Structure m1_Vbeta_j_mu is symmetric along diagonal and have same dimensions as the one in HAWQ tables.
     # print "coefficients i and j", joined_i_j_rdd.take(1)
     # m1_Vbeta_j_mu a matrix with dimensions 14 X 14.
