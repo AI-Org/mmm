@@ -32,9 +32,12 @@ def gibbs_iter(sc, sl, begin_iter, end_iter, coef_precision_prior_array, h2_part
         storagelevel = StorageLevel.DISK_ONLY
     if sl == 5 :
         storagelevel = StorageLevel.MEMORY_ONLY_2
+    # Best so far
     if sl == 6 :
         storagelevel = StorageLevel.MEMORY_AND_DISK_2
     if sl == 7 :
+        storagelevel = StorageLevel.MEMORY_AND_DISK_SER_2
+    if sl == 8 :
         storagelevel = StorageLevel.OFF_HEAP
     
     

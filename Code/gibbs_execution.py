@@ -75,7 +75,7 @@ if __name__ == "__main__":
         args:
             'storage_level' : 0 for MEMORY_ONLY, 1 for MEMORY_AND_DISK, 2 for MEMORY_ONLY_SER
                              3 for MEMORY_AND_DISK_SER, 4 for DISK_ONLY, 5 for MEMORY_ONLY_2, 6 MEMORY_AND_DISK_2
-                             7 : OFF_HEAP
+                             7 : StorageLevel.MEMORY_AND_DISK_SER_2  & 8 : OFF_HEAP
             'file'          : hdfs:///data/d.csv { Name of source table, arranged in a form where each variable is represented as a separate column }
             'hierarchy_level1' : Name of the bottom-most level of the hierarchy. ( tier )
             'hierarchy_level2' : Name of the upper-most level of the hierarchy.  The "pooling level" of the hierarchy. ( brand_department_number )
@@ -112,13 +112,13 @@ if __name__ == "__main__":
                        --py-files gibbs_init.py,gibbs_udfs.py,wishart.py,nearPD.py,gibbs.py,gibbs_transformations.py,gibbs_summary.py 
                        --conf spark.shuffle.spill=false --conf "spark.executor.extraJavaOptions=-XX:+UseCompressedOops"  gibbs_execution.py
                        Does not run with 4 g of driver-memory and 2 or more executor cores.
-        spark-submit  --master yarn-client --py-files gibbs_init.py,gibbs_udfs.py,wishart.py,nearPD.py,gibbs.py,gibbs_transformations.py,gibbs_summary.py --conf spark.shuffle.spill=false --conf "spark.executor.extraJavaOptions=-XX:+UseCompressedOops"  gibbs_execution.py
+        spark-submit  --master yarn-client --py-files gibbs_init.py,gibbs_udfs.py,wishart.py,nearPD.py,gibbs.py,gibbs_transformations.py,gibbs_summary.py,gibbs_partitions.py --conf spark.shuffle.spill=false --conf "spark.executor.extraJavaOptions=-XX:+UseCompressedOops"  gibbs_execution.py
                        
     """
     sc = SparkContext(appName="GibbsSampler")
     # defaults to 6 memory and disk storage with duplication
     storageLevel = sys.argv[1] if len(sys.argv) > 1 else 6
-    #sourcefile = sys.argv[1] if len(sys.argv) > 1 else "hdfs:///user/ssoni/data/d.csv"    
+    #sourcefile = sys.argv[2] if len(sys.argv) > 2 else "hdfs:///user/ssoni/data/d.csv"    
     sourcefile = sys.argv[2] if len(sys.argv) > 2 else "hdfs://hdm1.gphd.local:8020/user/ssoni/data/d.csv"
     
     h2_partitions = load_key_h2(sourcefile).groupByKey().keys().count()
