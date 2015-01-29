@@ -119,7 +119,7 @@ if __name__ == "__main__":
     # defaults to 6 memory and disk storage with duplication
     storageLevel = sys.argv[1] if len(sys.argv) > 1 else 6
     #sourcefile = sys.argv[1] if len(sys.argv) > 1 else "hdfs:///user/ssoni/data/d.csv"    
-    sourcefile = sys.argv[2] if len(sys.argv) > 2 else "hdfs://hdm1.gphd.local:8020/user/ssoni/data/d.csv
+    sourcefile = sys.argv[2] if len(sys.argv) > 2 else "hdfs://hdm1.gphd.local:8020/user/ssoni/data/d.csv"
     
     h2_partitions = load_key_h2(sourcefile).groupByKey().keys().count()
     h1_h2_partitions = load_key_h1_h2(sourcefile).groupByKey().keys().count()
