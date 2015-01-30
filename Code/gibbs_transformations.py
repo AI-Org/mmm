@@ -35,10 +35,11 @@ def create_x_matrix_y_array(recObj):
     x_matrix = numpy.append([[1 for _ in range(0,len(x_matrix))]], x_matrix.T,0).T
     
     y_array = mat[:,3].astype(float)
-    hierarchy_level2 =  mat[:,1]
+    hierarchy_level2_array =  mat[:,1]
+    hierarchy_level2 = int(str(hierarchy_level2_array[1,0])[0]) % 5
     #hierarchy_level1_2_keys = mat[:,0] : same as keys
     #return (keys, x_matrix, y_array, hierarchy_level2[1,0], hierarchy_level1[1,0])
-    return (h2_h1_key, hierarchy_level2[1,0], x_matrix, y_array)
+    return (h2_h1_key, hierarchy_level2, x_matrix, y_array)
 
 def create_x_matrix_y_array_old(recObj):
     """
