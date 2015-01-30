@@ -62,6 +62,11 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     # after sorted and new mod function we have [(1, 30), (2, 30), (3, 30), (4, 30), (5, 30)]    
     #OPTIMIZATION  boradcasting it like m1_d_count_grpby_level2_b [(0, 30), (1, 30), (2, 30), (3, 30), (4, 30)]  
     m1_d_childcount_b = sc.broadcast(sorted(gtr.get_d_childcount(d).collect()))
+    print "m1_d_childcount_b ", m1_d_childcount_b.value[0]
+    print "m1_d_childcount_b ", m1_d_childcount_b.value[1]
+    print "m1_d_childcount_b ", m1_d_childcount_b.value[2]
+    print "m1_d_childcount_b ", m1_d_childcount_b.value[3]
+    print "m1_d_childcount_b ", m1_d_childcount_b.value[4]
     #m1_d_childcount_b = sc.broadcast(m1_d_childcount.collect())
     #m1_d_childcount = d_groupedBy_h1_h2.map(lambda (x,iter): (x, sum(1 for _ in set(iter))), preservesPartitioning=True).cache()
     # print "d_child_counts take : ", m1_d_childcount.take(1)
@@ -151,7 +156,7 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     # instead of m1_d_childcount I will be using m1_d_childcount_b
     # (iter, h2, n1, Vbeta_inv_j_draw, pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, n1, coef_precision_prior_array_var))
     # Vbeta_inv_j_draw & sigmabeta_j_draw are both matrixs with dimensions 14 X 14.
-    m1_Vbeta_inv_Sigmabeta_j_draw = m1_Vbeta_j_mu_pinv.map(lambda (seq, hierarchy_level2, Vbeta_inv_j_draw): (seq, hierarchy_level2, m1_d_childcount_b.value[hierarchy_level2], Vbeta_inv_j_draw, gtr.pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, m1_d_childcount_b.value[hierarchy_level2], coef_precision_prior_array)), preservesPartitioning = True).persist()
+    m1_Vbeta_inv_Sigmabeta_j_draw = m1_Vbeta_j_mu_pinv.map(lambda (seq, hierarchy_level2, Vbeta_inv_j_draw): (seq, hierarchy_level2, m1_d_childcount_b.value[hierarchy_level2][1], Vbeta_inv_j_draw, gtr.pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, m1_d_childcount_b.value[hierarchy_level2][1], coef_precision_prior_array)), preservesPartitioning = True).persist()
     print " m1_Vbeta_inv_Sigmabeta_j_draw Take 1: ", m1_Vbeta_inv_Sigmabeta_j_draw.take(1)
     #print " m1_Vbeta_inv_Sigmabeta_j_draw Count: ", m1_Vbeta_inv_Sigmabeta_j_draw.count()
     
