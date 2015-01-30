@@ -252,7 +252,7 @@ def create_xtx_matrix_xty(obj):
 
 #h1_h2_partitions = 135
 h1_h2_partitions = 150
-d_groupedBy_h1_h2 = d.groupBy(group_partitionByh2h1, h1_h2_partitions)
+d_groupedBy_h1_h2 = d.keyBy(lambda (hierarchy_level1_h2_key, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): hierarchy_level1_h2_key).groupByKey()
 m1_d_array_agg = d_groupedBy_h1_h2.map(create_x_matrix_y_array) 
     
 m1_d_array_agg_constants = m1_d_array_agg.map(create_xtx_matrix_xty)

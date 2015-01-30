@@ -16,7 +16,7 @@ def add(x,y):
     return (x+y)
 
 #                  d, hierarchy_level1, hierarchy_level2, p, df1, y_var_index, x_var_indexes, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, begin_iter, end_iter
-def gibbs_iter(sc, sl, begin_iter, end_iter, coef_precision_prior_array, h2_partitions, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_inv_Sigmabeta_j_draw_collection, m1_Vbeta_j_mu):
+def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_array, h2_partitions, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_inv_Sigmabeta_j_draw_collection, m1_Vbeta_j_mu):
     
     m1_d_array_agg_key_by_h2_h1 = m1_d_array_agg.keyBy(lambda (keys_from_partitioning, x_matrix, y_array, hierarchy_level2, hierarchy_level1) : (hierarchy_level2, hierarchy_level1))
     # OPTIMIZED into grpby_level2    
@@ -32,7 +32,7 @@ def gibbs_iter(sc, sl, begin_iter, end_iter, coef_precision_prior_array, h2_part
         storagelevel = StorageLevel.DISK_ONLY
     if sl == 5 :
         storagelevel = StorageLevel.MEMORY_ONLY_2
-    # Best so far
+    # Best so far is MEMORY_AND_DISK_2
     if sl == 6 :
         storagelevel = StorageLevel.MEMORY_AND_DISK_2
     if sl == 7 :
@@ -40,7 +40,7 @@ def gibbs_iter(sc, sl, begin_iter, end_iter, coef_precision_prior_array, h2_part
     if sl == 8 :
         storagelevel = StorageLevel.OFF_HEAP
     
-    
+     
     # m1_d_array_agg_constants_key_by_h2_h1 is a large Data Structure which can be persisted across multiple iterations of Gibbs Algorithm
     # Data tuples which will be joined/cogrouped with this data set will be pickled and transferred to each of these nodes carrying 135 partitions.
     ##m1_d_array_agg_constants_key_by_h2_h1 = m1_d_array_agg_constants.keyBy(lambda (h2, h1, xtx, xty): (h2, h1)).partitionBy(150).persist(storagelevel)
@@ -78,7 +78,7 @@ def gibbs_iter(sc, sl, begin_iter, end_iter, coef_precision_prior_array, h2_part
         #print "take 1 m1_Vbeta_i_unified ", m1_Vbeta_i_unified.take(1)
         ## OPTIMIZATION SAVED m1_Vbeta_i_keyby_h2_h1 = m1_Vbeta_i.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, Vbeta_i): (hierarchy_level2, hierarchy_level1))
         ## OPTIMIZATION OF Previous functions as
-    
+        
        
         ### Inserting into beta_i_mean
         print "Inserting into beta_i_mean"
@@ -304,20 +304,27 @@ def gibbs_iter(sc, sl, begin_iter, end_iter, coef_precision_prior_array, h2_part
         #print "m1_h_draw : ", m1_h_draw.count()
         
         ## Creating vertical draws
+        # OPTIMIZATION After Key FOR m1_beta_i_draw_long_next
+        ## lists of tuples : s, h2, h1, beta_i_draw[:,i][0], driver_x_array[i], hierarchy_level2_hierarchy_level1_driver 
+        if s % 10 == 0 :            
+            m1_beta_i_draw_long = m1_beta_i_draw.map(gtr.get_beta_i_draw_long).keyBy(lambda (s, h2, h1, beta_i_draw, driver_x_array, hierarchy_level2_hierarchy_level1_driver): s).saveAsNewAPIHadoopFile(hdfs_dir+ "m1_beta_i_draw_long_"+s+".data", "org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat","org.apache.hadoop.io.IntWritable")
+
         ## -- Convert the array-based draws from the Gibbs Sampler into a "vertically long" format by unnesting the arrays.
-        # lists of tuples : s, h2, h1, beta_i_draw[:,i][0], driver_x_array[i], hierarchy_level2_hierarchy_level1_driver        
-        m1_beta_i_draw_long_next = m1_beta_i_draw.map(gtr.get_beta_i_draw_long).reduce(add)
-        print "reduce count ", len(m1_beta_i_draw_long_next)
+              
+        #m1_beta_i_draw_long_next = m1_beta_i_draw.map(gtr.get_beta_i_draw_long).reduce(add)
+        #print "reduce count ", len(m1_beta_i_draw_long_next)
         #print "reduce ", m1_beta_i_draw_long_next[0]
-        m1_beta_i_draw_long = m1_beta_i_draw_long + m1_beta_i_draw_long_next
-        print "end iteration", s
+        #m1_beta_i_draw_long = m1_beta_i_draw_long + m1_beta_i_draw_long_next
+        #print "end iteration", s
 
      
     # structured as (h2, h1, driver) -> (s, h2, h1, beta_draw[i], x_array[i], h2_h1_driver)    
-    m1_beta_i_draw_long = sc.parallelize(m1_beta_i_draw_long)
+    #m1_beta_i_draw_long = sc.parallelize(m1_beta_i_draw_long)
     #.keyBy(lambda (s, h2, h1, beta_i_draw, driver, h2_h1_driver): (h2, h1, driver))
-    print "m1_beta_i_draw_long count :", m1_beta_i_draw_long.count()
-    print "m1_beta_i_draw_long take :", m1_beta_i_draw_long.take(1)
+    #print "m1_beta_i_draw_long count :", m1_beta_i_draw_long.count()
+    #print "m1_beta_i_draw_long take :", m1_beta_i_draw_long.take(1)
+    
+    
         
     print gibbs_iteration_text()
     

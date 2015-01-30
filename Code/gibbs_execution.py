@@ -123,9 +123,10 @@ if __name__ == "__main__":
     sc = SparkContext(appName="GibbsSampler")
     # defaults to 6 memory and disk storage with duplication
     storageLevel = sys.argv[1] if len(sys.argv) > 1 else 6
-    #sourcefile = sys.argv[2] if len(sys.argv) > 2 else "hdfs:///user/ssoni/data/d.csv"    
+    #sourcefile = sys.argv[2] if len(sys.argv) > 2 else "hdfs://sandbox:9000/user/ssoni/data/d.csv"  
+    #hdfs_dir = "hdfs:///user/ssoni/data/" 
     sourcefile = sys.argv[2] if len(sys.argv) > 2 else "hdfs://hdm1.gphd.local:8020/user/ssoni/data/d.csv"
-    
+    hdfs_dir = "hdfs://hdm1.gphd.local:8020/user/ssoni/data/" 
     h2_partitions = load_key_h2(sourcefile).groupByKey().keys().count()
     h1_h2_partitions = load_key_h1_h2(sourcefile).groupByKey().keys().count()
     # get all the keys by load_key_h1_h2(sourcefile).groupByKey().keys().sortByKey().collect()
@@ -182,14 +183,14 @@ if __name__ == "__main__":
     end_iter = sys.argv[14] if len(sys.argv) > 14 else 100    
     
     # Calling the iterative gibbs algorithm 
-    (m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_j_mu, m1_beta_i_draw_long) = gibbs.gibbs_iter(sc,storageLevel, begin_iter, end_iter, coef_precision_prior_array, h2_partitions, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_inv_Sigmabeta_j_draw_collection, m1_Vbeta_j_mu)
+    (m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_j_mu, m1_beta_i_draw_long) = gibbs.gibbs_iter(sc,storageLevel, hdfs_dir, begin_iter, end_iter, coef_precision_prior_array, h2_partitions, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_inv_Sigmabeta_j_draw_collection, m1_Vbeta_j_mu)
     
     raw_iters = sys.argv[15] if len(sys.argv) > 15 else 100
     
     burn_in = sys.argv[16] if len(sys.argv) > 16 else 0     
     
     # call gibbs summary functions
-    m1_summary_geweke_conv_diag_detailed = gis.m1_summary_geweke_conv_diag_detailed(hierarchy_level1, hierarchy_level2, raw_iters, burn_in, m1_beta_i_draw_long)
+    m1_summary_geweke_conv_diag_detailed = gis.m1_summary_geweke_conv_diag_detailed(sc,hdfs_dir, hierarchy_level1, hierarchy_level2, raw_iters, burn_in, m1_beta_i_draw_long)
     print "m1_summary_geweke_conv_diag_detailed count", m1_summary_geweke_conv_diag_detailed.count()
     print "m1_summary_geweke_conv_diag_detailed take 1", m1_summary_geweke_conv_diag_detailed.take(1)
 
