@@ -65,10 +65,10 @@ def create_xtx_matrix_xty(recObj):
     #keys = obj[0] # partition value
     h2_h1_key = recObj[0] # partition value
     hierarchy_level2 = recObj[1]
-    x_matrix = obj[2]
+    x_matrix = recObj[2]
     x_matrix_t = numpy.transpose(x_matrix)
     xt_x = x_matrix_t * x_matrix
-    y_matrix = obj[3]
+    y_matrix = recObj[3]
     xt_y = x_matrix_t * y_matrix
     # h2_h1_key, h1, xtx, xty
     return (h2_h1_key, hierarchy_level2, xt_x, xt_y)
