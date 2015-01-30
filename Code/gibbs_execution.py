@@ -19,8 +19,13 @@ import gibbs_partitions as gp
 # where each tuple is of the type (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13)
 def parseData(data):
     rows = re.split(",", data)
-    return rows 
-    #return (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13)
+    # h2 keys
+    rows[2] = int(str(rows[2])[0]) % 5
+    # h1_h2 keys
+    rows[1] = gp.getCode(rows[2],str(rows[1]))
+    # now return (hierarchy_level1_h2_key, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13)
+    return rows[1:18] 
+    #previous return (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13)
 
 def load(source):
     return sc.textFile(source).map(lambda datapoint: parseData(datapoint))

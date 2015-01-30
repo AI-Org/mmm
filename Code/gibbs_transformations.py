@@ -18,93 +18,29 @@ df1_var = 15
 coef_precision_prior_array_var = [1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 coef_means_prior_array_var = [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 sample_size_deflator = 1
-
-# OPTIMIZATION 4
-# Following function should work on each partition's values
-# recObj represents one dataobject/dataset coming from one partition which can 
-# be either key by h2 or h2_h1
-
-## d.reduceByKey(create_x_matrix_y_array).take(1) 
-# where each tuple is index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13)
-#def create_x_matrix_y_array(tuple1,tuple2):
-#    """
-#       Take an iterable of records, where the key corresponds to a certain age group
-#       Create a numpy matrix and return the shape of the matrix
-#    """
-#    import numpy as np
-#    # challenge here is ValueError: zero-dimensional arrays cannot be concatenated
-#    #tup[1] = 2 >>> np.array((tup)[1]) array(2) which is a zero dimention array
-#    #(tup[1],) = (2) >>> np.array(((tup)[1],)) array([2]) which is a one dimension array
-#    y_array = []
-#    if len(tuple1)
-#    if type(tuple1) is 'tuple' and type(tuple2) is 'tuple':
-#        y1 = tuple((tuple1[4],))
-#        y2 = tuple((tuple2[4],))
-#        y_array = list(y1+y2)
-#    elif type(tuple1) is 'tuple' and type(tuple2) is 'list':
-#        y1 = tuple((tuple1[4],))
-#        y_array = tuple2.append(y1)
-#    elif type(tuple1) is list and type(tuple2) is list:
-#        y1 = tuple1[4]
-#        y2 = tuple2[4]
-#        y_array = y1 + y2 
-#    elif type(tuple2) is 'tuple' and type(tuple1) is 'list':
-#        y2 = tuple((tuple2[4],))
-#        y1 = tuple1
-#        y_array = y1.append(y2)
-#    else:
-#        y_array = [type(tuple1), type(tuple2)]
-#    return y_array
-#
-#
-#d.reduceByKey(create_x_matrix_y_array).take(1)
-#    
-#    if type(tuple1) == 'tuple' and type(tuple2) == 'tuple':
-#        y1 = np.array(tuple((tuple1[4],))).astype(float)
-#        y2 = np.array(tuple((tuple2[4],))).astype(float)
-#        y_array = np.concatenate((y1,y2), axis = 0)
-#    if type(tuple1) == 'tuple' and type(tuple2) == 'list':
-#        y1 = np.array(tuple((tuple1[4],))).astype(float)
-#        y_array = tuple2.append(y1)
-#        #y_array = np.concatenate((y1,y2), axis = 0)
-#    if type(tuple1) == 'list' and type(tuple2) == 'list':
-#        y1 = tuple1
-#        y2 = tuple2
-#        y_array = y1.append(y2) 
-#    if type(tuple2) == 'tuple' and type(tuple1) == 'list':
-#        y2 = np.array(tuple((tuple2[4],))).astype(float)
-#        y1 = tuple1
-#        y_array = y1.append(y2)
-#    return y_array
-#
-#
-#
-#
-##    tup1 = (1,)
-##    x_matrix1 = np.matrix(tup1+tuple1[5:18]).T.astype(float)
-##    x_matrix2 = np.matrix(tup1+tuple2[5:18]).T.astype(float)
-##    x_matrix1 * x_matrix2
-##    x_matrix = np.hstack(x_matrix1, x_matrix2).T
-##    return (y_array, x_matrix)
-## d.groupByKey().map(create_x_matrix_y_array).take(1)    
-#def create_x_matrix_y_array(recObj):
-#    """
-#       Take an iterable of records, where the key corresponds to a certain age group
-#       Create a numpy matrix and return the shape of the matrix
-#       #recObj is of the form of [key, <Iterable of all values tuples>]
-#    """
-#    import numpy
-#    keys = recObj[0]
-#    recIter = recObj[1]
-#    mat = numpy.matrix([r for r in recIter])
-#    x_matrix = mat[:,5:18].astype(float)
-#    x_matrix = numpy.append([[1 for _ in range(0,len(x_matrix))]], x_matrix.T,0).T
-#    y_array = mat[:,4].astype(float)
-#    hierarchy_level2 =  mat[:,2]
-#    hierarchy_level1 = mat[:,1]
-#    return (keys, x_matrix, y_array, hierarchy_level2[1,0], hierarchy_level1[1,0])
     
 def create_x_matrix_y_array(recObj):
+    """
+       Take an iterable of records, where the key corresponds to a certain age group
+       Create a numpy matrix and return the shape of the matrix
+       #recObj is of the form of [<all values tuples>]
+    """
+    import numpy
+    recIter = recObj
+    h2_h1_key = recObj[0] # partitioned h1_h2 keys
+    recIter = recObj[1]
+    mat = numpy.matrix([r for r in recIter])
+    
+    x_matrix = mat[:,4:17].astype(float)
+    x_matrix = numpy.append([[1 for _ in range(0,len(x_matrix))]], x_matrix.T,0).T
+    
+    y_array = mat[:,3].astype(float)
+    hierarchy_level2 =  mat[:,1]
+    #hierarchy_level1_2_keys = mat[:,0] : same as keys
+    #return (keys, x_matrix, y_array, hierarchy_level2[1,0], hierarchy_level1[1,0])
+    return (h2_h1_key, hierarchy_level2[1,0], x_matrix, y_array)
+
+def create_x_matrix_y_array_old(recObj):
     """
        Take an iterable of records, where the key corresponds to a certain age group
        Create a numpy matrix and return the shape of the matrix
@@ -123,8 +59,21 @@ def create_x_matrix_y_array(recObj):
     #return (keys, x_matrix, y_array, hierarchy_level2[1,0], hierarchy_level1[1,0])
     return (keys, x_matrix, y_array, hierarchy_level2[1,0], hierarchy_level1[1,0])
 
+def create_xtx_matrix_xty(recObj):
+    import numpy
+    #recObj is of the form of [key, <Iterable of all values tuples>]
+    #keys = obj[0] # partition value
+    h2_h1_key = recObj[0] # partition value
+    hierarchy_level2 = recObj[1]
+    x_matrix = obj[2]
+    x_matrix_t = numpy.transpose(x_matrix)
+    xt_x = x_matrix_t * x_matrix
+    y_matrix = obj[3]
+    xt_y = x_matrix_t * y_matrix
+    # h2_h1_key, h1, xtx, xty
+    return (h2_h1_key, hierarchy_level2, xt_x, xt_y)
 
-def create_xtx_matrix_xty(obj):
+def create_xtx_matrix_xty_old(obj):
     import numpy
     #recObj is of the form of [key, <Iterable of all values tuples>]
     #keys = obj[0] # partition value
@@ -138,20 +87,23 @@ def create_xtx_matrix_xty(obj):
     # h2, h1, xtx, xty
     return (hierarchy_level2,hierarchy_level1, xt_x, xt_y)
 
-def get_d_childcount(obj):
-    keyBy_h2_to_h1 = obj.map(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2, hierarchy_level1)).groupByKey()
-    # returns DS with key hierarchy_level2 and value <hierarchy_level2, n1>
-    return keyBy_h2_to_h1.map(lambda (x,iter): (x, sum(1 for _ in set(iter))))
-
-
 # as per the level 2 in integer mode
-def get_d_childcount_mod(obj):
-    keyBy_h2_to_h1 = obj.map(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2, hierarchy_level1)).groupByKey()
+def get_d_childcount(obj):
+    keyBy_h2_to_h1 = obj.map(lambda (h2_h1_key, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2, h2_h1_key)).groupByKey()
     # returns DS with key hierarchy_level2 and value <hierarchy_level2, n1>
     return keyBy_h2_to_h1.map(lambda (x,iter): (int(str(x)[0]), sum(1 for _ in set(iter))))
 
 
+def get_d_childcount_old(obj):
+    keyBy_h2_to_h1 = obj.map(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2, hierarchy_level1)).groupByKey()
+    # returns DS with key hierarchy_level2 and value <hierarchy_level2, n1>
+    return keyBy_h2_to_h1.map(lambda (x,iter): (x, sum(1 for _ in set(iter))))
+
 def get_d_count_grpby_level2(obj):
+    keyBy_h2_week = obj.map(lambda (hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2, week))
+    return keyBy_h2_week
+
+def get_d_count_grpby_level2_old(obj):
     keyBy_h2_week = obj.map(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2, week))
     return keyBy_h2_week
     #return keyBy_h2.map(lambda (x,iter): (x, sum(1 for _ in set(iter))))
@@ -159,29 +111,64 @@ def get_d_count_grpby_level2(obj):
 def get_ols_initialvals_beta_i(obj):
     from sklearn import linear_model
     regr = linear_model.LinearRegression()
+    #(h2_h1_key, hierarchy_level2[1,0], x_matrix, y_array)
+    # fit x_array, y_array
+    regr.fit(obj[2], obj[3])
+    # returns h2, h2_h1_key, regr.coef_
+    return (obj[1], obj[0], regr.coef_)
+
+def get_ols_initialvals_beta_i_old(obj):
+    from sklearn import linear_model
+    regr = linear_model.LinearRegression()
     # fit x_array, y_array
     regr.fit(obj[1], obj[2])
     # returns h2, h1, regr.coef_
     return (obj[3], obj[4], regr.coef_)
 
-
 def get_ols_initialvals_beta_j(obj):
+    from sklearn import linear_model
+    regr = linear_model.LinearRegression()
+    #(h2_h1_key, hierarchy_level2[1,0], x_matrix, y_array)
+    # fit x_array, y_array
+    regr.fit(obj[2], obj[3])
+    #hierarchy_level2 = a matrix obj[3] of same values in hierarchy_level2
+    return (obj[1], regr.coef_)
+
+def get_ols_initialvals_beta_j_old(obj):
     from sklearn import linear_model
     regr = linear_model.LinearRegression()
     # fit x_array, y_array
     regr.fit(obj[1], obj[2])
     #hierarchy_level2 = a matrix obj[3] of same values in hierarchy_level2
     return (obj[3], regr.coef_)
-
-
+    
+    
 def get_random_initialvals_beta_i(obj):
+    coeff = gu.initial_vals_random(p_var)
+    #(h2_h1_key, hierarchy_level2[1,0], x_matrix, y_array)
+    #hierarchy_level2 = obj[3]
+    #hierarchy_level1 = obj[4]
+    #h2, h1_h2_key coeff
+    return (obj[1], obj[0], coeff)
+
+
+def get_random_initialvals_beta_j(obj):
+    coeff = gu.initial_vals_random(p_var)
+    #(h2_h1_key, hierarchy_level2[1,0], x_matrix, y_array)
+    #hierarchy_level2 = obj[3]
+    #hierarchy_level1 = obj[4]
+    # h2 , coeff
+    return (obj[1], coeff)
+
+
+def get_random_initialvals_beta_i_old(obj):
     coeff = gu.initial_vals_random(p_var)
     #hierarchy_level2 = obj[3]
     #hierarchy_level1 = obj[4]
     return (obj[3], obj[4], coeff)
 
 
-def get_random_initialvals_beta_j(obj):
+def get_random_initialvals_beta_j_old(obj):
     coeff = gu.initial_vals_random(p_var)
     #hierarchy_level2 = obj[3]
     #hierarchy_level1 = obj[4]
@@ -214,7 +201,6 @@ def get_Vbeta_i_mu_coeff_i_coeff_j(list_coeff_i, coeff_j):
         values_array_i = r[2]    
         Vbeta_i_mu_ar.append(gu.Vbeta_i_mu(values_array_i, coeff_j))
     return Vbeta_i_mu_ar
-
 
 def get_Vbeta_j_mu_wrong(y):
     # now y is an ResultIterable object pointing to a collection of arrays
