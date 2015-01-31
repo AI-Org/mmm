@@ -52,7 +52,7 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
     ## OPTIMIZATION : m1_h_draw is already persisted with keyby so we dont need to keyby it : m1_h_draw_previous_iteration = m1_h_draw.keyBy(lambda (iteri, h2, h_draw): h2)
     ##>> OPTMIZATION it is understood that m1_Vbeta_inv_Sigmabeta_j_draw will be previous iteration when assigned and deassigned values for each iteration.
     ##>> ONLY SAVING it for KeyBy TODO COnvert m1_Vbeta_inv_Sigmabeta_j_draw_previous_iteration to collections only and then keep using that one.
-    m1_beta_i_draw.map(gtr.get_beta_i_draw_long).keyBy(lambda (x, h2, h1, beta_i_draw, driver_x_array, hierarchy_level2_hierarchy_level1_driver): x).saveAsNewAPIHadoopFile(hdfs_dir+ "m1_beta_i_draw_long_"+1+".data", "org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat","org.apache.hadoop.io.IntWritable")
+    m1_beta_i_draw.map(gtr.get_beta_i_draw_long).keyBy(lambda (x, h2, h1, beta_i_draw, driver_x_array, hierarchy_level2_hierarchy_level1_driver): x).saveAsNewAPIHadoopFile(hdfs_dir+ "m1_beta_i_draw_long_"+str(1)+".data", "org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat","org.apache.hadoop.io.IntWritable")
 
     for s in range(begin_iter, end_iter+1):
         
@@ -308,7 +308,7 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         ## lists of tuples : s, h2, h1, beta_i_draw[:,i][0], driver_x_array[i], hierarchy_level2_hierarchy_level1_driver 
         if s % 10 == 0 :            
             #m1_beta_i_draw_long = m1_beta_i_draw.map(gtr.get_beta_i_draw_long).keyBy(lambda (s, h2, h1, beta_i_draw, driver_x_array, hierarchy_level2_hierarchy_level1_driver): s).saveAsNewAPIHadoopFile(hdfs_dir+ "m1_beta_i_draw_long_"+s+".data", "org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat","org.apache.hadoop.io.IntWritable")
-            m1_beta_i_draw.map(gtr.get_beta_i_draw_long).keyBy(lambda (s, h2, h1, beta_i_draw, driver_x_array, hierarchy_level2_hierarchy_level1_driver): s).saveAsNewAPIHadoopFile(hdfs_dir+ "m1_beta_i_draw_long_"+s+".data", "org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat","org.apache.hadoop.io.IntWritable")
+            m1_beta_i_draw.map(gtr.get_beta_i_draw_long).keyBy(lambda (s, h2, h1, beta_i_draw, driver_x_array, hierarchy_level2_hierarchy_level1_driver): s).saveAsNewAPIHadoopFile(hdfs_dir+ "m1_beta_i_draw_long_"+str(s)+".data", "org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat","org.apache.hadoop.io.IntWritable")
 
         ## -- Convert the array-based draws from the Gibbs Sampler into a "vertically long" format by unnesting the arrays.
               
