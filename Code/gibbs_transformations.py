@@ -71,7 +71,7 @@ def create_xtx_matrix_xty(recObj):
     xt_x = x_matrix_t * x_matrix
     y_matrix = recObj[3]
     xt_y = x_matrix_t * y_matrix
-    # h2_h1_key, h1, xtx, xty
+    # h2_h1_key, h2, xtx, xty
     return (h2_h1_key, hierarchy_level2, xt_x, xt_y)
 
 def create_xtx_matrix_xty_old(obj):

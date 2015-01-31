@@ -6,6 +6,7 @@ import gibbs_init as gi
 import gibbs
 import gibbs_summary as gis
 import gibbs_partitions as gp
+from pyspark.storagelevel import StorageLevel
 
 # Following the bug that states as of 1/19/2015: "Calling cache() after RDDs are pipelined has no effect in PySpark"
 ## https://issues.apache.org/jira/browse/SPARK-3105
@@ -28,7 +29,7 @@ def parseData(data):
     #previous return (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13)
 
 def load(source):
-    return sc.textFile(source).map(lambda datapoint: parseData(datapoint))
+    return sc.textFile(source).map(lambda datapoint: parseData(datapoint)).persist(StorageLevel.MEMORY_AND_DISK_SER_2)
     
 ## get the number of partitions desired for h2 keyword
 def geth2(data):
