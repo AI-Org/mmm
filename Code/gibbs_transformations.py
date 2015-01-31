@@ -494,7 +494,7 @@ def get_beta_i_draw_long(x):
     # where each row : s, h2, h1, beta_draw[i], x_array[i], h2_h1_driver
     x_array = ['1', 'x1','x2','x3','x4','x5','x6','x7','x8','x9','x10','x11','x12','x13']
     for i in range(0,len(x_array)):
-        hierarchy_level2_hierarchy_level1_driver = h2+"-:-"+h1+"-:-"+ x_array[i]
+        hierarchy_level2_hierarchy_level1_driver = str(h2)+"-:-"+str(h1)+"-:-"+ x_array[i]
         row = (s, h2, h1, beta_draw[:,i][0], x_array[i], hierarchy_level2_hierarchy_level1_driver)
         rows.append(row)
     return rows
