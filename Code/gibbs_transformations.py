@@ -146,7 +146,7 @@ def get_Vbeta_j_mu_next(y):
 
 def get_m1_Vbeta_j_mu_pinv(obj):
     
-    import nearPDd as npd
+    import nearPD as npd
     global df1_var
     seq = obj[0]
     hierarchy_level2 = obj[1]

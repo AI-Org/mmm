@@ -231,8 +231,8 @@ def gibbs_iter(sc, begin_iter, end_iter, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta
     # structured as (h2, h1, driver) -> (s, h2, h1, beta_draw[i], x_array[i], h2_h1_driver)    
     m1_beta_i_draw_long = sc.parallelize(m1_beta_i_draw_long)
     #.keyBy(lambda (s, h2, h1, beta_i_draw, driver, h2_h1_driver): (h2, h1, driver))
-    print "m1_beta_i_draw_long count :", m1_beta_i_draw_long.count()
-    print "m1_beta_i_draw_long take :", m1_beta_i_draw_long.take(1)
+    #print "m1_beta_i_draw_long count :", m1_beta_i_draw_long.count()
+    #print "m1_beta_i_draw_long take :", m1_beta_i_draw_long.take(1)
         
     print gibbs_iteration_text()
     
