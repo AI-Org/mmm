@@ -14,7 +14,7 @@ def add(x,y):
     return (x+y)
 
 #                  d, hierarchy_level1, hierarchy_level2, p, df1, y_var_index, x_var_indexes, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, begin_iter, end_iter
-def gibbs_iter(sc, begin_iter, end_iter, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw ,m1_s2 ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_j_mu):
+def gibbs_iter(sc, hdfs_dir, begin_iter, end_iter, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw ,m1_s2 ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_j_mu):
     
     m1_beta_mu_j_draw_keyBy_h2 = m1_beta_mu_j_draw.keyBy(lambda (iter, hierarchy_level2, beta_mu_j_draw): hierarchy_level2)
     m1_d_array_agg_key_by_h2_h1 = m1_d_array_agg.keyBy(lambda (keys, x_matrix, y_array, hierarchy_level2, hierarchy_level1) : (keys[0], keys[1])) 
@@ -204,8 +204,8 @@ def gibbs_iter(sc, begin_iter, end_iter, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta
         # iteri, hierarchy_level2, m1_d_count_grpby_level2_b, s2
         m1_s2_next = foo2.groupByKey().map(lambda (x, y): gtr.get_s2(list(y)))
         m1_s2 = m1_s2.union(m1_s2_next)
-        print "m1_s2 : ", m1_s2.take(1)
-        print "m1_s2 : ", m1_s2.count()
+        #print "m1_s2 : ", m1_s2.take(1)
+        #print "m1_s2 : ", m1_s2.count()
         
         ## Updating values of h_draw based on current iteration
         # -- Draw h from gamma dist'n.  Note that h=1/(s^2)
@@ -213,14 +213,23 @@ def gibbs_iter(sc, begin_iter, end_iter, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta
         ## m1_h_draw = iteri, h2, h_draw
         m1_h_draw_next = m1_s2_next.map(gtr.get_h_draw)
         m1_h_draw = m1_h_draw.union(m1_h_draw_next)
-        print "m1_h_draw : ", m1_h_draw.take(1)
-        print "m1_h_draw : ", m1_h_draw.count()
+        #print "m1_h_draw : ", m1_h_draw.take(1)
+        #print "m1_h_draw : ", m1_h_draw.count()
         
         ## Creating vertical draws
         ## -- Convert the array-based draws from the Gibbs Sampler into a "vertically long" format by unnesting the arrays.
         # lists of tuples : s, h2, h1, beta_i_draw[:,i][0], driver_x_array[i], hierarchy_level2_hierarchy_level1_driver        
         #m1_beta_i_draw_long_next = m1_beta_i_draw.map(gtr.get_beta_i_draw_long).reduce(add)
-        m1_beta_i_draw.map(gtr.get_beta_i_draw_long).saveAsPickleFile("hdfs://hdm1.gphd.local:8020/user/ssoni/data/"+ "m1_beta_i_draw_long_"+str(s)+".data")
+        if s % 10 == 0 :
+            m1_beta_i_draw.map(gtr.get_beta_i_draw_long).saveAsPickleFile(hdfs_dir+ "m1_beta_i_draw_long_"+str(s)+".data")
+            m1_h_draw.saveAsPickleFile(hdfs_dir+ "m1_h_draw_"+str(s)+".data")
+            m1_beta_mu_j_draw.saveAsPickleFile(hdfs_dir+ "m1_beta_i_draw_long_"+str(s)+".data")
+            m1_beta_mu_j.saveAsPickleFile(hdfs_dir+ "m1_beta_mu_j_draw_"+str(s)+".data")
+            m1_Vbeta_inv_Sigmabeta_j_draw.saveAsPickleFile(hdfs_dir+ "m1_Vbeta_inv_Sigmabeta_j_draw_"+str(s)+".data")
+            m1_Vbeta_j_mu.saveAsPickleFile(hdfs_dir+ "m1_Vbeta_j_mu_"+str(s)+".data")
+            m1_beta_i_draw.saveAsPickleFile(hdfs_dir+ "m1_beta_i_draw_"+str(s)+".data")
+            m1_beta_i_mean.saveAsPickleFile(hdfs_dir+ "m1_beta_i_mean_"+str(s)+".data")
+            m1_Vbeta_i.saveAsPickleFile(hdfs_dir+ "m1_Vbeta_i_"+str(s)+".data")
         #print "reduce count ", len(m1_beta_i_draw_long_next)
         #print "reduce ", m1_beta_i_draw_long_next[0]
         #print "reduce ", m1_beta_i_draw_long_next[1]

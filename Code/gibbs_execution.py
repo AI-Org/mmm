@@ -60,6 +60,7 @@ if __name__ == "__main__":
     
     #file = sys.argv[1] if len(sys.argv) > 1 else "hdfs:///data/d.csv"
     file = sys.argv[1] if len(sys.argv) > 1 else "hdfs://hdm1.gphd.local:8020/user/ssoni/data/d.csv"
+    hdfs_dir = sys.argv[2] if len(sys.argv) > 2 else "hdfs://hdm1.gphd.local:8020/user/ssoni/data/result/"
     ## load all data as separate columns
     d = load(file) 
     keyBy_groupby_h2_h1 = d.keyBy(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2, hierarchy_level1)).groupByKey().cache()     
@@ -67,45 +68,45 @@ if __name__ == "__main__":
     
     # hierarchy_level1 = tier, 
     # hierarchy_level2 = brand_department_number
-    hierarchy_level1 = sys.argv[2] if len(sys.argv) > 2 else 1
-    hierarchy_level2 = sys.argv[3] if len(sys.argv) > 3 else 2
+    hierarchy_level1 = sys.argv[3] if len(sys.argv) > 3 else 1
+    hierarchy_level2 = sys.argv[4] if len(sys.argv) > 4 else 2
     
     # 'p' = Number of explanatory variables in the model, including the intercept term.
-    p = sys.argv[4] if len(sys.argv) > 4 else 14  # todo convert sysarhs to int
+    p = sys.argv[5] if len(sys.argv) > 5 else 14  # todo convert sysarhs to int
     # df1 = defree of freedom 
-    df1 = sys.argv[5] if len(sys.argv) > 5 else 15    
+    df1 = sys.argv[6] if len(sys.argv) > 6 else 15    
     # the response variable
-    y_var_index = sys.argv[6] if len(sys.argv) > 6 else 4
+    y_var_index = sys.argv[7] if len(sys.argv) > 7 else 4
     # the explanatory variables
-    x_var_indexes = sys.argv[7] if len(sys.argv) > 7 else [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+    x_var_indexes = sys.argv[8] if len(sys.argv) > 8 else [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
     
     # coef_means_prior_array' = Priors for coefficient means at the upper-most level of the hierarchy. 
     # coef_means_prior_array=sys.argv[5] if len(sys.argv) > 5 else [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-    coef_means_prior_array = sys.argv[8] if len(sys.argv) > 8 else [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    coef_means_prior_array = sys.argv[9] if len(sys.argv) > 9 else [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
     
     # coef_precision_prior_array = Priors for coefficient covariances at the upper-most level of the hierarchy. 
     # coef_precision_prior_array=sys.argv[5] if len(sys.argv) > 5 else [1,1,1,1,1,1,1,1,1,1,1,1,1]
-    coef_precision_prior_array = sys.argv[9] if len(sys.argv) > 9 else [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+    coef_precision_prior_array = sys.argv[10] if len(sys.argv) > 10 else [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
     
-    sample_size_deflator = sys.argv[10] if len(sys.argv) > 10 else 1
+    sample_size_deflator = sys.argv[11] if len(sys.argv) > 11 else 1
     
-    initial_vals = sys.argv[11] if len(sys.argv) > 11 else "ols" 
+    initial_vals = sys.argv[12] if len(sys.argv) > 12 else "ols" 
 
     # First initialize the gibbs sampler
     (m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw , m1_ols_beta_i ,m1_ols_beta_j ,m1_s2 ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_j_mu) = gi.gibbs_initializer(sc, d, keyBy_groupby_h2_h1, hierarchy_level1, hierarchy_level2, p, df1, y_var_index, x_var_indexes, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals)
     
-    begin_iter = sys.argv[12] if len(sys.argv) > 12 else 2
-    end_iter = sys.argv[13] if len(sys.argv) > 13 else 4    
+    begin_iter = sys.argv[13] if len(sys.argv) > 13 else 2
+    end_iter = sys.argv[14] if len(sys.argv) > 14 else 4    
     
     # Calling the iterative gibbs algorithm 
-    (m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw  ,m1_s2 ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_j_mu) = gibbs.gibbs_iter(sc, begin_iter, end_iter, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw ,m1_s2 ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_j_mu)
+    (m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw  ,m1_s2 ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_j_mu) = gibbs.gibbs_iter(sc, hdfs_dir, begin_iter, end_iter, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw ,m1_s2 ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_j_mu)
     
     raw_iters = sys.argv[14] if len(sys.argv) > 14 else 100
     
     burn_in = sys.argv[15] if len(sys.argv) > 15 else 0     
     
     # call gibbs summary functions
-    m1_summary_geweke_conv_diag_detailed = gis.m1_summary_geweke_conv_diag_detailed(sc, hierarchy_level1, hierarchy_level2, raw_iters, burn_in)
+    m1_summary_geweke_conv_diag_detailed = gis.m1_summary_geweke_conv_diag_detailed(sc, hdfs_dir, hierarchy_level1, hierarchy_level2, raw_iters, burn_in)
     print "m1_summary_geweke_conv_diag_detailed count", m1_summary_geweke_conv_diag_detailed.count()
     print "m1_summary_geweke_conv_diag_detailed take 1", m1_summary_geweke_conv_diag_detailed.take(1)
 
