@@ -22,17 +22,17 @@ sample_size_deflator = 1
 def create_x_matrix_y_array(recObj):
     """
        Take an iterable of records, where the key corresponds to a certain age group
-       Create a numpy matrix and return the shape of the matrix
+       Create a np matrix and return the shape of the matrix
     """
-    import numpy
+    
 
     #recObj is of the form of [key, <Iterable of all values tuples>]
     keys = recObj[0]
     recIter = recObj[1]
 
-    mat = numpy.matrix([r for r in recIter])
+    mat = np.matrix([r for r in recIter])
     x_matrix = mat[:,5:18].astype(float)
-    x_matrix = numpy.append([[1 for _ in range(0,len(x_matrix))]], x_matrix.T,0).T
+    x_matrix = np.append([[1 for _ in range(0,len(x_matrix))]], x_matrix.T,0).T
     y_array = mat[:,4].astype(float)
     hierarchy_level2 =  mat[:,2]
     hierarchy_level1 = mat[:,1]
@@ -40,11 +40,11 @@ def create_x_matrix_y_array(recObj):
 
 
 def create_xtx_matrix_xty(obj):
-    import numpy
+    
     #recObj is of the form of [key, <Iterable of all values tuples>]
     keys = obj[0]
     x_matrix = obj[1]
-    x_matrix_t = numpy.transpose(x_matrix)
+    x_matrix_t = np.transpose(x_matrix)
     xt_x = x_matrix_t * x_matrix
     y_matrix = obj[2]
     xt_y = x_matrix_t * y_matrix
@@ -145,8 +145,8 @@ def get_Vbeta_j_mu_next(y):
     return Vbeta_j_mu
 
 def get_m1_Vbeta_j_mu_pinv(obj):
-    import numpy as np
-    import nearPD as npd
+    
+    import nearPDd as npd
     global df1_var
     seq = obj[0]
     hierarchy_level2 = obj[1]
@@ -162,7 +162,7 @@ def get_m1_Vbeta_j_mu_pinv(obj):
 
 
 def pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, n1, coef_precision_prior_array):
-    import numpy as np
+    
     temp = gu.matrix_scalarmult_plr(Vbeta_inv_j_draw, n1) # (14 X 14)
     temp_add = gu.matrix_scalarmult_plr(temp, gu.matrix_diag_plr(coef_precision_prior_array))
     return np.linalg.pinv(temp_add)
@@ -328,7 +328,7 @@ def get_beta_i_mean_next(y, s):
     
 # depricated    
 def getX_var_array_y_array(y_0_list):
-    import numpy as np
+    
     #index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13
     #
     y_var_list = []
@@ -344,7 +344,7 @@ def getX_var_array_y_array(y_0_list):
     
 # depricated
 def get_sum_beta_i_draw_x(y):
-    import numpy as np
+    
     # where y is a tuple with value hierarchy_level2, hierarchy_level1, x_array_var_y_var, iteri, beta_i_draw, m1_d_count_grpby_level2_b
     #ssr = sum((y-madlib.array_dot(beta_i_draw, x))^2)
     beta_i_draw = y[4]
@@ -409,7 +409,7 @@ def get_beta_i_draw_long(x):
     return rows
     
 def compute_se_sa_i_avg_sa_i(y, raw_iters, burn_in):
-    import numpy as np
+    
     # s, h2, h1, beta_draw[i], x_array_i, h2_h1_driver
    
     beta_i_draw_array = []
@@ -421,7 +421,7 @@ def compute_se_sa_i_avg_sa_i(y, raw_iters, burn_in):
     return (se_sa_i, avg_sa_i)
     
 def compute_se_sc_i_avg_sc_i(y, raw_iters, burn_in):
-    import numpy as np
+    
     # s, h2, h1, beta_draw[i], x_array_i, h2_h1_driver
     
     beta_i_draw_array = []

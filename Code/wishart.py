@@ -97,6 +97,22 @@ class Wishart:
     print "result_draw" , result_draw
     return result_draw
 
+  def sample_wishart(self, dof, sigma):
+    '''
+    Returns a sample from the Wishart distn, conjugate prior for precision matrices.
+    '''
+    n = sigma.shape[0]
+    chol = np.linalg.cholesky(sigma)
+    
+    # use matlab's heuristic for choosing between the two different sampling schemes
+    if (dof <= 81+n) and (dof == round(dof)):
+        #direct
+        X = np.dot(chol,np.random.normal(size=(n,dof)))
+    else:
+        A = np.diag(np.sqrt(np.random.chisquare(dof - np.arange(0,n),size=n)))
+        A[np.tri(n,k=-1,dtype=bool)] = np.random.normal(size=(n*(n-1)/2.))
+        X = np.dot(chol,A)
+    return np.dot(X,X.T)
 
   def __str__(self):
     return '{dof:%f, scale:%s}'%(self.dof, str(self.scale))
