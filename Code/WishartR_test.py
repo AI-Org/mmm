@@ -21,7 +21,6 @@ x <- mean(avg_ar)
 
 np.random.seed(1)
 def sample_R(dof, sigma):
-    import numpy as np
     from scipy import linalg
     """Returns a draw from the distribution - will be a symmetric positive definite matrix."""
     n = sigma.shape[0]
@@ -42,7 +41,7 @@ def sample_R(dof, sigma):
 
 print sample_R(phi, a)     
 
-print ""
+print " sample_R produces the non symmetric positive definite matrixes"
 
 np_ar = [sample_R(phi, a)]
 for i in range(0, 10000):
@@ -114,8 +113,6 @@ def sample_wishart(dof, sigma):
 np_ar_2 = [sample_wishart(phi, a)]
 for i in range(0, 10000):
     np_ar_2.append(sample_wishart(phi, a))
-
-
     
 avg_np_2 = np.average(np_ar_2)
 avg_np_m_2 = np.mean(np_ar_2)

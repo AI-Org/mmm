@@ -5,7 +5,7 @@ Gibbs summary
 Call as  gibbs_summary( text, text, bigint, bigint)
 """
 import gibbs_transformations as gtr
-def m1_summary_geweke_conv_diag_detailed(sc, hdfs_dir, hierarchy_level1, hierarchy_level2, raw_iters, burn_in, m1_beta_i_draw_long):
+def m1_summary_geweke_conv_diag_detailed(sc, hdfs_dir, hierarchy_level1, hierarchy_level2, raw_iters, burn_in):
     """
         -- Compute Geweke Convergence Diagnostic (CD) to confirm that the draws of beta_i from the Gibbs Sampler are stationary.  
         -- Break up post burn-in draws from the Gibbs Sampler into 3 pieces.  
@@ -17,10 +17,17 @@ def m1_summary_geweke_conv_diag_detailed(sc, hdfs_dir, hierarchy_level1, hierarc
         -- Compute CD and store in a table.  CD is assumed to follow a Standard Normal Distribution.
     """
     # structured as (h2, h1, driver) -> (s, h2, h1, beta_draw[i], x_array[i], h2_h1_driver)
-    m1_beta_i_draw_long = sc.newAPIHadoopFile(hdfs_dir+ "m1_beta_i_draw_long*.data", "org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat","org.apache.hadoop.io.IntWritable", "org.apache.hadoop.io.Text")
-    m1_beta_i_draw_long_keyBy_h2_h1_driver_first_10_percent = m1_beta_i_draw_long.filter(lambda (s, h2, h1, beta_i_draw, driver, h2_h1_driver):(s < 0.1 *(raw_iters - burn_in))).keyBy(lambda (s, h2, h1, beta_i_draw, driver, h2_h1_driver): (h2, h1, driver))
-    m1_beta_i_draw_long_keyBy_h2_h1_driver_last_40_percent = m1_beta_i_draw_long.filter(lambda (s, h2, h1, beta_i_draw, driver, h2_h1_driver):(s > 0.6 * (raw_iters - burn_in))).keyBy(lambda (s, h2, h1, beta_i_draw, driver, h2_h1_driver): (h2, h1, driver))
+    m1_beta_i_draw_long = sc.pickleFile(hdfs_dir+ "m1_beta_i_draw_long*.data")
+    # 1, [(1, 4, 128, 17126325.852874778, '1', '4-:-128-:-1'), (1, 4, 128, 71313545.095800832, 'x1', '4-:-128-:-x1')]
+    m1_beta_i_draw_long_keyBy_h2_h1_driver_first_10_percent = m1_beta_i_draw_long.filter(lambda (s, rows):(s < 0.1 * (raw_iters - burn_in))).values().keyBy(lambda (s, h2, h1, beta_i_draw, driver, h2_h1_driver): (h2, h1, driver))
+    #.keyBy(lambda (s, h2, h1, beta_i_draw, driver, h2_h1_driver): (h2, h1, driver)) - no need as its already grouped by h1 h2
+    m1_beta_i_draw_long_keyBy_h2_h1_driver_last_40_percent = m1_beta_i_draw_long.filter(lambda (s, rows):(s > 0.6 * (raw_iters - burn_in))).values().keyBy(lambda (s, h2, h1, beta_i_draw, driver, h2_h1_driver): (h2, h1, driver))
+    #.keyBy(lambda (s, h2, h1, beta_i_draw, driver, h2_h1_driver): (h2, h1, driver)) - no need as its already grouped by h1 h2
     
+    #m1_beta_i_draw_long = sc.newAPIHadoopFile(hdfs_dir+ "m1_beta_i_draw_long*.data", "org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat","org.apache.hadoop.io.IntWritable", "org.apache.hadoop.io.Text")
+    #m1_beta_i_draw_long_keyBy_h2_h1_driver_first_10_percent = m1_beta_i_draw_long.filter(lambda (s, h2, h1, beta_i_draw, driver, h2_h1_driver):(s < 0.1 *(raw_iters - burn_in))).keyBy(lambda (s, h2, h1, beta_i_draw, driver, h2_h1_driver): (h2, h1, driver))
+    #m1_beta_i_draw_long_keyBy_h2_h1_driver_last_40_percent = m1_beta_i_draw_long.filter(lambda (s, h2, h1, beta_i_draw, driver, h2_h1_driver):(s > 0.6 * (raw_iters - burn_in))).keyBy(lambda (s, h2, h1, beta_i_draw, driver, h2_h1_driver): (h2, h1, driver))
+    # (h1,h2,driver) - > Iterable of (s, h2, h1, beta_i_draw, driver, h2_h1_driver)
     m1_beta_i_draw_long_keyBy_h2_h1_driver_first_10_grp_by_key = m1_beta_i_draw_long_keyBy_h2_h1_driver_first_10_percent.groupByKey()
     print "GROUP by key", m1_beta_i_draw_long_keyBy_h2_h1_driver_first_10_grp_by_key.map(lambda (x,y): (x, list(y))).take(30)
     print "KEYS ", m1_beta_i_draw_long_keyBy_h2_h1_driver_first_10_grp_by_key.map(lambda (x,y): (x, list(y))).keys().count() ## 1890 right = h1_h2 distinct pairs

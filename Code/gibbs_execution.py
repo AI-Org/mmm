@@ -191,7 +191,7 @@ if __name__ == "__main__":
     burn_in = sys.argv[16] if len(sys.argv) > 16 else 0     
     
     # call gibbs summary functions
-    m1_summary_geweke_conv_diag_detailed = gis.m1_summary_geweke_conv_diag_detailed(sc,hdfs_dir, hierarchy_level1, hierarchy_level2, raw_iters, burn_in)
+    m1_summary_geweke_conv_diag_detailed = gis.m1_summary_geweke_conv_diag_detailed(sc, hdfs_dir, hierarchy_level1, hierarchy_level2, raw_iters, burn_in)
     print "m1_summary_geweke_conv_diag_detailed count", m1_summary_geweke_conv_diag_detailed.count()
     print "m1_summary_geweke_conv_diag_detailed take 1", m1_summary_geweke_conv_diag_detailed.take(1)
 

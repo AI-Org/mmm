@@ -1,41 +1,41 @@
 import numpy as np
 
 # Function to compute median of any array.
-# It takes "anyarray" of type numpy array. 
+# It takes "anyarray" of type np array. 
 def final_median(anyarray):
     return np.median(anyarray)
 
 # Function to add two matrixes
 def matrix_add_plr(matrix1, matrix2):
-    import numpy as np
+    
     return np.add(matrix1, matrix2)
 
 # Function to diagonalize 1d Array
 def matrix_diag_plr(anyarray):
-    import numpy as np
+    
     return np.diag(anyarray)
 
 # Function to add a diagonal matrix created from a scalar value to any matrix
 def matrix_add_diag_plr(matrix, value):
-    import numpy as np
+    
     a = np.zeros(matrix.shape, float)
     np.fill_diagonal(a, value)
     return np.add(matrix, a)
 
 # Function to multiply a scalar to a matrix
 def matrix_scalarmult_plr(matrix, value):
-    import numpy as np
+    
     #print "multiply matrix : ", matrix ," with value ", value
     return np.dot(matrix, value)
 
 # Function to compute var-cov matrix for the pooled model, as defined in Equation 7.27 of Koop pp.156-157
-# beta_i is a float8[] matrix or numpy.array or numpy.matrix
-# beta_mu is anpther float8[] matrix or numpy.array or numpy.matrix
+# beta_i is a float8[] matrix or np.array or np.matrix
+# beta_mu is anpther float8[] matrix or np.array or np.matrix
 # according to Koop pp. 157 sigma(Beta_i) is a k-vector containing the sums of the elements of Beta_i
 # hance we convert beta_i_diff to mat before multiplying
 
 def Vbeta_i_mu(beta_i, beta_mu):
-    import numpy as np
+    
     beta_i_diff = np.mat(np.subtract(beta_i, beta_mu))
     Vbeta_i_mu = np.multiply(beta_i_diff, np.mat(beta_i_diff).transpose())
     #Vbeta_i_mu = np.dot(beta_i_diff, np.mat(beta_i_diff).transpose())
@@ -91,7 +91,7 @@ def beta_mu_prior(Sigmabeta_j, Vbeta_inv_j_draw, sum_coef_j, coef_means_prior_ar
     # used for computing the mean for beta_draws,
     # should be of order size of variables i.e 14
     # mat1 is a dot product of two arrays
-    import numpy as np
+    
     # both arrays are 1 X 14 so multiply is 1 X 14
     mat1 = np.multiply(coef_means_prior_array, coef_precision_prior_array)
     #mat2 is a matrix multiplication product of Vbeta_inv_j_draw and sum_coeff_j
@@ -106,10 +106,10 @@ def beta_mu_prior(Sigmabeta_j, Vbeta_inv_j_draw, sum_coef_j, coef_means_prior_ar
 
 # beta_draws are samples from mvrnprm or multivariate normal distribution.
 # it relies on MASS library in the original implementation However, we will be using
-# numpy and its random package to perform the same operation
+# np and its random package to perform the same operation
 
 def beta_draw(mean, cov):
-    import numpy as np
+    
     # mean should be a 1 D array of means of variables : 1 X 14
     # cov should be 2 D array of 14 X 14
     # returns an array of 14 elements
@@ -121,7 +121,7 @@ def beta_draw(mean, cov):
 # Vbeta_i<- solve(arg1*arg2+arg3)
 ## TODO
 def Vbeta_i(value, mat2, mat3):
-    import numpy as np
+    
     mat1_r = np.multiply(value, mat2)
     matr = np.add(mat1_r, mat3)
     return np.linalg.inv(matr)   
@@ -130,7 +130,7 @@ def Vbeta_i(value, mat2, mat3):
 # Only computed at lowest level of the hierarchy (i.e. the level that "mixes" directly with the data, namely X'y).
 
 def beta_i_mean(Vbeta_i, value, xty, Vbeta_i_inv_draw, beta_mu_j_draw):
-    import numpy as np
+    
     #def beta_i_mean(mat1, value, mat2, mat3, mat4):
     # error was mat_r1 is 1 X 14 instead of 14 X 1 but with T it will be not
     # beccause beta_mu_j is an array of 14 elements it needs to be converted to matrix first and then to 14 X1 format.
@@ -142,7 +142,7 @@ def beta_i_mean(Vbeta_i, value, xty, Vbeta_i_inv_draw, beta_mu_j_draw):
     return mat_r3
     
 def beta_i_mean_wrong_impl(Vbeta_i, value, xty, Vbeta_i_inv_draw, beta_mu_j_draw):
-    import numpy as np
+    
     #def beta_i_mean(mat1, value, mat2, mat3, mat4):
     # error was mat_r1 is 1 X 14 instead of 14 X 1 but with T it will be not
     #mat_r1 = np.dot(np.matrix(Vbeta_i_inv_draw), np.matrix(beta_mu_j_draw).getA1()).T
@@ -155,10 +155,10 @@ def beta_i_mean_wrong_impl(Vbeta_i, value, xty, Vbeta_i_inv_draw, beta_mu_j_draw
 
 # Function to draw h from gamma dist'n, as defined in (7.28) of Koop pp.157. 
 # rate is an alternate way to specify the scale, shape of the gamma distribution
-# numpy.random.gamma(shape, scale=1.0, size=None) is equivalent to rgamma(n, shape, rate = 1, scale = 1/rate)
+# np.random.gamma(shape, scale=1.0, size=None) is equivalent to rgamma(n, shape, rate = 1, scale = 1/rate)
 
 def h_draw(m, v):
-    import numpy as np
+    
     shape_g = v/2
     rate_g = v / (2 * m)
     scale_g = 1/ rate_g
@@ -167,9 +167,9 @@ def h_draw(m, v):
 
 
 # Function to draw random array sample of p elements from the uniform(-1,1) dist'n
-# numpy.random.uniform(low=0.0, high=1.0, size=None)     
+# np.random.uniform(low=0.0, high=1.0, size=None)     
 def initial_vals_random(p):
-    import numpy as np
+    
     return np.random.uniform(-1,1,p)
     
 

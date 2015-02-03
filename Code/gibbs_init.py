@@ -62,11 +62,11 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     # after sorted and new mod function we have [(1, 30), (2, 30), (3, 30), (4, 30), (5, 30)]    
     #OPTIMIZATION  boradcasting it like m1_d_count_grpby_level2_b [(0, 30), (1, 30), (2, 30), (3, 30), (4, 30)]  
     m1_d_childcount_b = sc.broadcast(sorted(gtr.get_d_childcount(d).collect()))
-    print "m1_d_childcount_b ", m1_d_childcount_b.value[0]
-    print "m1_d_childcount_b ", m1_d_childcount_b.value[1]
-    print "m1_d_childcount_b ", m1_d_childcount_b.value[2]
-    print "m1_d_childcount_b ", m1_d_childcount_b.value[3]
-    print "m1_d_childcount_b ", m1_d_childcount_b.value[4]
+    #print "m1_d_childcount_b ", m1_d_childcount_b.value[0]
+    #print "m1_d_childcount_b ", m1_d_childcount_b.value[1]
+    #print "m1_d_childcount_b ", m1_d_childcount_b.value[2]
+    #print "m1_d_childcount_b ", m1_d_childcount_b.value[3]
+    #print "m1_d_childcount_b ", m1_d_childcount_b.value[4]
     #m1_d_childcount_b = sc.broadcast(m1_d_childcount.collect())
     #m1_d_childcount = d_groupedBy_h1_h2.map(lambda (x,iter): (x, sum(1 for _ in set(iter))), preservesPartitioning=True).cache()
     # print "d_child_counts take : ", m1_d_childcount.take(1)
@@ -314,9 +314,11 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     ## from iteri, hierarchy_level2, m1_d_count_grpby_level2_b, s2
     ## m1_h_draw = iteri, h2, h_draw
     ## optimization we can keyby persist it here as it has no defined custom partitioning levels, as such its better as to assign our keyby and then ask Spark to persist it.
-    m1_h_draw = m1_s2.map(gtr.get_h_draw).keyBy(lambda (iteri, h2, h_draw): h2).persist()
+    m1_h_draw = m1_s2.map(gtr.get_h_draw).keyBy(lambda (iteri, h2, h_draw): h2)
     print "m1_h_draw : 5 : ", m1_h_draw.take(1)
-    print "m1_h_draw : 5 : ", m1_h_draw.count() 
+    print "m1_h_draw : 5 : ", m1_h_draw.count()
+    #(h2,  n1, Vbeta_inv_j_draw, Sigmabeta_j, h_draw)
+    m1_Vbeta_inv_Sigmabeta_j_draw = m1_Vbeta_inv_Sigmabeta_j_draw.keyBy(lambda (iter, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): h2).join(m1_h_draw).map(lambda (h2, y): (h2, y[0][2], y[0][3], y[0][4], y[1][2])).keyBy(lambda (h2,  n1, Vbeta_inv_j_draw, Sigmabeta_j, h_draw): h2)
     
     print gibbs_init_text()    
     

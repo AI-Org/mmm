@@ -7,10 +7,15 @@ Created on Tue Jan 20 10:03:02 2015
 ###
 import sys
 import re
+import numpy
+
+from pyspark import SparkContext
 
 def geth2(data):
     columns = re.split(",", data)[1]
     return columns 
+
+sc = SparkContext(appName="GibbsSampler")
 
 def load_key_h2(source):
     return sc.textFile(source).map(lambda datapoint: geth2(datapoint)).keyBy(lambda (hierarchy_level2): (hierarchy_level2))
@@ -221,7 +226,6 @@ def create_x_matrix_y_array(recObj):
        Create a numpy matrix and return the shape of the matrix
        #recObj is of the form of [<all values tuples>]
     """
-    import numpy
     recIter = recObj
     keys = recObj[0] # partition value
     recIter = recObj[1]
@@ -236,7 +240,6 @@ def create_x_matrix_y_array(recObj):
 
 
 def create_xtx_matrix_xty(obj):
-    import numpy
     #recObj is of the form of [key, <Iterable of all values tuples>]
     keys = obj[0] # partition value
     x_matrix = obj[1]

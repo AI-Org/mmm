@@ -22,17 +22,17 @@ sample_size_deflator = 1
 def create_x_matrix_y_array(recObj):
     """
        Take an iterable of records, where the key corresponds to a certain age group
-       Create a numpy matrix and return the shape of the matrix
+       Create a np matrix and return the shape of the matrix
        #recObj is of the form of [<all values tuples>]
     """
-    import numpy
+    
     recIter = recObj
     h2_h1_key = recObj[0] # partitioned h1_h2 keys
     recIter = recObj[1]
-    mat = numpy.matrix([r for r in recIter])
+    mat = np.matrix([r for r in recIter])
     
     x_matrix = mat[:,4:17].astype(float)
-    x_matrix = numpy.append([[1 for _ in range(0,len(x_matrix))]], x_matrix.T,0).T
+    x_matrix = np.append([[1 for _ in range(0,len(x_matrix))]], x_matrix.T,0).T
     
     y_array = mat[:,3].astype(float)
     hierarchy_level2_array =  mat[:,1]
@@ -44,16 +44,16 @@ def create_x_matrix_y_array(recObj):
 def create_x_matrix_y_array_old(recObj):
     """
        Take an iterable of records, where the key corresponds to a certain age group
-       Create a numpy matrix and return the shape of the matrix
+       Create a np matrix and return the shape of the matrix
        #recObj is of the form of [<all values tuples>]
     """
-    import numpy
+    
     recIter = recObj
     keys = recObj[0] # partition value
     recIter = recObj[1]
-    mat = numpy.matrix([r for r in recIter])
+    mat = np.matrix([r for r in recIter])
     x_matrix = mat[:,5:18].astype(float)
-    x_matrix = numpy.append([[1 for _ in range(0,len(x_matrix))]], x_matrix.T,0).T
+    x_matrix = np.append([[1 for _ in range(0,len(x_matrix))]], x_matrix.T,0).T
     y_array = mat[:,4].astype(float)
     hierarchy_level2 =  mat[:,2]
     hierarchy_level1 = mat[:,1]
@@ -61,13 +61,13 @@ def create_x_matrix_y_array_old(recObj):
     return (keys, x_matrix, y_array, hierarchy_level2[1,0], hierarchy_level1[1,0])
 
 def create_xtx_matrix_xty(recObj):
-    import numpy
+    
     #recObj is of the form of [key, <Iterable of all values tuples>]
     #keys = obj[0] # partition value
     h2_h1_key = recObj[0] # partition value
     hierarchy_level2 = recObj[1]
     x_matrix = recObj[2]
-    x_matrix_t = numpy.transpose(x_matrix)
+    x_matrix_t = np.transpose(x_matrix)
     xt_x = x_matrix_t * x_matrix
     y_matrix = recObj[3]
     xt_y = x_matrix_t * y_matrix
@@ -75,11 +75,11 @@ def create_xtx_matrix_xty(recObj):
     return (h2_h1_key, hierarchy_level2, xt_x, xt_y)
 
 def create_xtx_matrix_xty_old(obj):
-    import numpy
+    
     #recObj is of the form of [key, <Iterable of all values tuples>]
     #keys = obj[0] # partition value
     x_matrix = obj[1]
-    x_matrix_t = numpy.transpose(x_matrix)
+    x_matrix_t = np.transpose(x_matrix)
     xt_x = x_matrix_t * x_matrix
     y_matrix = obj[2]
     xt_y = x_matrix_t * y_matrix
@@ -234,7 +234,7 @@ def get_Vbeta_j_mu_next(y, s):
     return h2, Vbeta_j_mu
 
 def get_m1_Vbeta_j_mu_pinv(obj):
-    import numpy as np
+     as np
     import nearPD as npd
     global df1_var
     seq = obj[0]
@@ -251,7 +251,7 @@ def get_m1_Vbeta_j_mu_pinv(obj):
 
 
 def pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, n1, coef_precision_prior_array):
-    import numpy as np
+     as np
     temp = gu.matrix_scalarmult_plr(Vbeta_inv_j_draw, n1) # (14 X 14)
     temp_add = gu.matrix_add_plr(temp, gu.matrix_diag_plr(coef_precision_prior_array))
     return np.linalg.pinv(temp_add)
@@ -418,7 +418,7 @@ def get_beta_i_mean_next(y, s):
     
 # depricated    
 def getX_var_array_y_array(y_0_list):
-    import numpy as np
+     as np
     #index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13
     #
     y_var_list = []
@@ -434,7 +434,7 @@ def getX_var_array_y_array(y_0_list):
     
 # depricated
 def get_sum_beta_i_draw_x(y):
-    import numpy as np
+     as np
     # where y is a tuple with value hierarchy_level2, hierarchy_level1, x_array_var_y_var, iteri, beta_i_draw, m1_d_count_grpby_level2_b
     #ssr = sum((y-madlib.array_dot(beta_i_draw, x))^2)
     beta_i_draw = y[4]
@@ -497,10 +497,10 @@ def get_beta_i_draw_long(x):
         hierarchy_level2_hierarchy_level1_driver = str(h2)+"-:-"+str(h1)+"-:-"+ x_array[i]
         row = (s, h2, h1, beta_draw[:,i][0], x_array[i], hierarchy_level2_hierarchy_level1_driver)
         rows.append(row)
-    return rows
+    return (s, rows)
     
 def compute_se_sa_i_avg_sa_i(y, raw_iters, burn_in):
-    import numpy as np
+     as np
     # s, h2, h1, beta_draw[i], x_array_i, h2_h1_driver
    
     beta_i_draw_array = []
@@ -512,7 +512,7 @@ def compute_se_sa_i_avg_sa_i(y, raw_iters, burn_in):
     return (se_sa_i, avg_sa_i)
     
 def compute_se_sc_i_avg_sc_i(y, raw_iters, burn_in):
-    import numpy as np
+     as np
     # s, h2, h1, beta_draw[i], x_array_i, h2_h1_driver
     
     beta_i_draw_array = []
