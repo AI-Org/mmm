@@ -5,6 +5,10 @@ Gibbs summary
 Call as  gibbs_summary( text, text, bigint, bigint)
 """
 import gibbs_transformations as gtr
+
+def add(x,y):
+    return (x+y)
+
 def m1_summary_geweke_conv_diag_detailed(sc, hierarchy_level1, hierarchy_level2, raw_iters, burn_in):
     """
         -- Compute Geweke Convergence Diagnostic (CD) to confirm that the draws of beta_i from the Gibbs Sampler are stationary.  
@@ -17,27 +21,27 @@ def m1_summary_geweke_conv_diag_detailed(sc, hierarchy_level1, hierarchy_level2,
         -- Compute CD and store in a table.  CD is assumed to follow a Standard Normal Distribution.
     """
     # structured as (h2, h1, driver) -> (s, h2, h1, beta_draw[i], x_array[i], h2_h1_driver) 
-    m1_beta_i_draw_long = sc.pickleFile("hdfs://hdm1.gphd.local:8020/user/ssoni/data/"+ "m1_beta_i_draw_long_*.data")
+    m1_beta_i_draw_long = sc.parallelize(sc.pickleFile("hdfs://hdm1.gphd.local:8020/user/ssoni/data/"+ "m1_beta_i_draw_long_*.data").reduce(add))
     m1_beta_i_draw_long_keyBy_h2_h1_driver_first_10_percent = m1_beta_i_draw_long.filter(lambda (s, h2, h1, beta_i_draw, driver, h2_h1_driver):(s < 0.1 *(raw_iters - burn_in))).keyBy(lambda (s, h2, h1, beta_i_draw, driver, h2_h1_driver): (h2, h1, driver))
     m1_beta_i_draw_long_keyBy_h2_h1_driver_last_40_percent = m1_beta_i_draw_long.filter(lambda (s, h2, h1, beta_i_draw, driver, h2_h1_driver):(s > 0.6 * (raw_iters - burn_in))).keyBy(lambda (s, h2, h1, beta_i_draw, driver, h2_h1_driver): (h2, h1, driver))
     
     m1_beta_i_draw_long_keyBy_h2_h1_driver_first_10_grp_by_key = m1_beta_i_draw_long_keyBy_h2_h1_driver_first_10_percent.groupByKey()
-    print "GROUP by key", m1_beta_i_draw_long_keyBy_h2_h1_driver_first_10_grp_by_key.map(lambda (x,y): (x, list(y))).take(30)
-    print "KEYS ", m1_beta_i_draw_long_keyBy_h2_h1_driver_first_10_grp_by_key.map(lambda (x,y): (x, list(y))).keys().count()
-    print "COUNT BY KEYS ", sorted(m1_beta_i_draw_long_keyBy_h2_h1_driver_first_10_grp_by_key.map(lambda (x,y): (x, list(y))).countByKey().items()) 
+    #print "GROUP by key", m1_beta_i_draw_long_keyBy_h2_h1_driver_first_10_grp_by_key.map(lambda (x,y): (x, list(y))).take(30)
+    #print "KEYS ", m1_beta_i_draw_long_keyBy_h2_h1_driver_first_10_grp_by_key.map(lambda (x,y): (x, list(y))).keys().count()
+    #print "COUNT BY KEYS ", sorted(m1_beta_i_draw_long_keyBy_h2_h1_driver_first_10_grp_by_key.map(lambda (x,y): (x, list(y))).countByKey().items()) 
     geweke_part_10_percent = m1_beta_i_draw_long_keyBy_h2_h1_driver_first_10_grp_by_key.map(lambda (x, y): (x, gtr.compute_se_sa_i_avg_sa_i(list(y), raw_iters, burn_in))).keyBy(lambda (x, y): x)
     
     m1_beta_i_draw_long_keyBy_h2_h1_driver_last_40_grp_by_key = m1_beta_i_draw_long_keyBy_h2_h1_driver_last_40_percent.groupByKey()
-    print "GROUP by key", m1_beta_i_draw_long_keyBy_h2_h1_driver_last_40_grp_by_key.map(lambda (x,y): (x, list(y))).take(30)
-    print "KEYS ", m1_beta_i_draw_long_keyBy_h2_h1_driver_last_40_grp_by_key.map(lambda (x,y): (x, list(y))).keys().count()
-    print "COUNT BY KEYS ", sorted(m1_beta_i_draw_long_keyBy_h2_h1_driver_last_40_grp_by_key.map(lambda (x,y): (x, list(y))).countByKey().items())
+    #print "GROUP by key", m1_beta_i_draw_long_keyBy_h2_h1_driver_last_40_grp_by_key.map(lambda (x,y): (x, list(y))).take(30)
+    #print "KEYS ", m1_beta_i_draw_long_keyBy_h2_h1_driver_last_40_grp_by_key.map(lambda (x,y): (x, list(y))).keys().count()
+    #print "COUNT BY KEYS ", sorted(m1_beta_i_draw_long_keyBy_h2_h1_driver_last_40_grp_by_key.map(lambda (x,y): (x, list(y))).countByKey().items())
     geweke_part_40_percent = m1_beta_i_draw_long_keyBy_h2_h1_driver_last_40_grp_by_key.map(lambda (x, y): (x, gtr.compute_se_sc_i_avg_sc_i(list(y), raw_iters, burn_in))).keyBy(lambda (x, y): x)
        
     Joined_geweke_part_10_percent_with_geweke_part_40_percent = geweke_part_10_percent.cogroup(geweke_part_40_percent)
-    print "JOINED ", Joined_geweke_part_10_percent_with_geweke_part_40_percent.map(lambda (x,y): (list(y[0])[0], list(y[1])[0])).take(1)
+    #print "JOINED ", Joined_geweke_part_10_percent_with_geweke_part_40_percent.map(lambda (x,y): (list(y[0])[0], list(y[1])[0])).take(1)
     # get_cd_beta_i uses se_sa_i, avg_sa_i, se_sc_i, avg_sc_i which is list(y[0])[0][0], list(y[0])[0][1], list(y[1])[0][0], list(y[1])[0][1]
     m1_summary_geweke_conv_diag_detailed = Joined_geweke_part_10_percent_with_geweke_part_40_percent.map(lambda (x,y): (x, list(y[0])[0][1][0], list(y[0])[0][1][1], list(y[1])[0][1][0], list(y[1])[0][1][1], gtr.get_cd_beta_i(list(y[0])[0][1][0], list(y[0])[0][1][1], list(y[1])[0][1][0], list(y[1])[0][1][1])))
-    print "m1_summary_geweke_conv_diag_detailed ", m1_summary_geweke_conv_diag_detailed.take(10)
+    #print "m1_summary_geweke_conv_diag_detailed ", m1_summary_geweke_conv_diag_detailed.take(10)
 
     return m1_summary_geweke_conv_diag_detailed
 
