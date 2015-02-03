@@ -76,7 +76,9 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         
         ## After Frames optimization -> removing need for collections and persisting on i levels
         m1_Vbeta_i.unpersist()
-        m1_Vbeta_i = m1_d_array_agg_constants.keyBy(lambda (h2_h1_key, hierarchy_level2, xt_x, xt_y): hierarchy_level2).join(m1_Vbeta_inv_Sigmabeta_j_draw).map(lambda (hierarchy_level2, y) : (s, hierarchy_level2, y[0][0], gtr.pinv_Vbeta_i(y[0][2], y[1][2], y[1][4]), y[0][3])).persist()
+        # pinv_Vbeta_i(xtx, Vbeta_inv_j_draw, h_draw)
+        #s, hierarchy_level2, h2_h1_key, Vbeta_i, h_draw, xty, Vbeta_inv_j_draw  
+        m1_Vbeta_i = m1_d_array_agg_constants.keyBy(lambda (h2_h1_key, hierarchy_level2, xt_x, xt_y): hierarchy_level2).join(m1_Vbeta_inv_Sigmabeta_j_draw).map(lambda (hierarchy_level2, y) : (s, hierarchy_level2, y[0][0], gtr.pinv_Vbeta_i(y[0][2], y[1][2], y[1][4]), y[1][4], y[0][3], y[1][2])).persist()
         #map(lambda (h2_h1_key, hierarchy_level2, xt_x, xt_y): (s, hierarchy_level2, h2_h1_key, gtr.pinv_Vbeta_i(xt_x, m1_Vbeta_inv_Sigmabeta_j_draw_collection[int(str(hierarchy_level2)[0]) -1][1], m1_Vbeta_inv_Sigmabeta_j_draw_collection[int(str(hierarchy_level2)[0]) -1][4]), xt_y), preservesPartitioning = True).persist(storagelevel)    
         #print "count  m1_Vbeta_i_unified   ", m1_Vbeta_i_unified.count()
         #print "take 1 m1_Vbeta_i_unified ", m1_Vbeta_i_unified.take(1)
@@ -262,6 +264,7 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         #print "foo2 : 5 : ", foo2.count()
         
         #foo3 = foo2.groupByKey().map(lambda (x, y): get_s2(list(y)))
+        # iteri, hierarchy_level2, m1_d_count_grpby_level2_b, s2
         # iteri, hierarchy_level2, m1_d_count_grpby_level2_b, s2
         m1_s2 = foo2.groupByKey().map(lambda (x, y): gtr.get_s2(list(y)))
         # OPTIMIZATION no need for union witht he previous step as it is not required in further iterations 
