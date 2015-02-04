@@ -145,6 +145,30 @@ if __name__ == "__main__":
         
     ## load all data as separate columns
     d = load(sourcefile) 
+    
+    try:
+        d.saveAsHadoopFile(hdfs_dir+"old_api.data","org.apache.hadoop.mapred.SequenceFileOutputFormat", "org.apache.hadoop.io.IntWritable", "org.apache.hadoop.io.Text")
+    
+        sc.parallelize([1, 2, 'spark', 'rdd']).saveAsHadoopFile(hdfs_dir+"mold_api.data","org.apache.hadoop.mapred.SequenceFileOutputFormat", "org.apache.hadoop.io.IntWritable", "org.apache.hadoop.io.Text")
+    except:
+        print "Count not write using old API file"
+    try:
+        d.saveAsNewAPIHadoopFile(hdfs_dir+"new_api.data","org.apache.hadoop.mapred.SequenceFileOutputFormat", "org.apache.hadoop.io.IntWritable", "org.apache.hadoop.io.Text")
+        sc.parallelize([1, 2, 'spark', 'rdd']).saveAsNewAPIHadoopFile(hdfs_dir+"mnew_api.data","org.apache.hadoop.mapred.SequenceFileOutputFormat", "org.apache.hadoop.io.IntWritable", "org.apache.hadoop.io.Text")
+    except:
+        print "Count not write using new API file"
+    try:
+        d.saveAsPickleFile(hdfs_dir+"pickle_api.data", 3)
+        sc.parallelize([1, 2, 'spark', 'rdd']).saveAsPickleFile(hdfs_dir+"mpickle_api.data", 3)
+    except:
+        print "not possible via pickle file too"
+    try:
+        d.saveAsPickleFile(hdfs_dir+"sequence_api.data")
+        sc.parallelize([1, 2, 'spark', 'rdd']).saveAsPickleFile(hdfs_dir+"msequence_api.data")
+    except:
+        print "not possible via sequenceFile also"   
+        
+        
     # OPTIMIZATION 2 keyBy_groupby_h2_h1 is essentially d_key_h2_h1 so we use d_key_h2_h1 in place of keyBy_groupby_h2_h1
     # keyBy_groupby_h2_h1 = d.keyBy(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2, hierarchy_level1)).groupByKey().cache()     
     #print "Cached Copy of Data, First Data Set : ", d_key_h2_h1.take(1)
