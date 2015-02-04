@@ -127,7 +127,7 @@ if __name__ == "__main__":
     #sourcefile = sys.argv[2] if len(sys.argv) > 2 else "hdfs://sandbox:9000/user/ssoni/data/d.csv"  
     #hdfs_dir = "hdfs:///user/ssoni/data/" 
     sourcefile = sys.argv[2] if len(sys.argv) > 2 else "hdfs://hdm1.gphd.local:8020/user/ssoni/data/d.csv"
-    hdfs_dir = "hdfs://hdm1.gphd.local:8020/user/ssoni/data/result" 
+    hdfs_dir = "hdfs://hdm1.gphd.local:8020/user/ssoni/data/result/" 
     h2_partitions = load_key_h2(sourcefile).groupByKey().keys().count()
     h1_h2_partitions = load_key_h1_h2(sourcefile).groupByKey().keys().count()
     # get all the keys by load_key_h1_h2(sourcefile).groupByKey().keys().sortByKey().collect()
