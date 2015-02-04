@@ -13,23 +13,6 @@ def gibbs_iteration_text():
     return text_output
 
 
-#TRY OUT
-#>>> try:
-#...     raise NameError()
-#... except:
-#...     print "ok"
-#... finally:
-#...     try:
-#...             raise NameError()
-#...     except:
-#...             print "still ok"
-#...     print "Done"
-#... 
-#ok
-#still ok
-#Done
-#>>> 
-
 def add(x,y):
     return (x+y)
 
