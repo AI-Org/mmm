@@ -161,12 +161,12 @@ if __name__ == "__main__":
         d.saveAsPickleFile(hdfs_dir+"pickle_api.data", 3)
         sc.parallelize([1, 2, 'spark', 'rdd']).saveAsPickleFile(hdfs_dir+"mpickle_api.data", 3)
     except:
-        print "not possible via pickle file too"
+        print "Count not write using pickle file too"
     try:
         d.saveAsPickleFile(hdfs_dir+"sequence_api.data")
         sc.parallelize([1, 2, 'spark', 'rdd']).saveAsPickleFile(hdfs_dir+"msequence_api.data")
     except:
-        print "not possible via sequenceFile also"   
+        print "Count not write using sequenceFile also"   
         
         
     # OPTIMIZATION 2 keyBy_groupby_h2_h1 is essentially d_key_h2_h1 so we use d_key_h2_h1 in place of keyBy_groupby_h2_h1
