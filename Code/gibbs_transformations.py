@@ -234,7 +234,7 @@ def get_Vbeta_j_mu_next(y, s):
     return h2, Vbeta_j_mu
 
 def get_m1_Vbeta_j_mu_pinv(obj):
-     as np
+     
     import nearPD as npd
     global df1_var
     seq = obj[0]
@@ -251,7 +251,7 @@ def get_m1_Vbeta_j_mu_pinv(obj):
 
 
 def pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, n1, coef_precision_prior_array):
-     as np
+     
     temp = gu.matrix_scalarmult_plr(Vbeta_inv_j_draw, n1) # (14 X 14)
     temp_add = gu.matrix_add_plr(temp, gu.matrix_diag_plr(coef_precision_prior_array))
     return np.linalg.pinv(temp_add)
@@ -418,7 +418,7 @@ def get_beta_i_mean_next(y, s):
     
 # depricated    
 def getX_var_array_y_array(y_0_list):
-     as np
+     
     #index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13
     #
     y_var_list = []
@@ -434,7 +434,7 @@ def getX_var_array_y_array(y_0_list):
     
 # depricated
 def get_sum_beta_i_draw_x(y):
-     as np
+     
     # where y is a tuple with value hierarchy_level2, hierarchy_level1, x_array_var_y_var, iteri, beta_i_draw, m1_d_count_grpby_level2_b
     #ssr = sum((y-madlib.array_dot(beta_i_draw, x))^2)
     beta_i_draw = y[4]
@@ -500,7 +500,7 @@ def get_beta_i_draw_long(x):
     return (s, rows)
     
 def compute_se_sa_i_avg_sa_i(y, raw_iters, burn_in):
-     as np
+     
     # s, h2, h1, beta_draw[i], x_array_i, h2_h1_driver
    
     beta_i_draw_array = []
@@ -512,7 +512,7 @@ def compute_se_sa_i_avg_sa_i(y, raw_iters, burn_in):
     return (se_sa_i, avg_sa_i)
     
 def compute_se_sc_i_avg_sc_i(y, raw_iters, burn_in):
-     as np
+     
     # s, h2, h1, beta_draw[i], x_array_i, h2_h1_driver
     
     beta_i_draw_array = []

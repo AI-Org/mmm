@@ -42,28 +42,6 @@ def Vbeta_i_mu(beta_i, beta_mu):
     #Vbeta_i_mu = np.dot(beta_i_diff, beta_i_diff.T)
     return Vbeta_i_mu
 
-## Same usage as mentioned by the function Vbeta_inv_draw
-## usage wishartrand(nu, phi)
-## where nu is degree of freedom
-## phi is the matrix
-## taken from
-## https://gist.github.com/jfrelinger/2638485
-# 
-#def wishartrand(nu, phi):
-#    dim = phi.shape[0]
-#    chol = cholesky(phi)
-#    #nu = nu+dim - 1
-#    #nu = nu + 1 - np.arange(1,dim+1)
-#    foo = np.zeros((dim,dim))
-#    
-#    for i in range(dim):
-#        for j in range(i+1):
-#            if i == j:
-#                foo[i,j] = np.sqrt(chi2.rvs(nu-(i+1)+1))
-#            else:
-#                foo[i,j]  = npr.normal(0,1)
-#    return np.dot(chol, np.dot(foo, np.dot(foo.T, chol.T)))
-# using the wishart.py class that should work for drawing random distributions.
 
 # Function to draw Vbeta_inv from Wishart dist'n, as shown in Equation (7.25) of Koop pp.156-157
 # rwish is random generation from the Wishart distribution from MCMCpack package
