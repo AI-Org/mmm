@@ -55,7 +55,10 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
     #m1_beta_i_draw.map(gtr.get_beta_i_draw_long).keyBy(lambda (x, h2, h1, beta_i_draw, driver_x_array, hierarchy_level2_hierarchy_level1_driver): x).saveAsNewAPIHadoopFile(hdfs_dir+ "m1_beta_i_draw_long_"+str(1)+".data", "org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat","org.apache.hadoop.io.IntWritable")
     # OPTIMIZATION by changing the retunr values of keyby as (s, rows)    
     #m1_beta_i_draw.map(gtr.get_beta_i_draw_long).keyBy(lambda (x, lst): x).saveAsNewAPIHadoopFile(hdfs_dir+ "m1_beta_i_draw_long_"+str(1)+".data", "org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat","org.apache.hadoop.io.IntWritable")
-    m1_beta_i_draw.map(gtr.get_beta_i_draw_long).saveAsPickleFile(hdfs_dir+ "m1_beta_i_draw_long_"+str(1)+".data")
+    try:    
+        m1_beta_i_draw.map(gtr.get_beta_i_draw_long).saveAsPickleFile(hdfs_dir+ "m1_beta_i_draw_long_"+str(1)+".data")
+    except:
+        print "OOps missed that"
     #keyBy(lambda (x, h2, h1, beta_i_draw, driver_x_array, hierarchy_level2_hierarchy_level1_driver): x).saveAsNewAPIHadoopFile(hdfs_dir+ "m1_beta_i_draw_long_"+str(1)+".data", "org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat","org.apache.hadoop.io.IntWritable")
     
     
@@ -87,11 +90,12 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         #print "count  m1_Vbeta_i_unified   ", m1_Vbeta_i_unified.count()
         #print "take 1 m1_Vbeta_i_unified ", m1_Vbeta_i_unified.take(1)
         ## OPTIMIZATION SAVED m1_Vbeta_i_keyby_h2_h1 = m1_Vbeta_i.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, Vbeta_i): (hierarchy_level2, hierarchy_level1))
-       
-        if s % 10 == 0 :            
-            m1_Vbeta_i_p.saveAsPickleFile(hdfs_dir+ "m1_Vbeta_i_"+str(s)+".data")
+        try:
+            if s % 10 == 0 :            
+                m1_Vbeta_i_p.saveAsPickleFile(hdfs_dir+ "m1_Vbeta_i_"+str(s)+".data")         
+        except:
             m1_Vbeta_i_p.unpersist()
-       
+            print "OOps missed that"
         ### Inserting into beta_i_mean
         print "Inserting into beta_i_mean"
         
@@ -116,10 +120,12 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         m1_beta_i_mean.unpersist()
         # m1_beta_i_mean is a RDD of (sequence, h2, h1, beta_i_mean, Vbeta_i)
         m1_beta_i_mean = m1_Vbeta_i.map(lambda (sequence, h2, h1, Vbeta_i, xty): (s, h2, h1, gu.beta_i_mean(Vbeta_i, m1_Vbeta_inv_Sigmabeta_j_draw_collection[h2][4], xty,  m1_beta_mu_j_draw_collection[h2][4], m1_beta_mu_j_draw_collection[h2][3]), Vbeta_i), preservesPartitioning = True).persist(storagelevel)
-        
-        if s % 10 == 0 :            
-            m1_Vbeta_i_p.saveAsPickleFile(hdfs_dir+ "m1_beta_i_mean_"+str(s)+".data")
-            m1_Vbeta_i_p.unpersist()
+        try:
+            if s % 10 == 0 :            
+                m1_beta_i_mean_p.saveAsPickleFile(hdfs_dir+ "m1_beta_i_mean_"+str(s)+".data")
+        except:
+            m1_beta_i_mean_p.unpersist()
+            print "OOps missed that"
         # the Unified table is the actual table that reflects all rows of m1_beta_i_draw in correct format.
         # strucutured as iter or s, h2, h1, beta_i_mean
         ## OPTIMIZING THE UNIONIZING of functions and removing it from iterations
@@ -146,11 +152,14 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
                 
         ## Creating vertical draws
         # OPTIMIZATION After Key FOR m1_beta_i_draw_long_next
-        ## lists of tuples : s, h2, h1, beta_i_draw[:,i][0], driver_x_array[i], hierarchy_level2_hierarchy_level1_driver 
-        if s % 10 == 0 :            
-            m1_beta_i_draw_p.map(gtr.get_beta_i_draw_long).keyBy(lambda (x, lst): x).saveAsPickleFile(hdfs_dir+ "m1_beta_i_draw_long_"+str(s)+".data")
+        ## lists of tuples : s, h2, h1, beta_i_draw[:,i][0], driver_x_array[i], hierarchy_level2_hierarchy_level1_driver
+        try:
+            if s % 10 == 0 :            
+                m1_beta_i_draw_p.map(gtr.get_beta_i_draw_long).keyBy(lambda (x, lst): x).saveAsPickleFile(hdfs_dir+ "m1_beta_i_draw_long_"+str(s)+".data")
+                
+        except:
             m1_beta_i_draw_p.unpersist()
-            
+            print "OOps missed that"    
     
         #print "m1_beta_i_draw take ", m1_beta_i_draw.take(1) 
         #print "m1_beta_i_draw count ", m1_beta_i_draw.count()        
@@ -180,10 +189,12 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         ## OPTIMIZATION no need for unions m1_Vbeta_j_mu = m1_Vbeta_j_mu.union(m1_Vbeta_j_mu_next)
         #print "count  m1_Vbeta_j_mu   ", m1_Vbeta_j_mu.count()
         #print "take 1 m1_Vbeta_j_mu, s ", m1_Vbeta_j_mu.collect(), "WITH S ", s
-        if s % 10 == 0 :            
-            m1_Vbeta_j_mu_p.saveAsPickleFile(hdfs_dir+ "m1_Vbeta_j_mu_"+str(s)+".data")
-            m1_Vbeta_j_mu_p.unpersist()        
-        
+        try:            
+            if s % 10 == 0 :            
+                m1_Vbeta_j_mu_p.saveAsPickleFile(hdfs_dir+ "m1_Vbeta_j_mu_"+str(s)+".data")
+        except:
+            m1_Vbeta_j_mu_p.unpersist()
+            print "OOps missed that" 
         
         ## inserting into m1_Vbeta_inv_Sigmabeta_j_draw
         print "inserting into m1_Vbeta_inv_Sigmabeta_j_draw"
@@ -214,9 +225,12 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
             
         m1_Vbeta_inv_Sigmabeta_j_draw.unpersist()
         m1_Vbeta_inv_Sigmabeta_j_draw = m1_Vbeta_j_mu_pinv.map(lambda (seq, hierarchy_level2, Vbeta_inv_j_draw): (s, hierarchy_level2, m1_d_childcount.value[hierarchy_level2][1], Vbeta_inv_j_draw, gtr.pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, m1_d_childcount.value(hierarchy_level2), coef_precision_prior_array)), preservesPartitioning = True).persist(storagelevel)
-        if s % 10 == 0 :            
-            m1_Vbeta_inv_Sigmabeta_j_draw_p.saveAsPickleFile(hdfs_dir+ "m1_Vbeta_inv_Sigmabeta_j_draw_"+str(s)+".data")
+        try:            
+            if s % 10 == 0 :            
+                m1_Vbeta_inv_Sigmabeta_j_draw_p.saveAsPickleFile(hdfs_dir+ "m1_Vbeta_inv_Sigmabeta_j_draw_"+str(s)+".data")
+        except:                
             m1_Vbeta_inv_Sigmabeta_j_draw_p.unpersist()
+            print "OOps missed that"
                
         
         #print "count  m1_Vbeta_inv_Sigmabeta_j_draw_next   ", m1_Vbeta_inv_Sigmabeta_j_draw.count()
@@ -257,10 +271,12 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         # h2 -> s, h2, beta_mu_j
         # Beta_mu_j keyed by h2
         # m1_beta_mu_j_keyBy_h2 = m1_beta_mu_j.keyBy(lambda (iter, hierarchy_level2, beta_mu_j): hierarchy_level2)
-        if s % 10 == 0 :            
-            m1_beta_mu_j_p.saveAsPickleFile(hdfs_dir+ "m1_beta_mu_j_"+str(s)+".data")
+        try:
+            if s % 10 == 0 :            
+                m1_beta_mu_j_p.saveAsPickleFile(hdfs_dir+ "m1_beta_mu_j_"+str(s)+".data")
+        except:
             m1_beta_mu_j_p.unpersist()
-        
+            print "OOps missed that"
         # inserting into m1_beta_mu_j_draw
         # -- Draw beta_mu from mvnorm dist'n.  Get back J vectors of beta_mu, one for each J.  Note that all input values are at iter=s.
         print "inserting into m1_beta_mu_j_draw"
@@ -285,9 +301,13 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         #OPTIMIZATION : NO NEED for unions m1_beta_mu_j_draw = m1_beta_mu_j_draw.union(m1_beta_mu_j_draw_next)
         # beta_mu_j_draw keyed by h2
         #m1_beta_mu_j_draw = m1_beta_mu_j_draw_next.keyBy(lambda (iter, hierarchy_level2, beta_mu_j_draw, Vbeta_inv_j_draw): hierarchy_level2)
-        if s % 10 == 0 :            
-            m1_beta_mu_j_draw_p.saveAsPickleFile(hdfs_dir+ "m1_beta_mu_j_draw_"+str(s)+".data")
+        try:
+            if s % 10 == 0 :            
+                m1_beta_mu_j_draw_p.saveAsPickleFile(hdfs_dir+ "m1_beta_mu_j_draw_"+str(s)+".data")
+        except:
             m1_beta_mu_j_draw_p.unpersist()
+            print "OOps missed that"
+            
             
         # Update values of s2
         ##-- Compute updated value of s2 to use in next section.
@@ -337,10 +357,14 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         ## so removing the persistence and creating new persistence
         # OPTIMIZATION : SAVED over unions , only next values used in iterations m1_h_draw = m1_h_draw.union(m1_h_draw_next)
         print "m1_h_draw : ", m1_h_draw.take(1)
-        if s % 10 == 0 :            
-            m1_h_draw_p.saveAsPickleFile(hdfs_dir+ "m1_h_draw_"+str(s)+".data")
-            m1_h_draw_p.unpersist()
-        
+        try:
+            if s % 10 == 0 :            
+                m1_h_draw_p.saveAsPickleFile(hdfs_dir+ "m1_h_draw_"+str(s)+".data")
+                
+        except:
+           m1_h_draw_p.unpersist() 
+           print "OOps missed that"
+           
         # Reassigning the collections values
         m1_Vbeta_inv_Sigmabeta_j_draw_h_draws = m1_Vbeta_inv_Sigmabeta_j_draw.keyBy(lambda (sequence, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): h2).join(m1_h_draw).map(lambda (h2, y): (y[0][0], h2, y[0][2], y[0][3], y[0][4], y[1][2]))
         

@@ -127,7 +127,7 @@ if __name__ == "__main__":
     #sourcefile = sys.argv[2] if len(sys.argv) > 2 else "hdfs://sandbox:9000/user/ssoni/data/d.csv"  
     #hdfs_dir = "hdfs:///user/ssoni/data/" 
     sourcefile = sys.argv[2] if len(sys.argv) > 2 else "hdfs://hdm1.gphd.local:8020/user/ssoni/data/d.csv"
-    hdfs_dir = "hdfs://hdm1.gphd.local:8020/user/ssoni/data/" 
+    hdfs_dir = "hdfs://hdm1.gphd.local:8020/user/ssoni/data/result" 
     h2_partitions = load_key_h2(sourcefile).groupByKey().keys().count()
     h1_h2_partitions = load_key_h1_h2(sourcefile).groupByKey().keys().count()
     # get all the keys by load_key_h1_h2(sourcefile).groupByKey().keys().sortByKey().collect()
@@ -146,27 +146,27 @@ if __name__ == "__main__":
     ## load all data as separate columns
     d = load(sourcefile) 
     
-    try:
-        d.saveAsHadoopFile(hdfs_dir+"old_api.data","org.apache.hadoop.mapred.SequenceFileOutputFormat", "org.apache.hadoop.io.IntWritable", "org.apache.hadoop.io.Text")
-    
-        sc.parallelize([1, 2, 'spark', 'rdd']).saveAsHadoopFile(hdfs_dir+"mold_api.data","org.apache.hadoop.mapred.SequenceFileOutputFormat", "org.apache.hadoop.io.IntWritable", "org.apache.hadoop.io.Text")
-    except:
-        print "Count not write using old API file"
-    try:
-        d.saveAsNewAPIHadoopFile(hdfs_dir+"new_api.data","org.apache.hadoop.mapred.SequenceFileOutputFormat", "org.apache.hadoop.io.IntWritable", "org.apache.hadoop.io.Text")
-        sc.parallelize([1, 2, 'spark', 'rdd']).saveAsNewAPIHadoopFile(hdfs_dir+"mnew_api.data","org.apache.hadoop.mapred.SequenceFileOutputFormat", "org.apache.hadoop.io.IntWritable", "org.apache.hadoop.io.Text")
-    except:
-        print "Count not write using new API file"
-    try:
-        d.saveAsPickleFile(hdfs_dir+"pickle_api.data", 3)
-        sc.parallelize([1, 2, 'spark', 'rdd']).saveAsPickleFile(hdfs_dir+"mpickle_api.data", 3)
-    except:
-        print "Count not write using pickle file too"
-    try:
-        d.saveAsPickleFile(hdfs_dir+"sequence_api.data")
-        sc.parallelize([1, 2, 'spark', 'rdd']).saveAsPickleFile(hdfs_dir+"msequence_api.data")
-    except:
-        print "Count not write using sequenceFile also"   
+    #try:
+    #    d.saveAsHadoopFile(hdfs_dir+"old_api.data","org.apache.hadoop.mapred.SequenceFileOutputFormat", "org.apache.hadoop.io.IntWritable", "org.apache.hadoop.io.Text")
+    #
+    #    sc.parallelize([1, 2, 'spark', 'rdd']).saveAsHadoopFile(hdfs_dir+"mold_api.data","org.apache.hadoop.mapred.SequenceFileOutputFormat", "org.apache.hadoop.io.IntWritable", "org.apache.hadoop.io.Text")
+    #except:
+    #    print "Count not write using old API file"
+    #try:
+    #    d.saveAsNewAPIHadoopFile(hdfs_dir+"new_api.data","org.apache.hadoop.mapred.SequenceFileOutputFormat", "org.apache.hadoop.io.IntWritable", "org.apache.hadoop.io.Text")
+    #    sc.parallelize([1, 2, 'spark', 'rdd']).saveAsNewAPIHadoopFile(hdfs_dir+"mnew_api.data","org.apache.hadoop.mapred.SequenceFileOutputFormat", "org.apache.hadoop.io.IntWritable", "org.apache.hadoop.io.Text")
+    #except:
+    #    print "Count not write using new API file"
+    #try:
+    #    d.saveAsPickleFile(hdfs_dir+"pickle_api.data", 3)
+    #    sc.parallelize([1, 2, 'spark', 'rdd']).saveAsPickleFile(hdfs_dir+"mpickle_api.data", 3)
+    #except:
+    #    print "Count not write using pickle file too"
+    #try:
+    #    d.saveAsPickleFile(hdfs_dir+"sequence_api.data")
+    #    sc.parallelize([1, 2, 'spark', 'rdd']).saveAsPickleFile(hdfs_dir+"msequence_api.data")
+    #except:
+    #    print "Count not write using sequenceFile also"   
         
         
     # OPTIMIZATION 2 keyBy_groupby_h2_h1 is essentially d_key_h2_h1 so we use d_key_h2_h1 in place of keyBy_groupby_h2_h1
