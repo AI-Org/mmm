@@ -19,16 +19,16 @@ coef_precision_prior_array_var = [1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 coef_means_prior_array_var = [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 sample_size_deflator = 1
     
-def create_x_matrix_y_array(recObj):
+def create_x_matrix_y_array(hierarchy_level1_h2_key, recIter):
     """
        Take an iterable of records, where the key corresponds to a certain age group
        Create a np matrix and return the shape of the matrix
        #recObj is of the form of [<all values tuples>]
     """
-    
-    recIter = recObj
-    h2_h1_key = recObj[0] # partitioned h1_h2 keys
-    recIter = recObj[1]
+    # after NOP both keys and tuples get passed to function
+    #recIter = recObj
+    #h2_h1_key = recObj[0] # partitioned h1_h2 keys
+    #recIter = recObj[1]
     mat = np.matrix([r for r in recIter])
     
     x_matrix = mat[:,4:17].astype(float)
@@ -39,7 +39,7 @@ def create_x_matrix_y_array(recObj):
     hierarchy_level2 = int(str(hierarchy_level2_array[1,0])[0]) % 5
     #hierarchy_level1_2_keys = mat[:,0] : same as keys
     #return (keys, x_matrix, y_array, hierarchy_level2[1,0], hierarchy_level1[1,0])
-    return (h2_h1_key, hierarchy_level2, x_matrix, y_array)
+    return (hierarchy_level1_h2_key, hierarchy_level2, x_matrix, y_array)
 
 def create_x_matrix_y_array_old(recObj):
     """

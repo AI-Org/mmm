@@ -104,7 +104,13 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         # pinv_Vbeta_i(xtx, Vbeta_inv_j_draw, h_draw)
         #s, hierarchy_level2, h2_h1_key, Vbeta_i, h_draw, xty, Vbeta_inv_j_draw  
         #m1_Vbeta_i = m1_d_array_agg_constants.keyBy(lambda (h2_h1_key, hierarchy_level2, xt_x, xt_y): hierarchy_level2).join(m1_Vbeta_inv_Sigmabeta_j_draw).map(lambda (hierarchy_level2, y) : (s, hierarchy_level2, y[0][0], gtr.pinv_Vbeta_i(y[0][2], y[1][2], y[1][4]), y[1][4], y[0][3], y[1][2])).persist()
-        m1_Vbeta_i = m1_d_array_agg_constants.map(lambda (h2_h1_key, hierarchy_level2, xt_x, xt_y): (s, hierarchy_level2, h2_h1_key, gtr.pinv_Vbeta_i(xt_x, m1_Vbeta_inv_Sigmabeta_j_draw_collection[hierarchy_level2][1], m1_Vbeta_inv_Sigmabeta_j_draw_collection[hierarchy_level2][4]), xt_y), preservesPartitioning = True).persist(storagelevel)    
+        ## NOP : Optimization over  m1_d_array_agg_constants   hierarchy_level1_h2_key  -> (h2_h1_key, hierarchy_level2, xt_x, xt_y  
+        m1_Vbeta_i = m1_d_array_agg_constants.map(lambda (hierarchy_level1_h2_key, y) : (hierarchy_level1_h2_key, (
+        m1_Vbeta_i = m1_d_array_agg_constants.map(lambda (hierarchy_level1_h2_key, y) : (hierarchy_level1_h2_key, (m1_Vbeta_inv_Sigmabeta_j_draw_collection[y[1]][2], y[0][1], hierarchy_level1_h2_key, gtr.pinv_Vbeta_i(y[2], m1_Vbeta_inv_Sigmabeta_j_draw_collection[y[1]][1], m1_Vbeta_inv_Sigmabeta_j_draw_collection[y[1]][4]), y[3])), preservesPartitioning = True).persist()    
+    
+                                                                                                                    (s, hierarchy_level2, h2_h1_key, gtr.pinv_Vbeta_i(xt_x, m1_Vbeta_inv_Sigmabeta_j_draw_collection[hierarchy_level2][1], m1_Vbeta_inv_Sigmabeta_j_draw_collection[hierarchy_level2][4]), xt_y), preservesPartitioning = True).persist(storagelevel)    
+                
+        #m1_Vbeta_i = m1_d_array_agg_constants.map(lambda (h2_h1_key, hierarchy_level2, xt_x, xt_y): (s, hierarchy_level2, h2_h1_key, gtr.pinv_Vbeta_i(xt_x, m1_Vbeta_inv_Sigmabeta_j_draw_collection[hierarchy_level2][1], m1_Vbeta_inv_Sigmabeta_j_draw_collection[hierarchy_level2][4]), xt_y), preservesPartitioning = True).persist(storagelevel)    
         #print "count  m1_Vbeta_i_unified   ", m1_Vbeta_i_unified.count()
         #print "take 1 m1_Vbeta_i_unified ", m1_Vbeta_i_unified.take(1)
         ## OPTIMIZATION SAVED m1_Vbeta_i_keyby_h2_h1 = m1_Vbeta_i.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, Vbeta_i): (hierarchy_level2, hierarchy_level1))
@@ -186,10 +192,12 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         ## lists of tuples : s, h2, h1, beta_i_draw[:,i][0], driver_x_array[i], hierarchy_level2_hierarchy_level1_driver
         try:
             if s % 10 == 0 :            
-                m1_beta_i_draw_p.map(gtr.get_beta_i_draw_long).keyBy(lambda (x, lst): x).saveAsPickleFile(hdfs_dir+ "m1_beta_i_draw_long_"+str(s)+".data")
+                #Mostly Failing so only saving as Text File
+                #m1_beta_i_draw_p.map(gtr.get_beta_i_draw_long).keyBy(lambda (x, lst): x).saveAsPickleFile(hdfs_dir+ "m1_beta_i_draw_long_"+str(s)+".data")
+                m1_beta_i_draw_p.map(gtr.get_beta_i_draw_long).keyBy(lambda (x, lst): x).saveAsTextFile(hdfs_dir+ "m1_beta_i_draw_long_tx_"+str(s)+".data")
                 m1_beta_i_draw_p.unpersist()    
         except:
-            
+            m1_beta_i_draw_p.map(gtr.get_beta_i_draw_long).keyBy(lambda (x, lst): x).saveAsTextFile(hdfs_dir+ "m1_beta_i_draw_long_tx_"+str(s)+".data")
             print "OOps missed that"    
         finally:
             try:
