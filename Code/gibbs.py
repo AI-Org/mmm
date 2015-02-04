@@ -224,7 +224,7 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
             m1_Vbeta_inv_Sigmabeta_j_draw_p.union(m1_Vbeta_inv_Sigmabeta_j_draw)
             
         m1_Vbeta_inv_Sigmabeta_j_draw.unpersist()
-        m1_Vbeta_inv_Sigmabeta_j_draw = m1_Vbeta_j_mu_pinv.map(lambda (seq, hierarchy_level2, Vbeta_inv_j_draw): (s, hierarchy_level2, m1_d_childcount.value[hierarchy_level2][1], Vbeta_inv_j_draw, gtr.pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, m1_d_childcount.value(hierarchy_level2), coef_precision_prior_array)), preservesPartitioning = True).persist(storagelevel)
+        m1_Vbeta_inv_Sigmabeta_j_draw = m1_Vbeta_j_mu_pinv.map(lambda (seq, hierarchy_level2, Vbeta_inv_j_draw): (s, hierarchy_level2, m1_d_childcount.value[hierarchy_level2][1], Vbeta_inv_j_draw, gtr.pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, m1_d_childcount.value[hierarchy_level2][1], coef_precision_prior_array)), preservesPartitioning = True).persist(storagelevel)
         try:            
             if s % 10 == 0 :            
                 m1_Vbeta_inv_Sigmabeta_j_draw_p.saveAsPickleFile(hdfs_dir+ "m1_Vbeta_inv_Sigmabeta_j_draw_"+str(s)+".data")
