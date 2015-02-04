@@ -12,6 +12,24 @@ def gibbs_iteration_text():
     text_output = 'Done: All requested Gibbs Sampler updates are complete.  All objects associated with this model are named with a m1 prefix.'   
     return text_output
 
+
+#TRY OUT
+#>>> try:
+#...     raise NameError()
+#... except:
+#...     print "ok"
+#... finally:
+#...     try:
+#...             raise NameError()
+#...     except:
+#...             print "still ok"
+#...     print "Done"
+#... 
+#ok
+#still ok
+#Done
+#>>> 
+
 def add(x,y):
     return (x+y)
 
@@ -92,10 +110,15 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         ## OPTIMIZATION SAVED m1_Vbeta_i_keyby_h2_h1 = m1_Vbeta_i.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, Vbeta_i): (hierarchy_level2, hierarchy_level1))
         try:
             if s % 10 == 0 :            
-                m1_Vbeta_i_p.saveAsPickleFile(hdfs_dir+ "m1_Vbeta_i_"+str(s)+".data")         
+                m1_Vbeta_i_p.saveAsPickleFile(hdfs_dir+ "m1_Vbeta_i_"+str(s)+".data")  
+                m1_Vbeta_i_p.unpersist()
         except:
-            m1_Vbeta_i_p.unpersist()
             print "OOps missed that"
+        finally:
+            try:
+                m1_Vbeta_i_p.unpersist()
+            except:
+                print "Exception while unpersisting m1_Vbeta_i_p"
         ### Inserting into beta_i_mean
         print "Inserting into beta_i_mean"
         
@@ -123,9 +146,15 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         try:
             if s % 10 == 0 :            
                 m1_beta_i_mean_p.saveAsPickleFile(hdfs_dir+ "m1_beta_i_mean_"+str(s)+".data")
+                m1_beta_i_mean_p.unpersist()
         except:
-            m1_beta_i_mean_p.unpersist()
+            
             print "OOps missed that"
+        finally:
+            try:
+                m1_beta_i_mean_p.unpersist()
+            except:
+                print "Exception while unpersisting m1_beta_i_mean_p"
         # the Unified table is the actual table that reflects all rows of m1_beta_i_draw in correct format.
         # strucutured as iter or s, h2, h1, beta_i_mean
         ## OPTIMIZING THE UNIONIZING of functions and removing it from iterations
@@ -156,11 +185,15 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         try:
             if s % 10 == 0 :            
                 m1_beta_i_draw_p.map(gtr.get_beta_i_draw_long).keyBy(lambda (x, lst): x).saveAsPickleFile(hdfs_dir+ "m1_beta_i_draw_long_"+str(s)+".data")
-                
+                m1_beta_i_draw_p.unpersist()    
         except:
-            m1_beta_i_draw_p.unpersist()
+            
             print "OOps missed that"    
-    
+        finally:
+            try:
+                m1_beta_i_draw_p.unpersist()  
+            except:
+                print "Exception while unpersisting m1_beta_i_draw_p"
         #print "m1_beta_i_draw take ", m1_beta_i_draw.take(1) 
         #print "m1_beta_i_draw count ", m1_beta_i_draw.count()        
         
@@ -192,9 +225,15 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         try:            
             if s % 10 == 0 :            
                 m1_Vbeta_j_mu_p.saveAsPickleFile(hdfs_dir+ "m1_Vbeta_j_mu_"+str(s)+".data")
+                m1_Vbeta_j_mu_p.unpersist()
         except:
-            m1_Vbeta_j_mu_p.unpersist()
-            print "OOps missed that" 
+            
+            print "OOps missed that"
+        finally:
+            try:
+                m1_Vbeta_j_mu_p.unpersist()  
+            except:
+                print "Exception while unpersisting m1_Vbeta_j_mu_p"
         
         ## inserting into m1_Vbeta_inv_Sigmabeta_j_draw
         print "inserting into m1_Vbeta_inv_Sigmabeta_j_draw"
@@ -228,10 +267,15 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         try:            
             if s % 10 == 0 :            
                 m1_Vbeta_inv_Sigmabeta_j_draw_p.saveAsPickleFile(hdfs_dir+ "m1_Vbeta_inv_Sigmabeta_j_draw_"+str(s)+".data")
+                m1_Vbeta_inv_Sigmabeta_j_draw_p.unpersist()
         except:                
-            m1_Vbeta_inv_Sigmabeta_j_draw_p.unpersist()
+            
             print "OOps missed that"
-               
+        finally:
+            try:
+                m1_Vbeta_inv_Sigmabeta_j_draw_p.unpersist()  
+            except:
+                print "Exception while unpersisting m1_Vbeta_inv_Sigmabeta_j_draw_p"       
         
         #print "count  m1_Vbeta_inv_Sigmabeta_j_draw_next   ", m1_Vbeta_inv_Sigmabeta_j_draw.count()
         #print "take 1 m1_Vbeta_inv_Sigmabeta_j_draw_next ", m1_Vbeta_inv_Sigmabeta_j_draw.take(1)
@@ -274,9 +318,15 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         try:
             if s % 10 == 0 :            
                 m1_beta_mu_j_p.saveAsPickleFile(hdfs_dir+ "m1_beta_mu_j_"+str(s)+".data")
+                m1_beta_mu_j_p.unpersist()
         except:
-            m1_beta_mu_j_p.unpersist()
+            
             print "OOps missed that"
+        finally:
+            try:
+                m1_beta_mu_j_p.unpersist()  
+            except:
+                print "Exception while unpersisting m1_beta_mu_j_p" 
         # inserting into m1_beta_mu_j_draw
         # -- Draw beta_mu from mvnorm dist'n.  Get back J vectors of beta_mu, one for each J.  Note that all input values are at iter=s.
         print "inserting into m1_beta_mu_j_draw"
@@ -304,10 +354,15 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         try:
             if s % 10 == 0 :            
                 m1_beta_mu_j_draw_p.saveAsPickleFile(hdfs_dir+ "m1_beta_mu_j_draw_"+str(s)+".data")
+                m1_beta_mu_j_draw_p.unpersist()
         except:
-            m1_beta_mu_j_draw_p.unpersist()
-            print "OOps missed that"
             
+            print "OOps missed that"
+        finally:
+            try:
+                m1_beta_mu_j_draw_p.unpersist()  
+            except:
+                print "Exception while unpersisting m1_beta_mu_j_draw_p"    
             
         # Update values of s2
         ##-- Compute updated value of s2 to use in next section.
@@ -360,11 +415,15 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         try:
             if s % 10 == 0 :            
                 m1_h_draw_p.saveAsPickleFile(hdfs_dir+ "m1_h_draw_"+str(s)+".data")
-                
+                m1_h_draw_p.unpersist()
         except:
-           m1_h_draw_p.unpersist() 
+            
            print "OOps missed that"
-           
+        finally:
+            try:
+                m1_h_draw_p.unpersist()  
+            except:
+                print "Exception while unpersisting m1_h_draw_p"    
         # Reassigning the collections values
         m1_Vbeta_inv_Sigmabeta_j_draw_h_draws = m1_Vbeta_inv_Sigmabeta_j_draw.keyBy(lambda (sequence, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): h2).join(m1_h_draw).map(lambda (h2, y): (y[0][0], h2, y[0][2], y[0][3], y[0][4], y[1][2]))
         
