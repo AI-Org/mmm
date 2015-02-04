@@ -221,7 +221,7 @@ def get_Vbeta_j_mu_next(y, s):
     # OPTI and RI2 is a single tuple iter, hierarchy_level2, beta_mu_j_draw
     # y is tuple of as I put a map on cogroup  y : h2, <all of beta_i_draw>, beta_mu_j_draw
     beta_mu_j_draw = list(y)[0][2]
-    h2 = list(y)[0][0]
+    #h2 = list(y)[0][0]
     Vbeta_i_mu_ar = []
     for rec in list(y)[0][1]:
         # rec : s, h2, h1, beta_i_draw
@@ -231,14 +231,14 @@ def get_Vbeta_j_mu_next(y, s):
             beta_i_draw = rec[3]
         Vbeta_i_mu_ar.append(gu.Vbeta_i_mu(beta_i_draw, beta_mu_j_draw))
     Vbeta_j_mu = gu.matrix_add_diag_plr(sum(Vbeta_i_mu_ar) ,p_var) 
-    return h2, Vbeta_j_mu
+    return Vbeta_j_mu
 
 def get_m1_Vbeta_j_mu_pinv(obj):
      
     import nearPD as npd
     global df1_var
-    seq = obj[0]
-    hierarchy_level2 = obj[1][0]
+    hierarchy_level2 = obj[0]
+    seq = obj[1][0]
     Vbeta_j_mu = obj[1][1]
     # Vbeta_inv_draw(nu, phi) where nu is df1_var & for phi matrix we have a
     a = gu.matrix_scalarmult_plr(Vbeta_j_mu, df1_var)
@@ -290,17 +290,19 @@ def get_m1_Vbeta_inv_Sigmabeta_j_draw_next(y):
 
 def get_substructure_beta_mu_j(obj):
     global coef_precision_prior_array_var, coef_means_prior_array_var
-    # (k, (W1, W2)) 
+    # (k, (W1, W2)) scrapped , so its only (W1, W2) now
     #  k = hierarchy_level2
     # where W1 is a ResultIterable having iter, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j
     # and W2 is another ResultIterable having sum_coef_j
-    for r in obj[1][0]:
+    #for r in obj[1][0]:
+    for r in obj[0]:
         #for j in r:
         iteri = r[0]
         hierarchy_level2 = r[1]
         Vbeta_inv_j_draw = r[3]
         Sigmabeta_j = r[4]
-    for r in obj[1][1]:
+    #for r in obj[1][1]:
+    for r in obj[1]:
         sum_coef_j = r[0]
     # beta_mu_j is 14 X 1
     beta_mu_j = gu.beta_mu_prior(Sigmabeta_j, Vbeta_inv_j_draw, sum_coef_j, coef_means_prior_array_var, coef_precision_prior_array_var)

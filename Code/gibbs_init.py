@@ -144,7 +144,8 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     ## Data Structure m1_Vbeta_j_mu is symmetric along diagonal and have same dimensions as the one in HAWQ tables.
     # print "coefficients i and j", joined_i_j_rdd.take(1)
     # m1_Vbeta_j_mu a matrix with dimensions 14 X 14.
-    m1_Vbeta_j_mu = joined_i_j_rdd.map(lambda (x, y): (1, gtr.get_Vbeta_j_mu_next(y, 1)), preservesPartitioning = True).persist() 
+    # h2, (1, Vbeta_j_mu)
+    m1_Vbeta_j_mu = joined_i_j_rdd.map(lambda (x, y): (x, (1, gtr.get_Vbeta_j_mu_next(y, 1)))).partitionBy(5).persist() 
     # print " m1_Vbeta_j_mu count ", m1_Vbeta_j_mu.count() 
     print " m1_Vbeta_j_mu take 1", m1_Vbeta_j_mu.take(1) # 1, (h2, vbeta_j_mu)
     
@@ -183,7 +184,9 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     # Here we have iteri, hierarchy_level2, beta_mu_j, Vbeta_inv_j_draw, Sigmabeta_j)
     # Vbeta_inv_j_draw : 14 X 14
     # Sigmabeta_j : 14 X 14
-    m1_beta_mu_j = joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j.map(gtr.get_substructure_beta_mu_j, preservesPartitioning = True).persist()
+    #NPO as in gibbs iterations
+    m1_beta_mu_j = joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j.map(lambda (x, y): (x, gtr.get_substructure_beta_mu_j(y))).partitionBy(5).persist(storagelevel)
+    #m1_beta_mu_j = joined_m1_Vbeta_inv_Sigmabeta_j_draw_rdd_key_h2_m1_ols_beta_i_sum_coef_j.map(gtr.get_substructure_beta_mu_j, preservesPartitioning = True).persist()
     # hierarchy_level2=> (iter, hierarchy_level2, beta_mu_j)
     #>>>  computing keybys on the fly and not with persistence m1_beta_mu_j_keyBy_h2 = m1_beta_mu_j.keyBy(lambda (iter, hierarchy_level2, beta_mu_j): hierarchy_level2)
     #print "counts of m1_beta_mu_j ", m1_beta_mu_j.count() # number is 5 on both sides
@@ -199,7 +202,10 @@ def gibbs_initializer(sc, d, h1_h2_partitions,h2_partitions, hierarchy_level1, h
     ## OPTIMIZATION for computing m1_beta_i_mean : including Vbeta_inv_j_draw with m1_beta_mu_j_draw for further computations
     ##m1_beta_mu_j_draw = m1_beta_mu_j.map(gtr.get_beta_draw, preservesPartitioning = True).persist()
     # m1_beta_mu_j_draw is array of 14 elements
-    m1_beta_mu_j_draw = m1_beta_mu_j.map(lambda (seq, hierarchy_level2, beta_mu_j, Vbeta_inv_j_draw, Sigmabeta_j): (seq, hierarchy_level2, gu.beta_draw(beta_mu_j, Sigmabeta_j), Vbeta_inv_j_draw), preservesPartitioning = True)
+    #### NOP h2 -> (values) where values or y : seq, hierarchy_level2, beta_mu_j, Vbeta_inv_j_draw, Sigmabeta_j
+    m1_beta_mu_j_draw = m1_beta_mu_j.map(lambda (hierarchy_level2, y): (s, hierarchy_level2, gu.beta_draw(y[2], y[4]), y[3]), preservesPartitioning = True).persist()
+        
+    #m1_beta_mu_j_draw = m1_beta_mu_j.map(lambda (seq, hierarchy_level2, beta_mu_j, Vbeta_inv_j_draw, Sigmabeta_j): (seq, hierarchy_level2, gu.beta_draw(beta_mu_j, Sigmabeta_j), Vbeta_inv_j_draw), preservesPartitioning = True)
     #>> m1_beta_mu_j_draw_keyBy_h2 = m1_beta_mu_j_draw.keyBy(lambda (iter, hierarchy_level2, beta_mu_j_draw, Vbeta_inv_j_draw): hierarchy_level2)
     # count of 5    
     #print "count m1_beta_mu_j_draw", m1_beta_mu_j_draw.count()
