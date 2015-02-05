@@ -19,16 +19,16 @@ coef_precision_prior_array_var = [1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 coef_means_prior_array_var = [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 sample_size_deflator = 1
     
-def create_x_matrix_y_array(hierarchy_level1_h2_key, recIter):
+def create_x_matrix_y_array(recObj):
     """
        Take an iterable of records, where the key corresponds to a certain age group
        Create a np matrix and return the shape of the matrix
        #recObj is of the form of [<all values tuples>]
     """
-    # after NOP both keys and tuples get passed to function
-    #recIter = recObj
-    #h2_h1_key = recObj[0] # partitioned h1_h2 keys
-    #recIter = recObj[1]
+    
+    recIter = recObj
+    h2_h1_key = recObj[0] # partitioned h1_h2 keys
+    recIter = recObj[1]
     mat = np.matrix([r for r in recIter])
     
     x_matrix = mat[:,4:17].astype(float)
@@ -39,7 +39,7 @@ def create_x_matrix_y_array(hierarchy_level1_h2_key, recIter):
     hierarchy_level2 = int(str(hierarchy_level2_array[1,0])[0]) % 5
     #hierarchy_level1_2_keys = mat[:,0] : same as keys
     #return (keys, x_matrix, y_array, hierarchy_level2[1,0], hierarchy_level1[1,0])
-    return (hierarchy_level1_h2_key, hierarchy_level2, x_matrix, y_array)
+    return (h2_h1_key, hierarchy_level2, x_matrix, y_array)
 
 def create_x_matrix_y_array_old(recObj):
     """
@@ -486,10 +486,8 @@ def get_h_draw(x):
 # returns extended beta_draw values pertaining to each driver combination of h2, h1 and 
 # dependable variable, returned structure is to be used in summary functions
 # iter, h2, h1, beta_Draw, x_array_driver, hierarchy_level2_hierarchy_level1_driver  
-def get_beta_i_draw_long(obj):
+def get_beta_i_draw_long(x):
     # x : s, h2, h1, beta_draw 
-    # NOP x is hierarchy_level1_h2_key -> s, h2, h1_h2_key, beta_draw
-    x = obj[1]
     rows = []
     s = x[0]
     h2 = x[1]
