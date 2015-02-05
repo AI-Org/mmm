@@ -17,7 +17,9 @@ def m1_summary_geweke_conv_diag_detailed(sc, hdfs_dir, hierarchy_level1, hierarc
         -- Compute CD and store in a table.  CD is assumed to follow a Standard Normal Distribution.
     """
     # structured as (h2, h1, driver) -> (s, h2, h1, beta_draw[i], x_array[i], h2_h1_driver)
-    m1_beta_i_draw_long = sc.pickleFile(hdfs_dir+ "m1_beta_i_draw_long*.data")
+    m1_beta_i_draw_long = sc.textFile(hdfs_dir+ "m1_beta_i_draw_long*.data")
+    # load it as a text file
+    #m1_beta_i_draw_long = sc.pickleFile(hdfs_dir+ "m1_beta_i_draw_long*.data")
     # 1, [(1, 4, 128, 17126325.852874778, '1', '4-:-128-:-1'), (1, 4, 128, 71313545.095800832, 'x1', '4-:-128-:-x1')]
     m1_beta_i_draw_long_keyBy_h2_h1_driver_first_10_percent = m1_beta_i_draw_long.filter(lambda (s, rows):(s < 0.1 * (raw_iters - burn_in))).values().keyBy(lambda (s, h2, h1, beta_i_draw, driver, h2_h1_driver): (h2, h1, driver))
     #.keyBy(lambda (s, h2, h1, beta_i_draw, driver, h2_h1_driver): (h2, h1, driver)) - no need as its already grouped by h1 h2
