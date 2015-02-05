@@ -256,7 +256,7 @@ def gibbs_initializer(sc, d, h1_h2_partitions, h2_partitions, hierarchy_level1, 
     ##NOP: m1_d_array_agg_constants is h1_h2_key -> hierarchy_level1, hierarchy_level2, xtx, xty
     ## now m1_Vbet_i will be hierarchy_level1_h2_key -> sequence, h2, h1, Vbeta_i, xty
     ## NOP : array_agg_contants :h1_h2_key ->  h2_h1_key, hierarchy_level2, xt_x, xt_y
-    m1_Vbeta_i = m1_d_array_agg_constants.map(lambda (hierarchy_level1_h2_key, y) : (hierarchy_level1_h2_key, (m1_Vbeta_inv_Sigmabeta_j_draw_collection[y[1]][2], y[1], hierarchy_level1_h2_key, gtr.pinv_Vbeta_i(y[2], m1_Vbeta_inv_Sigmabeta_j_draw_collection[y[1]][1], 1), y[3])), preservesPartitioning = True).persist()    
+    m1_Vbeta_i = m1_d_array_agg_constants.map(lambda (hierarchy_level1_h2_key, y) : (hierarchy_level1_h2_key, (1, y[1], hierarchy_level1_h2_key, gtr.pinv_Vbeta_i(y[2], m1_Vbeta_inv_Sigmabeta_j_draw_collection[y[1]][1], 1), y[3])), preservesPartitioning = True).persist()    
     
     #m1_Vbeta_i = m1_d_array_agg_constants.map(lambda (hierarchy_level1, hierarchy_level2, xtx, xty): (m1_Vbeta_inv_Sigmabeta_j_draw_collection[hierarchy_level2][2], hierarchy_level2, hierarchy_level1, gtr.pinv_Vbeta_i(xtx, m1_Vbeta_inv_Sigmabeta_j_draw_collection[hierarchy_level2][1], 1), xty), preservesPartitioning = True).persist()    
     #print "count m1_Vbeta_i", m1_Vbeta_i.count() # 135 or 150 if the data is extended version

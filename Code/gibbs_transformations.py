@@ -486,8 +486,10 @@ def get_h_draw(x):
 # returns extended beta_draw values pertaining to each driver combination of h2, h1 and 
 # dependable variable, returned structure is to be used in summary functions
 # iter, h2, h1, beta_Draw, x_array_driver, hierarchy_level2_hierarchy_level1_driver  
-def get_beta_i_draw_long(x):
+def get_beta_i_draw_long(obj):
     # x : s, h2, h1, beta_draw 
+    # NOP x is hierarchy_level1_h2_key -> s, h2, h1_h2_key, beta_draw
+    x = obj[1]
     rows = []
     s = x[0]
     h2 = x[1]

@@ -13,23 +13,6 @@ def gibbs_iteration_text():
     return text_output
 
 
-#TRY OUT
-#>>> try:
-#...     raise NameError()
-#... except:
-#...     print "ok"
-#... finally:
-#...     try:
-#...             raise NameError()
-#...     except:
-#...             print "still ok"
-#...     print "Done"
-#... 
-#ok
-#still ok
-#Done
-#>>> 
-
 def add(x,y):
     return (x+y)
 
@@ -104,12 +87,10 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         # pinv_Vbeta_i(xtx, Vbeta_inv_j_draw, h_draw)
         #s, hierarchy_level2, h2_h1_key, Vbeta_i, h_draw, xty, Vbeta_inv_j_draw  
         #m1_Vbeta_i = m1_d_array_agg_constants.keyBy(lambda (h2_h1_key, hierarchy_level2, xt_x, xt_y): hierarchy_level2).join(m1_Vbeta_inv_Sigmabeta_j_draw).map(lambda (hierarchy_level2, y) : (s, hierarchy_level2, y[0][0], gtr.pinv_Vbeta_i(y[0][2], y[1][2], y[1][4]), y[1][4], y[0][3], y[1][2])).persist()
-        ## NOP : Optimization over  m1_d_array_agg_constants   hierarchy_level1_h2_key  -> (h2_h1_key, hierarchy_level2, xt_x, xt_y  
-        m1_Vbeta_i = m1_d_array_agg_constants.map(lambda (hierarchy_level1_h2_key, y) : (hierarchy_level1_h2_key, (
-        m1_Vbeta_i = m1_d_array_agg_constants.map(lambda (hierarchy_level1_h2_key, y) : (hierarchy_level1_h2_key, (m1_Vbeta_inv_Sigmabeta_j_draw_collection[y[1]][2], y[0][1], hierarchy_level1_h2_key, gtr.pinv_Vbeta_i(y[2], m1_Vbeta_inv_Sigmabeta_j_draw_collection[y[1]][1], m1_Vbeta_inv_Sigmabeta_j_draw_collection[y[1]][4]), y[3])), preservesPartitioning = True).persist()    
-    
-                                                                                                                    (s, hierarchy_level2, h2_h1_key, gtr.pinv_Vbeta_i(xt_x, m1_Vbeta_inv_Sigmabeta_j_draw_collection[hierarchy_level2][1], m1_Vbeta_inv_Sigmabeta_j_draw_collection[hierarchy_level2][4]), xt_y), preservesPartitioning = True).persist(storagelevel)    
-                
+        ## NOP : Optimization over  m1_d_array_agg_constants   hierarchy_level1_h2_key  -> (h2_h1_key, hierarchy_level2, xt_x, xt_y)  
+        ## m1_Vbeta_i = h1_2 -> s, h2, h1_h2, Vbeta_i, xt_y
+        m1_Vbeta_i = m1_d_array_agg_constants.map(lambda (hierarchy_level1_h2_key, y) : (hierarchy_level1_h2_key, (s , y[1], hierarchy_level1_h2_key, gtr.pinv_Vbeta_i(y[2], m1_Vbeta_inv_Sigmabeta_j_draw_collection[y[1]][1], m1_Vbeta_inv_Sigmabeta_j_draw_collection[y[1]][4]), y[3])), preservesPartitioning = True).persist()
+        # from init m1_Vbeta_i = m1_d_array_agg_constants.map(lambda (hierarchy_level1_h2_key, y) : (hierarchy_level1_h2_key, (m1_Vbeta_inv_Sigmabeta_j_draw_collection[y[1]][2], y[0][1], hierarchy_level1_h2_key, gtr.pinv_Vbeta_i(y[2], m1_Vbeta_inv_Sigmabeta_j_draw_collection[y[1]][1], m1_Vbeta_inv_Sigmabeta_j_draw_collection[y[1]][4]), y[3])), preservesPartitioning = True).persist()                                                                                                                
         #m1_Vbeta_i = m1_d_array_agg_constants.map(lambda (h2_h1_key, hierarchy_level2, xt_x, xt_y): (s, hierarchy_level2, h2_h1_key, gtr.pinv_Vbeta_i(xt_x, m1_Vbeta_inv_Sigmabeta_j_draw_collection[hierarchy_level2][1], m1_Vbeta_inv_Sigmabeta_j_draw_collection[hierarchy_level2][4]), xt_y), preservesPartitioning = True).persist(storagelevel)    
         #print "count  m1_Vbeta_i_unified   ", m1_Vbeta_i_unified.count()
         #print "take 1 m1_Vbeta_i_unified ", m1_Vbeta_i_unified.take(1)
@@ -133,7 +114,8 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         ##OPTIMIZATION over JOINED #>> above
         ##  (h2, Vbeta_inv_j_draw, sequence, no_n1 Sigmabeta_j, h_draw) is already collected in previous coefficient(m1_Vbeta_i) computation 
         ## we only need beta_mu_j_draw so collecting it over.
-        m1_beta_mu_j_draw_collection = m1_beta_mu_j_draw.map(lambda (sequence, hierarchy_level2, beta_mu_j_draw, Vbeta_inv_j_draw): (hierarchy_level2, sequence, hierarchy_level2, beta_mu_j_draw, Vbeta_inv_j_draw)).collect()
+        ##  s-1, hierarchy_level2, beta_mu_j_draw, Vbeta_inv_j_draw
+        m1_beta_mu_j_draw_collection = m1_beta_mu_j_draw.map(lambda (sequence_pre, hierarchy_level2, beta_mu_j_draw, Vbeta_inv_j_draw): (hierarchy_level2, sequence_pre, hierarchy_level2, beta_mu_j_draw, Vbeta_inv_j_draw)).collect()
         #m1_beta_mu_j_draw_collection = sorted(map(lambda (sequence, h2, beta_mu_j_draw, Vbeta_inv_j_draw): (int(str(hierarchy_level2)[0]), sequence, h2, beta_mu_j_draw.all(), Vbeta_inv_j_draw.all()), m1_beta_mu_j_draw_collection))
         # takes 7 + secs to finish.
         m1_beta_mu_j_draw_collection = sorted(m1_beta_mu_j_draw_collection)
@@ -149,8 +131,12 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         ###>>>m1_beta_i_mean_keyBy_h2_long_next = JOINED_part_1_by_keyBy_h2.cogroup(JOINED_part_2_by_keyBy_h2).map(lambda (x,y): (x, gtr.get_beta_i_mean_next(y, s)))
         # m1_Vbeta_inv_Sigmabeta_j_draw_collection  is key by (int(str(hierarchy_level2)[0]), Vbeta_inv_j_draw, sequence, n1,  Sigmabeta_j, h_draw)
         m1_beta_i_mean.unpersist()
+        # m1_Vbeta_i is RDD of m1_Vbeta_i = h1_2 -> s, h2, h1_h2, Vbeta_i, xty
         # m1_beta_i_mean is a RDD of (sequence, h2, h1, beta_i_mean, Vbeta_i)
-        m1_beta_i_mean = m1_Vbeta_i.map(lambda (sequence, h2, h1, Vbeta_i, xty): (s, h2, h1, gu.beta_i_mean(Vbeta_i, m1_Vbeta_inv_Sigmabeta_j_draw_collection[h2][4], xty,  m1_beta_mu_j_draw_collection[h2][4], m1_beta_mu_j_draw_collection[h2][3]), Vbeta_i), preservesPartitioning = True).persist(storagelevel)
+        m1_beta_i_mean = m1_Vbeta_i.map(lambda (hierarchy_level1_h2_key, y) : (hierarchy_level1_h2_key, (s, y[1], hierarchy_level1_h2_key, gu.beta_i_mean(y[3], m1_Vbeta_inv_Sigmabeta_j_draw_collection[y[1]][4], y[4], m1_beta_mu_j_draw_collection[y[1]][4], m1_beta_mu_j_draw_collection[y[1]][3]), y[3])), preservesPartitioning = True).persist(storagelevel)
+            
+        #(s, h2, h1, gu.beta_i_mean(Vbeta_i, m1_Vbeta_inv_Sigmabeta_j_draw_collection[h2][4], xty,  m1_beta_mu_j_draw_collection[h2][4], m1_beta_mu_j_draw_collection[h2][3]), Vbeta_i), preservesPartitioning = True).persist(storagelevel)
+            
         #try:
         #    if s % 10 == 0 :            
         #        m1_beta_i_mean_p.saveAsPickleFile(hdfs_dir+ "m1_beta_i_mean_"+str(s)+".data")
@@ -184,8 +170,13 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         
         ## USING THE OPTIMIZATION OF PREVIOUS init functions where only m1_beta_i_mean_by_current_iteration was used. 
         ##>>m1_beta_i_draw = m1_beta_i_mean_by_current_iteration.cogroup(m1_Vbeta_i_keyby_h2_h1_current_iteration).map(lambda (x,y): (s, x[0], x[1], gu.beta_draw(list(y[0])[0][3], list(y[1])[0][3])), preservesPartitioning = True).persist(storagelevel)
-        m1_beta_i_draw.unpersist()        
-        m1_beta_i_draw = m1_beta_i_mean.map(lambda (sequence, h2, h1, beta_i_mean, Vbeta_i): (s, h2, h1, gu.beta_draw(beta_i_mean, Vbeta_i)), preservesPartitioning = True).persist(storagelevel)
+        ## : NOP : m1_beta_i_draw = m1_beta_i_mean.map(lambda (hierarchy_level1_h2_key, y): (hierarchy_level1_h2_key, (1, y[1], hierarchy_level1_h2_key, gu.beta_draw(y[3], y[4]))), preservesPartitioning = True).persist()
+            
+        m1_beta_i_draw.unpersist() 
+        ## m1_beta_i_mean is a RDD of (sequence, h2, h1, beta_i_mean, Vbeta_i)
+        #m1_beta_i_draw is RDD of hierarchy_level1_h2_key -> s, h2, h1_h2_key, beta_draw
+        m1_beta_i_draw = m1_beta_i_mean.map(lambda (hierarchy_level1_h2_key, y): (hierarchy_level1_h2_key, (s, y[1], hierarchy_level1_h2_key, gu.beta_draw(y[3], y[4]))), preservesPartitioning = True).persist(storagelevel)
+        #m1_beta_i_draw = m1_beta_i_mean.map(lambda (sequence, h2, h1, beta_i_mean, Vbeta_i): (s, h2, h1, gu.beta_draw(beta_i_mean, Vbeta_i)), preservesPartitioning = True).persist(storagelevel)
                 
         ## Creating vertical draws
         # OPTIMIZATION After Key FOR m1_beta_i_draw_long_next
@@ -195,7 +186,6 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
                 #Mostly Failing so only saving as Text File
                 #m1_beta_i_draw_p.map(gtr.get_beta_i_draw_long).keyBy(lambda (x, lst): x).saveAsPickleFile(hdfs_dir+ "m1_beta_i_draw_long_"+str(s)+".data")
                 m1_beta_i_draw_p.map(gtr.get_beta_i_draw_long).keyBy(lambda (x, lst): x).saveAsTextFile(hdfs_dir+ "m1_beta_i_draw_long_tx_"+str(s)+".data")
-                m1_beta_i_draw_p.unpersist()    
         except:
             m1_beta_i_draw_p.map(gtr.get_beta_i_draw_long).keyBy(lambda (x, lst): x).saveAsTextFile(hdfs_dir+ "m1_beta_i_draw_long_tx_"+str(s)+".data")
             print "OOps missed that"    
@@ -212,13 +202,16 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         # using using the most "recent" values of the beta_i_draw coefficients
         # The values of beta_mu_j_draw and Vbeta_j_mu have not yet been updated at this stage, so their values at iter=s-1 are taken.
         # S1 : h2, h1, beta_i_draw  from m1_beta_i_draw where iteri == s ==> m1_beta_i_draw_next => key it by h2
-        m1_beta_i_draw_key_by_h2 = m1_beta_i_draw.keyBy(lambda (s, h2, h1, beta_i_draw): h2)
+        ## OVERKILL but lets see if it gets things faster
+        ## map and not a keyby here
+        m1_beta_i_draw_key_by_h2 = m1_beta_i_draw.map(lambda (hierarchy_level1_h2_key, y): (y[1], y)).coalesce(5, shuffle = False)
+        #m1_beta_i_draw_key_by_h2 = m1_beta_i_draw.keyBy(lambda (s, h2, h1, beta_i_draw): h2)
         # S2 : h2, beta_mu_j_draw from m1_beta_mu_j_draw where iter= s-1 and also key it by h2
         # m1_beta_mu_j_draw_by_previous_iteration = hierarchy_level2 -> (s-1, hierarchy_level2, beta_mu_j_draw)
         #m1_beta_mu_j_draw has tuples : iteri, key, gu.beta_draw(beta_mu_j, Sigmabeta_j), Vbeta_inv_j_draw)
         m1_beta_mu_j_draw = m1_beta_mu_j_draw.keyBy(lambda (s_previous, hierarchy_level2, beta_mu_j_draw, Vbeta_inv_j_draw): hierarchy_level2)
         #JOINED_m1_beta_i_draw_next_key_by_h2_WITH_m1_beta_mu_j_draw_by_previous_iteration = m1_beta_i_draw_key_by_h2.cogroup(m1_beta_mu_j_draw).map(lambda (x,y): (x, list(y[0]), list(y[1])[0][2])).groupBy(lambda x : gp.partitionByh2(x), h2_partitions)
-        JOINED_m1_beta_i_draw_next_key_by_h2_WITH_m1_beta_mu_j_draw_by_previous_iteration = m1_beta_i_draw_key_by_h2.cogroup(m1_beta_mu_j_draw).map(lambda (x,y): (x, list(y[0]), list(y[1])[0][2])).keyBy(lambda (h2, l1, l2) : h2).groupByKey()
+        JOINED_m1_beta_i_draw_next_key_by_h2_WITH_m1_beta_mu_j_draw_by_previous_iteration = m1_beta_i_draw_key_by_h2.cogroup(m1_beta_mu_j_draw).map(lambda (h2 ,y): (h2, list(y[0]), list(y[1])[0][2])).keyBy(lambda (h2, l1, l2) : h2).groupByKey()
         ## OPTIMIZATION onf JOINED to get it grouped by the GroupedBy clause to build upon further iterations on top of it, which have the same partitioning
         ## .map(lambda (x,y): (x, list(y[0]), list(y[1])[0][1])).groupBy(lambda x : gp.partitionByh2(x[0]), h2_partitions).persist(storagelevel)
         #if s == 2 or s % 11 == 0:
@@ -386,22 +379,30 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         # Update values of s2
         ##-- Compute updated value of s2 to use in next section.
         print "Updating values of s2"
-        m1_beta_i_draw_group_by_h2_h1 = m1_beta_i_draw.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, beta_i_draw): (hierarchy_level2, hierarchy_level1))
+        #NOP m1_beta_i_draw_group_by_h2_h1 is already keyed by h1_h2_key
+        #m1_beta_i_draw_group_by_h2_h1 = m1_beta_i_draw.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, beta_i_draw): (hierarchy_level2, hierarchy_level1))
         # The structure m1_beta_i_draw_next doesnt change during iterations. 
         # m1_beta_i_draw_next is already computed in Gibbs_init via : m1_d_array_agg_key_by_h2_h1 = m1_d_array_agg.keyBy(lambda (keys, x_matrix, y_array, hierarchy_level2, hierarchy_level1) : (keys[0], keys[1]))
-        JOINED_m1_beta_i_draw_WITH_m1_d_array_agg = m1_d_array_agg_key_by_h2_h1.cogroup(m1_beta_i_draw_group_by_h2_h1)
+        ## NOP  m1_d_array_agg_key_by_h2_h1 is already groupped by h1_h2 key so no need for key again       
+        #JOINED_m1_beta_i_draw_WITH_m1_d_array_agg = m1_d_array_agg_key_by_h2_h1.cogroup(m1_beta_i_draw_group_by_h2_h1)
+        JOINED_m1_beta_i_draw_WITH_m1_d_array_agg = m1_d_array_agg.join(m1_beta_i_draw)
         #print "JOINED_m1_beta_i_draw_WITH_m1_d_array_agg : 2 : ", JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.take(1)
         # hierarchy_level2, hierarchy_level1, x_array_var, y_var, iter, beta_i_draw
         #JOINED_m1_beta_i_draw_WITH_m1_d_array_agg = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.map(lambda (x, y): (x[0], x[1], list(y[0])[0][1], list(y[0])[0][2] ,list(y[1])[0][0], list(y[1])[0][3], m1_d_count_grpby_level2_b.value[x[0]]))
-        JOINED_m1_beta_i_draw_WITH_m1_d_array_agg = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.map(lambda (x, y): (x[0], x[1], list(y[0])[0][2], list(y[0])[0][3] , 1 , list(y[1])[0][3], m1_d_count_grpby_level2_b.value[x[0]]))
+        ## NOP: mapping again based only upon the join and hierarchy_level1_h2_key. ALso keyBy consolidating here.
+        JOINED_m1_beta_i_draw_WITH_m1_d_array_agg = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.map(lambda (hierarchy_level1_h2_key, y): (hierarchy_level1_h2_key, (y[0][1], hierarchy_level1_h2_key, y[0][2] , y[0][3], 1 , y[1][3], m1_d_count_grpby_level2_b.value[y[0][1]])), preservesPartitioning = True)
+            
+        #JOINED_m1_beta_i_draw_WITH_m1_d_array_agg = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.map(lambda (x, y): (x[0], x[1], list(y[0])[0][2], list(y[0])[0][3] , 1 , list(y[1])[0][3], m1_d_count_grpby_level2_b.value[x[0]]))
             
         #print "JOINED_m1_beta_i_draw_WITH_m1_d_array_agg : 3 :", JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.take(1)
         #JOINED_m1_beta_i_draw_WITH_m1_d_array_agg = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.map(lambda (x, y): (x[0], x[1], list(list(y[0])[0])[1], list(list(y[0])[0])[2], list(y[1])[0][0], list(y[1])[0][3], m1_d_count_grpby_level2_b.value[x[0]]))
-        foo = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.keyBy(lambda (hierarchy_level2, hierarchy_level1, x_array_var, y_var, iteri, beta_i_draw, m1_d_count_grpby_level2_b): (hierarchy_level2, hierarchy_level1, iteri))
+        #foo = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.keyBy(lambda (hierarchy_level2, hierarchy_level1, x_array_var, y_var, iteri, beta_i_draw, m1_d_count_grpby_level2_b): (hierarchy_level2, hierarchy_level1, iteri))
         #print "foo : 4 : ", foo.take(1)
         #print "foo : 4 : ", foo.count()
         # foo2 is group by hierarchy_level2, hierarchy_level1, iteri and has structure as ey => ( hierarchy_level2, hierarchy_level1, iteri, ssr, m1_d_count_grpby_level2_b )
-        foo2 = foo.map(lambda (x, y): gtr.get_sum_beta_i_draw_x2(y)).keyBy(lambda (hierarchy_level2, hierarchy_level1, iteri, ssr, m1_d_count_grpby_level2_b): (hierarchy_level2, iteri, m1_d_count_grpby_level2_b))
+        foo2 = JOINED_m1_beta_i_draw_WITH_m1_d_array_agg.map(lambda (hierarchy_level1_h2_key, y): gtr.get_sum_beta_i_draw_x2(y)).keyBy(lambda (hierarchy_level2, hierarchy_level1, iteri, ssr, m1_d_count_grpby_level2_b): (hierarchy_level2, iteri, m1_d_count_grpby_level2_b))
+    
+        #foo2 = foo.map(lambda (x, y): gtr.get_sum_beta_i_draw_x2(y)).keyBy(lambda (hierarchy_level2, hierarchy_level1, iteri, ssr, m1_d_count_grpby_level2_b): (hierarchy_level2, iteri, m1_d_count_grpby_level2_b))
         #print "foo2 : 5 : ", foo2.take(1)
         #print "foo2 : 5 : ", foo2.count()
         
