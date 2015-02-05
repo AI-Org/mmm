@@ -119,7 +119,7 @@ def gibbs_initializer(sc, d, h1_h2_partitions, h2_partitions, hierarchy_level1, 
         # h2, coeff
         # m1_ols_beta_j.keys().collect() : [u'"5"', u'"1"', u'"2"', u'"3"', u'"4"']
         # NOP No need as it will be keyed by h2 automatically unlike ols_bet_i .keyBy(lambda (h2,coff): (h2))
-        m1_ols_beta_j = d_keyBy_h2.map(lambda (h2_key, y) : gtr.get_ols_initialvals_beta_j)
+        m1_ols_beta_j = d_keyBy_h2.map(lambda (h2_key, y) : gtr.get_ols_initialvals_beta_j(y))
         
         # OPTIMIZATION 3, actually creating a collection of this small data set and preserving it with driver or
         # boradcasting it so as to have a highly distributed m1_ols_beta_i's stationary into their partitions 
@@ -133,10 +133,10 @@ def gibbs_initializer(sc, d, h1_h2_partitions, h2_partitions, hierarchy_level1, 
     if(initial_vals == "random"):
         # print "Draw random array samples of p elements from the uniform(-1,1) dist'n"
         # OPTIMIZATION SINCE we started doing group by partitionings its not so clear as to still have keyBy h2 h1 or not, Omitting it, till its needed.
-        m1_ols_beta_i = m1_d_array_agg.map(lambda (h1_h2_key, y) : gtr.get_random_initialvals_beta_i).keyBy(lambda (h2, h1_h2_key, coff): (h2))
+        m1_ols_beta_i = m1_d_array_agg.map(lambda (h1_h2_key, y) : gtr.get_random_initialvals_beta_i(y)).keyBy(lambda (h2, h1_h2_key, coff): (h2))
         #m1_ols_beta_j = d_keyBy_h2.map(gtr.get_random_initialvals_beta_j).keyBy(lambda (h2,coff): (h2))
         #m1_ols_beta_i = m1_d_array_agg.map(gtr.get_random_initialvals_beta_i, preservesPartitioning=True).persist()
-        m1_ols_beta_j = d_keyBy_h2.map(lambda (h2_key, y) : gtr.get_random_initialvals_beta_j)
+        m1_ols_beta_j = d_keyBy_h2.map(lambda (h2_key, y) : gtr.get_random_initialvals_beta_j(y))
         #.keyBy(lambda (h2,coff): (h2))
         #m1_ols_beta_j_collection = d_keyBy_h2.map(gtr.get_random_initialvals_beta_j).collect()
         

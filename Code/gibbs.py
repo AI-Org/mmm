@@ -19,7 +19,7 @@ def add(x,y):
 #                  d, hierarchy_level1, hierarchy_level2, p, df1, y_var_index, x_var_indexes, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, begin_iter, end_iter
 def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_array, h2_partitions, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_inv_Sigmabeta_j_draw_collection, m1_Vbeta_j_mu):
     
-    m1_d_array_agg_key_by_h2_h1 = m1_d_array_agg.keyBy(lambda (h2_h1_key, hierarchy_level2, x_matrix, y_array) : (hierarchy_level2, h2_h1_key))
+    #m1_d_array_agg_key_by_h2_h1 = m1_d_array_agg.keyBy(lambda (h2_h1_key, hierarchy_level2, x_matrix, y_array) : (hierarchy_level2, h2_h1_key))
     # OPTIMIZED into grpby_level2    
     m1_d_count_grpby_level2_b = m1_d_count_grpby_level2
     storagelevel = StorageLevel.MEMORY_ONLY
