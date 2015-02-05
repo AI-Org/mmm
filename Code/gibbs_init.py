@@ -108,7 +108,7 @@ def gibbs_initializer(sc, d, h1_h2_partitions, h2_partitions, hierarchy_level1, 
         # m1_ols_beta_i = m1_d_array_agg.map(gtr.get_ols_initialvals_beta_i, preservesPartitioning=True).keyBy(lambda (h2,h1,coff): (h2, h1))
         # h2, h1, ols_beta_i
         # OPTIMIZATION instead of preserving partitioning here, I keep it at the h2 level, so that we have a chance to 
-        m1_ols_beta_i = m1_d_array_agg.map(lambda (h1_h2_key, y) : gtr.get_ols_initialvals_beta_i).keyBy(lambda (h2, h1_h2_key ,coff): (h2))
+        m1_ols_beta_i = m1_d_array_agg.map(lambda (h1_h2_key, y) : gtr.get_ols_initialvals_beta_i(y)).keyBy(lambda (h2, h1_h2_key ,coff): (h2))
         # print "Coefficients for LinearRegression ", m1_ols_beta_i.count()
         
         # Initial values of coefficients for each department_name (j).  Set crudely as OLS regression coefficients for each department_name (j).
@@ -214,7 +214,8 @@ def gibbs_initializer(sc, d, h1_h2_partitions, h2_partitions, hierarchy_level1, 
     ## OPTIMIZATION for computing m1_beta_i_mean : including Vbeta_inv_j_draw with m1_beta_mu_j_draw for further computations
     ##m1_beta_mu_j_draw = m1_beta_mu_j.map(gtr.get_beta_draw, preservesPartitioning = True).persist()
     # m1_beta_mu_j_draw is array of 14 elements
-    #### NOP h2 -> (values) where values or y : seq, hierarchy_level2, beta_mu_j, Vbeta_inv_j_draw, Sigmabeta_j
+    #### NOP m1_beta_mu_j : h2 -> (values) where values or y : seq, hierarchy_level2, beta_mu_j, Vbeta_inv_j_draw, Sigmabeta_j
+    ## NOP beta_mu_j_draw : 1, hierarchy_level2, beta_mu_j_draw, Vbeta_inv_j_draw
     m1_beta_mu_j_draw = m1_beta_mu_j.map(lambda (hierarchy_level2, y): (1, hierarchy_level2, gu.beta_draw(y[2], y[4]), y[3]), preservesPartitioning = True).persist()
         
     #m1_beta_mu_j_draw = m1_beta_mu_j.map(lambda (seq, hierarchy_level2, beta_mu_j, Vbeta_inv_j_draw, Sigmabeta_j): (seq, hierarchy_level2, gu.beta_draw(beta_mu_j, Sigmabeta_j), Vbeta_inv_j_draw), preservesPartitioning = True)
@@ -255,7 +256,7 @@ def gibbs_initializer(sc, d, h1_h2_partitions, h2_partitions, hierarchy_level1, 
     # sequence, h2, h1, Vbeta_i, xty
     ##NOP: m1_d_array_agg_constants is h1_h2_key -> hierarchy_level1, hierarchy_level2, xtx, xty
     ## now m1_Vbet_i will be hierarchy_level1_h2_key -> sequence, h2, h1, Vbeta_i, xty
-    ## NOP : array_agg_contants :h1_h2_key ->  h2_h1_key, hierarchy_level2, xt_x, xt_y
+    ## NOP : array_agg_contants :h1_h2_key ->  h2_h1_key, hierarchy_level2, xt_x, xt_y, y[1] == hierarchy_level2, y[2] == xtx, y[3] == xt_y
     m1_Vbeta_i = m1_d_array_agg_constants.map(lambda (hierarchy_level1_h2_key, y) : (hierarchy_level1_h2_key, (1, y[1], hierarchy_level1_h2_key, gtr.pinv_Vbeta_i(y[2], m1_Vbeta_inv_Sigmabeta_j_draw_collection[y[1]][1], 1), y[3])), preservesPartitioning = True).persist()    
     
     #m1_Vbeta_i = m1_d_array_agg_constants.map(lambda (hierarchy_level1, hierarchy_level2, xtx, xty): (m1_Vbeta_inv_Sigmabeta_j_draw_collection[hierarchy_level2][2], hierarchy_level2, hierarchy_level1, gtr.pinv_Vbeta_i(xtx, m1_Vbeta_inv_Sigmabeta_j_draw_collection[hierarchy_level2][1], 1), xty), preservesPartitioning = True).persist()    
