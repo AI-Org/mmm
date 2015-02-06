@@ -453,8 +453,16 @@ def get_sum_beta_i_draw_x2(y):
     beta_i_draw = y[5]
     lsts_squares_of_sub_of_dot = []
     for x_var in x_array_var:
+        # getA1() Return self as a flattened ndarray. => returns float8
+        # array_dot (anyarray x, anyarray y) : returns float8
+        # beta_i_draw is 14 X 1 matrix. cols = 1
+        # x_var.getA1() is also 1 X 14. rows = 1
+        # Therefore np.dot(beta_i_draw , x_var.getA1()) is 14 X 1
         ssr_sm = np.power(np.subtract(y_var, np.dot(beta_i_draw, x_var.getA1())), 2)
         lsts_squares_of_sub_of_dot.append(ssr_sm)
+    # .item(x) : Copy an element of an array at position x 
+    # to a standard Python scalar and return it.
+    # ssr = array([[x]])
     ssr = sum(lsts_squares_of_sub_of_dot).item(0)
     # hierarchy_level2, hierarchy_level1,iteri, ssr ,m1_d_count_grpby_level2_b
     return (y[0], y[1], y[4], ssr, y[6]) 
@@ -469,6 +477,7 @@ def get_s2(y):
     iteri = prelims[2]
     m1_d_count_grpby_level2_b = prelims[4]
     for rec in y:
+        # ssr : rec[3]
         list_ssrs.append(rec[3])
     s2 = sum(list_ssrs)/(m1_d_count_grpby_level2_b / sample_size_deflator)
     return (iteri, hierarchy_level2, m1_d_count_grpby_level2_b, s2)
