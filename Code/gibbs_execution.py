@@ -33,12 +33,12 @@ def load(source):
     
 ## get the number of partitions desired for h2 keyword
 def geth2(data):
-    columns = re.split(",", data)[1]
+    columns = re.split(",", data)[2]
     return columns
 
 def load_key_h2(source):
     return sc.textFile(source).map(lambda datapoint: geth2(datapoint)).keyBy(lambda (hierarchy_level2): (hierarchy_level2))
-    
+
 ## get the number of partitions desired for h2,h1 keyword
 def geth1h2(data):
     rows = re.split(",", data)[1:3]
@@ -50,30 +50,50 @@ def geth1h2(data):
 def load_key_h1_h2(source):
      return sc.textFile(source).map(lambda datapoint: geth1h2(datapoint)).keyBy(lambda (hierarchy_level1, hierarchy_level2): (hierarchy_level2, hierarchy_level1))
 
-# Partition data with h2 keys
-def partitionByh2(hierarchy_level2):
-    int(str(hierarchy_level2)[1]) % 5
-     
-# Partition data with h2,h1 keys
-def geth1(h1):
-    if len(str(h1)) == 4:
-        return int(str(h1)[2])
-    else:
-        return int(str(h1)[2:4])
+## NEW FILE
+## NEW FILE
+## NEW FILE
+## NEW FILE
+# new data doesnt have an index column 
+# its like (hierarchy_level1_h2_key, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13)
+def parseData_newData(data):
+    rows = re.split(",", data)
+    # h2 keys replaced T4 -> 5 T3 -> 4 T2 -> 3, T1 -> 2, F1 -> 1
+    rows[1] = int(str(rows[1])[0]) % 5
+    # h1_h2 keys directly converting the strings into ints
+    rows[0] = gp.getCode_new(rows[1],int(str(rows[0])))
+    # now return (hierarchy_level1_h2_key, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13)
+    return rows[0:17] 
+    #previous return (hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13)
+
+def load_new(source):
+    return sc.textFile(source).map(lambda datapoint: parseData_newData(datapoint)).persist(StorageLevel.MEMORY_AND_DISK_SER_2)
+    
+
+## get the number of partitions desired for h2 keyword
+def geth2_new(data):
+    columns = re.split(",", data)[1]
+    return columns
+
+def load_key_h2_new(source):
+    return sc.textFile(source).map(lambda datapoint: geth2_new(datapoint)).keyBy(lambda (hierarchy_level2): (hierarchy_level2))    
+
+## NEW FILE
+def geth1h2_new(data):
+    rows = re.split(",", data)[0:2]
+    #h1 = rows[0]
+    #h2 = rows[1]
+    #r = [geth1(h1), int(str(h2)[1])]
+    return rows
+
+def load_key_h1_h2_new(source):
+     return sc.textFile(source).map(lambda datapoint: geth1h2_new(datapoint)).keyBy(lambda (hierarchy_level1, hierarchy_level2): (hierarchy_level2, hierarchy_level1))
+
 
 #def partitionByh2h1(obj):
 #    h1_int = geth1(obj[1])
 #    n = int(str(obj[0])[1]) % 5
 #    return n*100 + h1_int    
-
-## get persisted datastores that work on same partitions.
-def get_persisted_by_h2(source, numPartitions):
-    return sc.textFile(source).map(lambda datapoint: parseData(datapoint)).keyBy(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2)).partitionBy(numPartitions, gp.partitionByh2).persist()
-
-def get_persisted_by_h2_h1(source, numPartitions): 
-    return sc.textFile(source).map(lambda datapoint: parseData(datapoint)).keyBy(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2, hierarchy_level1)).partitionBy(numPartitions, gp.partitionByh2h1).persist()
-
-
 
 if __name__ == "__main__":
     """
@@ -128,8 +148,12 @@ if __name__ == "__main__":
     #hdfs_dir = "hdfs:///user/ssoni/data/" 
     sourcefile = sys.argv[2] if len(sys.argv) > 2 else "hdfs://hdm1.gphd.local:8020/user/ssoni/data/d.csv"
     hdfs_dir = "hdfs://hdm1.gphd.local:8020/user/ssoni/data/result/" 
-    h2_partitions = load_key_h2(sourcefile).groupByKey().keys().count()
-    h1_h2_partitions = load_key_h1_h2(sourcefile).groupByKey().keys().count()
+    
+    # compute partions from Hierarchy levels    
+    h2_partitions = load_key_h2_new(sourcefile).groupByKey().keys().count()
+    h1_h2_partitions = load_key_h1_h2_new(sourcefile).groupByKey().keys().count()
+    print "new H2 partitions ", h2_partitions
+    print "new H1 h2 partitions ", h1_h2_partitions
     # get all the keys by load_key_h1_h2(sourcefile).groupByKey().keys().sortByKey().collect()
     # hierarchy_level2 | n1 
     #------------------+----
@@ -144,7 +168,7 @@ if __name__ == "__main__":
     #d_key_h2_h1 = get_persisted_by_h2(sourcefile, h1_h2_partitions)
         
     ## load all data as separate columns
-    d = load(sourcefile) 
+    d = load_new(sourcefile) 
     
     #try:
     #    d.saveAsHadoopFile(hdfs_dir+"old_api.data","org.apache.hadoop.mapred.SequenceFileOutputFormat", "org.apache.hadoop.io.IntWritable", "org.apache.hadoop.io.Text")
@@ -167,11 +191,6 @@ if __name__ == "__main__":
     #    sc.parallelize([1, 2, 'spark', 'rdd']).saveAsPickleFile(hdfs_dir+"msequence_api.data")
     #except:
     #    print "Count not write using sequenceFile also"   
-        
-        
-    # OPTIMIZATION 2 keyBy_groupby_h2_h1 is essentially d_key_h2_h1 so we use d_key_h2_h1 in place of keyBy_groupby_h2_h1
-    # keyBy_groupby_h2_h1 = d.keyBy(lambda (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level2, hierarchy_level1)).groupByKey().cache()     
-    #print "Cached Copy of Data, First Data Set : ", d_key_h2_h1.take(1)
     
     # hierarchy_level1 = tier, 
     # hierarchy_level2 = brand_department_number
