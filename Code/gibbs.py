@@ -65,7 +65,9 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
     #keyBy(lambda (x, h2, h1, beta_i_draw, driver_x_array, hierarchy_level2_hierarchy_level1_driver): x).saveAsNewAPIHadoopFile(hdfs_dir+ "m1_beta_i_draw_long_"+str(1)+".data", "org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat","org.apache.hadoop.io.IntWritable")
     
     print "Gibbs Iteration Start at ", time.strftime("%a, %d %b %Y %H:%M:%S")
-    start = timeit.default_timer()
+    from datetime import datetime
+    start_time = datetime.now()
+    
     for s in range(begin_iter, end_iter+1):
         
         ## Inserting into m1_beta_i
@@ -483,8 +485,11 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         #m1_beta_i_draw_long = m1_beta_i_draw_long + m1_beta_i_draw_long_next
         print "end iteration", s    
     
-    stop = timeit.default_timer()
-    print "Finished Gibbs Iteration in ", str(start - stop)    
+    end_time = datetime.now()
+    print "End of Summary statistics"
+    print('Duration: {}'.format(end_time - start_time))    
+    #    stop = timeit.default_timer()
+    #    print "Finished Gibbs Iteration in ", str(start - stop)    
     print gibbs_iteration_text()
     
     return (m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount, m1_d_count_grpby_level2 ,m1_h_draw  ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_j_mu)

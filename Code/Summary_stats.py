@@ -10,7 +10,7 @@ if __name__ == "__main__":
     print "printing the summary statistics"
     
     path = '/home/ssoni/mmm_t/Code/result_diag/cd_pct.data'
-    f=open(file, 'rb')  
+    f=open(path, 'rb')  
     obj_dict = pickle.load(f) 
     print "cd_signif , denom, cd_pct values"
     print obj_dict

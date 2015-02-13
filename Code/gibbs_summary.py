@@ -62,7 +62,8 @@ def m1_summary_geweke_conv_diag_detailed(sc, hdfs_dir, hierarchy_level1, hierarc
     #m1_beta_i_draw_long = sc.textFile(hdfs_dir+ "m1_beta_i_draw_long*.data")
     # load it as a text file
     print "Summary Started at ", time.strftime("%a, %d %b %Y %H:%M:%S")
-    start = timeit.default_timer()
+    from datetime import datetime
+    start_time = datetime.now()
     #m1_beta_i_draw_long = sc.pickleFile(hdfs_dir+ "m1_beta_i_draw_long*.data")
     # 1, [(1, 4, 128, 17126325.852874778, '1', '4-:-128-:-1'), (1, 4, 128, 71313545.095800832, 'x1', '4-:-128-:-x1')]
     m1_beta_i_draw_long_keyBy_h2_h1_driver_first_10_percent = sc.parallelize(m1_dict_10_percent).keyBy(lambda (s, h2, h1, beta_i_draw, driver, h2_h1_driver): (h2, h1, driver))
@@ -94,7 +95,9 @@ def m1_summary_geweke_conv_diag_detailed(sc, hdfs_dir, hierarchy_level1, hierarc
     m1_summary_geweke_conv_diag_detailed = Joined_geweke_part_10_percent_with_geweke_part_40_percent.map(lambda (x,y): (x, list(y[0])[0][1][0], list(y[0])[0][1][1], list(y[1])[0][1][0], list(y[1])[0][1][1], gtr.get_cd_beta_i(list(y[0])[0][1][0], list(y[0])[0][1][1], list(y[1])[0][1][0], list(y[1])[0][1][1])))
     #print "m1_summary_geweke_conv_diag_detailed ", m1_summary_geweke_conv_diag_detailed.take(10)
 
-    stop = timeit.default_timer()
+    end_time = datetime.now()
+    print "End of Summary statistics"
+    print('Duration: {}'.format(end_time - start_time))
     ## for 100 iterations Finished Computing Geweke Convergence Diagnostic (CD) in time 0.445631027222
     print "Finished Computing Geweke Convergence Diagnostic (CD) in time", str(stop - start)
     # Write via the driver program itself
@@ -109,8 +112,10 @@ def m1_summary_geweke_conv_diag_detailed(sc, hdfs_dir, hierarchy_level1, hierarc
 # #  By chance alone, 5% of the marginal posterior distributions should appear non-stationary when stationarity exists (http://www.bayesian-inference.com/softwaredoc/Geweke.Diagnostic).
 
 def m1_summary_geweke_conv_diag(m1_summary_geweke_conv_diag_detailed):
-    cd_signif = m1_summary_geweke_conv_diag_detailed.filter(lambda (x, se_sa_i, avg_sa_i, se_sc_i, avg_sc_i, cd_beta_i): (abs(cd_beta_i)>1.96)).count()    
+    cd_signif = m1_summary_geweke_conv_diag_detailed.filter(lambda (x, se_sa_i, avg_sa_i, se_sc_i, avg_sc_i, cd_beta_i): (abs(cd_beta_i)>1.96)).count()  
+    print "cd_signif ", cd_signif
     denom = m1_summary_geweke_conv_diag_detailed.count()
+    print "denom ", denom
     cd_pct = float(cd_signif)/float(denom)
     
     output = open("/home/ssoni/mmm_t/Code/result_diag/cd_pct.data",'ab+')
@@ -124,7 +129,7 @@ def m1_summary_geweke_conv_diag(m1_summary_geweke_conv_diag_detailed):
 
 ## run as
 ##
-## spark-submit  --master yarn-client --num-executors 128 --executor-memory 2G --conf spark.executor.extraLibraryPath=/usr/local/lib --jars hadoop-common-2.2.0-gphd-3.0.1.0.jar --conf spark.shuffle.spill=true --conf spark.executor.extraJavaOptions=-XX:+UseCompressedOops   --py-files  gibbs_init.py,gibbs_udfs.py,wishart.py,nearPD.py,gibbs.py,gibbs_transformations.py,gibbs_partitions.py gibbs_summary.py 6    
+## spark-submit  --master yarn-client --num-executors 128 --executor-memory 2G --conf spark.executor.extraLibraryPath=/usr/local/lib --conf spark.shuffle.spill=true --conf spark.executor.extraJavaOptions=-XX:+UseCompressedOops   --py-files  gibbs_init.py,gibbs_udfs.py,wishart.py,nearPD.py,gibbs.py,gibbs_transformations.py,gibbs_partitions.py gibbs_summary.py 6    
 # Count number of coefficients where the CD falls outside of the 95% interval 0.999332443258
 #if __name__ == "__main__":
 #    print "hello"
