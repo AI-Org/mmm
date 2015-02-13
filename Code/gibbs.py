@@ -86,7 +86,10 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         # m1_Vbeta_inv_Sigmabeta_j_draw_collection  is key by (int(str(hierarchy_level2)[0]), Vbeta_inv_j_draw, sequence, n1,  Sigmabeta_j, h_draw)
         
         ## After Frames optimization -> removing need for collections and persisting on i levels
-        m1_Vbeta_i.unpersist()
+        try:
+            m1_Vbeta_i.unpersist()
+        except:
+            print "Failed to remove m1_Vbeta_i"
         # pinv_Vbeta_i(xtx, Vbeta_inv_j_draw, h_draw)
         #s, hierarchy_level2, h2_h1_key, Vbeta_i, h_draw, xty, Vbeta_inv_j_draw  
         #m1_Vbeta_i = m1_d_array_agg_constants.keyBy(lambda (h2_h1_key, hierarchy_level2, xt_x, xt_y): hierarchy_level2).join(m1_Vbeta_inv_Sigmabeta_j_draw).map(lambda (hierarchy_level2, y) : (s, hierarchy_level2, y[0][0], gtr.pinv_Vbeta_i(y[0][2], y[1][2], y[1][4]), y[1][4], y[0][3], y[1][2])).persist()
@@ -129,7 +132,10 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         ##using the gu function gu.beta_i_mean(Vbeta_i, h_draw, xty, Vbeta_inv_j_draw, beta_mu_j_draw) directly over the following functions as 
         ###>>>m1_beta_i_mean_keyBy_h2_long_next = JOINED_part_1_by_keyBy_h2.cogroup(JOINED_part_2_by_keyBy_h2).map(lambda (x,y): (x, gtr.get_beta_i_mean_next(y, s)))
         # m1_Vbeta_inv_Sigmabeta_j_draw_collection  is key by (int(str(hierarchy_level2)[0]), Vbeta_inv_j_draw, sequence, n1,  Sigmabeta_j, h_draw)
-        m1_beta_i_mean.unpersist()
+        try:        
+            m1_beta_i_mean.unpersist()
+        except:
+            print "Unpersist m1_beta_i_mean"
         # m1_beta_i_mean is a RDD of (sequence, h2, h1, beta_i_mean, Vbeta_i)
         m1_beta_i_mean = m1_Vbeta_i.map(lambda (sequence, h2, h1, Vbeta_i, xty): (s, h2, h1, gu.beta_i_mean(Vbeta_i, m1_Vbeta_inv_Sigmabeta_j_draw_collection[h2][5], xty,  m1_beta_mu_j_draw_collection[h2][4], m1_beta_mu_j_draw_collection[h2][3]), Vbeta_i), preservesPartitioning = True).persist(storagelevel)
         
@@ -170,7 +176,7 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         try:        
             m1_beta_i_draw.unpersist() 
         except:
-            print "Erorr while unpersisting"
+            print "Unpersist m1_beta_i_draw"
         m1_beta_i_draw = m1_beta_i_mean.map(lambda (sequence, h2, h1, beta_i_mean, Vbeta_i): (s, h2, h1, gu.beta_draw(beta_i_mean, Vbeta_i)), preservesPartitioning = True).persist(storagelevel)
                 
         ## Creating vertical draws
@@ -196,12 +202,12 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
                 #m1_beta_i_draw_p.unpersist()    
         except:
             
-            print "OOps missed that"    
+            print "OOps Could not write to driver "    
         finally:
             try:
                 m1_beta_i_draw_p.unpersist()  
             except:
-                print "Exception while unpersisting m1_beta_i_draw_p"
+                print "Unpersist m1_beta_i_draw_p"
         #print "m1_beta_i_draw take ", m1_beta_i_draw.take(1) 
         #print "m1_beta_i_draw count ", m1_beta_i_draw.count()        
         
@@ -224,8 +230,10 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         #else:
         #    ## unify with the previous one
         #    m1_Vbeta_j_mu_p.union(m1_Vbeta_j_mu)
-            
-        m1_Vbeta_j_mu.unpersist()
+        try:    
+            m1_Vbeta_j_mu.unpersist()
+        except:
+            print "Unpersist m1_Vbeta_j_mu"
         ## NOP : changing s and h2_int's position and making it look like suitable for parttionByCaluse => then persisting in mem? only if required => only if reducing shuffle.
         #m1_Vbeta_j_mu = JOINED_m1_beta_i_draw_next_key_by_h2_WITH_m1_beta_mu_j_draw_by_previous_iteration.map(lambda (h2_int, y): (s, gtr.get_Vbeta_j_mu_next(y, s)), preservesPartitioning = True).persist(storagelevel)
         m1_Vbeta_j_mu = JOINED_m1_beta_i_draw_next_key_by_h2_WITH_m1_beta_mu_j_draw_by_previous_iteration.map(lambda (h2_int, y): (h2_int, (s, gtr.get_Vbeta_j_mu_next(y, s)))).partitionBy(5).persist(storagelevel)
@@ -272,8 +280,11 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         #else:
         #    ## unify with the previous one
         #    m1_Vbeta_inv_Sigmabeta_j_draw_p.union(m1_Vbeta_inv_Sigmabeta_j_draw)
-            
-        m1_Vbeta_inv_Sigmabeta_j_draw.unpersist()
+        try:    
+            m1_Vbeta_inv_Sigmabeta_j_draw.unpersist()
+        except:
+            print "Unpersist m1_Vbeta_inv_Sigmabeta_j_draw"
+        
         m1_Vbeta_inv_Sigmabeta_j_draw = m1_Vbeta_j_mu_pinv.map(lambda (seq, hierarchy_level2, Vbeta_inv_j_draw): (s, hierarchy_level2, m1_d_childcount.value[hierarchy_level2][1], Vbeta_inv_j_draw, gtr.pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, m1_d_childcount.value[hierarchy_level2][1], coef_precision_prior_array)), preservesPartitioning = True).persist(storagelevel)
         #try:            
         #    if s % 10 == 0 :            
@@ -317,7 +328,11 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         #    m1_beta_mu_j_p.union(m1_beta_mu_j)
         # Using same function as was used in the gibbs_init
         # s, h2, beta_mu_j
-        m1_beta_mu_j.unpersist()
+        try:
+            m1_beta_mu_j.unpersist()
+        except:
+            print "Unpersist m1_beta_mu_j"
+        
         #OPTIMIZATION from init iteri, hierarchy_level2, beta_mu_j, Vbeta_inv_j_draw, Sigmabeta_j
         ##NPO : Applying the same partition sense as was applied for Vbeta_j_mu as it is build for same sort of computations.
         ## NPO: now beta_mu_j becomes a key value pair where key is h2 : value is (iteri, hierarchy_level2, beta_mu_j, Vbeta_inv_j_draw, Sigmabeta_j)
@@ -356,8 +371,10 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         #else:
         #    ## unify with the previous one
         #    m1_beta_mu_j_draw_p.union(m1_beta_mu_j_draw)
-            
-        m1_beta_mu_j_draw.unpersist()
+        try:    
+            m1_beta_mu_j_draw.unpersist()
+        except:
+            print "Unpersist m1_beta_mu_j_draw"
         #m1_beta_mu_j_draw = Joined_m1_beta_mu_j_next_keyBy_h2_WITH_m1_Vbeta_inv_Sigmabeta_j_draw_next_keyBy_h2.map(gtr.get_beta_draw, preservesPartitioning = True).persist(storagelevel)
         ## NOP h2 -> (values) where values or y : seq, hierarchy_level2, beta_mu_j, Vbeta_inv_j_draw, Sigmabeta_j
         m1_beta_mu_j_draw = m1_beta_mu_j.map(lambda (hierarchy_level2, y): (s, hierarchy_level2, gu.beta_draw(y[2], y[4]), y[3]), preservesPartitioning = True).persist(storagelevel)
@@ -451,7 +468,10 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         # (1,<objc>)(2,<objc>)...
         #m1_Vbeta_inv_Sigmabeta_j_draw_collection = sorted(map(lambda (sequence, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): (int(str(hierarchy_level2)[0]), Vbeta_inv_j_draw.all(), sequence, n1,  Sigmabeta_j.all()), m1_Vbeta_inv_Sigmabeta_j_draw_collection))
         m1_Vbeta_inv_Sigmabeta_j_draw_collection = sorted(m1_Vbeta_inv_Sigmabeta_j_draw_collection)
-        m1_s2.unpersist()
+        try:        
+            m1_s2.unpersist()
+        except:
+            print "Unpersist m1_s2"
         
         #print "m1_h_draw : ", s, " ", m1_h_draw.count()
 
