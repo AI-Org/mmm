@@ -7,7 +7,8 @@ import gibbs_udfs as gu
 import gibbs_transformations as gtr
 from pyspark.storagelevel import StorageLevel
 import gibbs_partitions as gp
-
+import timeit
+import time
 def gibbs_iteration_text():
     text_output = 'Done: All requested Gibbs Sampler updates are complete.  All objects associated with this model are named with a m1 prefix.'   
     return text_output
@@ -41,6 +42,7 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
     if sl == 8 :
         storagelevel = StorageLevel.OFF_HEAP
     
+    print "Gibbs Iteration starts"
      
     # m1_d_array_agg_constants_key_by_h2_h1 is a large Data Structure which can be persisted across multiple iterations of Gibbs Algorithm
     # Data tuples which will be joined/cogrouped with this data set will be pickled and transferred to each of these nodes carrying 135 partitions.
@@ -62,7 +64,8 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         print "OOps missed that"
     #keyBy(lambda (x, h2, h1, beta_i_draw, driver_x_array, hierarchy_level2_hierarchy_level1_driver): x).saveAsNewAPIHadoopFile(hdfs_dir+ "m1_beta_i_draw_long_"+str(1)+".data", "org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat","org.apache.hadoop.io.IntWritable")
     
-    
+    print "Gibbs Iteration Start at ", time.strftime("%a, %d %b %Y %H:%M:%S")
+    start = timeit.default_timer()
     for s in range(begin_iter, end_iter+1):
         
         ## Inserting into m1_beta_i
@@ -175,7 +178,20 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         ## lists of tuples : s, h2, h1, beta_i_draw[:,i][0], driver_x_array[i], hierarchy_level2_hierarchy_level1_driver
         try:
             if s % 10 == 0 : 
-                m1_beta_i_draw_p.map(gtr.get_beta_i_draw_long).keyBy(lambda (x, lst): x).saveAsTextFile(hdfs_dir+ "m1_beta_i_draw_long_tx_"+str(s)+".data")
+                import pickle
+                l = m1_beta_i_draw_p.map(gtr.get_beta_i_draw_long).reduceByKey(add).collect()
+                #print "M1_d_longs >>>", l
+                #d = dict([(k, v) for k,v in zip (l[0][0][0], l)])
+                d = dict(l)
+                #d = dict([(k, v) for k,v in zip (l[0][::2], l[0][1::2])])
+                #print "M!_d_long d >>>", d
+                output = open("/home/ssoni/mmm_t/Code/result/m1_beta_i_draw_"+str(s)+".data",'ab+')
+                pickle.dump(d, output) 
+                output.close()
+                #m1_beta_i_draw_p.map(gtr.get_beta_i_draw_long).keyBy(lambda (x, lst): x).saveAsTextFile(hdfs_dir+ "m1_beta_i_draw_long_tx_"+str(s)+".data")
+                # following didnt work  files with no contents               
+                #with open("/home/ssoni/mmm_t/Code/result/m1_beta_i_draw_"+str(s)+".data", "a") as f:
+                #    f.write(m1)
                 #m1_beta_i_draw_p.map(gtr.get_beta_i_draw_long).keyBy(lambda (x, lst): x).saveAsPickleFile(hdfs_dir+ "m1_beta_i_draw_long_"+str(s)+".data")
                 #m1_beta_i_draw_p.unpersist()    
         except:
@@ -393,7 +409,7 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         # OPTIMIZATION no need for union witht he previous step as it is not required in further iterations 
         # it is computed new each time.
         ##?}>>>m1_s2 = m1_s2.union(m1_s2_next)
-        print "m1_s2 : ", m1_s2.take(1)
+        #print "m1_s2 : ", m1_s2.take(1)
         #print "m1_s2 : ", m1_s2.count()
         
         ## Updating values of h_draw based on current iteration
@@ -413,7 +429,7 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         ## so removing the persistence and creating new persistence
         # OPTIMIZATION : SAVED over unions , only next values used in iterations m1_h_draw = m1_h_draw.union(m1_h_draw_next)
         # iteri, h2, h_draw
-        print "m1_h_draw : ", m1_h_draw.take(1)
+        #print "m1_h_draw : ", m1_h_draw.take(1)
         #try:
         #    if s % 10 == 0 :            
         #        m1_h_draw_p.saveAsPickleFile(hdfs_dir+ "m1_h_draw_"+str(s)+".data")
@@ -437,7 +453,7 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         m1_Vbeta_inv_Sigmabeta_j_draw_collection = sorted(m1_Vbeta_inv_Sigmabeta_j_draw_collection)
         m1_s2.unpersist()
         
-        print "m1_h_draw : ", s, " ", m1_h_draw.count()
+        #print "m1_h_draw : ", s, " ", m1_h_draw.count()
 
         ## -- Convert the array-based draws from the Gibbs Sampler into a "vertically long" format by unnesting the arrays.
               
@@ -447,7 +463,8 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         #m1_beta_i_draw_long = m1_beta_i_draw_long + m1_beta_i_draw_long_next
         print "end iteration", s    
     
-        
+    stop = timeit.default_timer()
+    print "Finished Gibbs Iteration in ", str(start - stop)    
     print gibbs_iteration_text()
     
     return (m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount, m1_d_count_grpby_level2 ,m1_h_draw  ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_j_mu)

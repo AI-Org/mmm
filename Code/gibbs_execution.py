@@ -56,10 +56,11 @@ def load_key_h1_h2(source):
 ## NEW FILE
 # new data doesnt have an index column 
 # its like (hierarchy_level1_h2_key, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13)
+# d.map(lambda data: re.split(",",data)).map(lambda (hierarchy_level1_h2_key, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level1_h2_key, hierarchy_level2))
 def parseData_newData(data):
     rows = re.split(",", data)
     # h2 keys replaced T4 -> 5 T3 -> 4 T2 -> 3, T1 -> 2, F1 -> 1
-    rows[1] = int(str(rows[1])[0]) % 5
+    rows[1] = int(str(rows[1])[1]) % 5
     # h1_h2 keys directly converting the strings into ints
     rows[0] = gp.getCode_new(rows[1],int(str(rows[0])))
     # now return (hierarchy_level1_h2_key, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13)
@@ -187,8 +188,8 @@ if __name__ == "__main__":
     #except:
     #    print "Count not write using pickle file too"
     #try:
-    #    d.saveAsPickleFile(hdfs_dir+"sequence_api.data")
-    #    sc.parallelize([1, 2, 'spark', 'rdd']).saveAsPickleFile(hdfs_dir+"msequence_api.data")
+    #    d.saveAsSequenceFile(hdfs_dir+"sequence_api.data")
+    #    sc.parallelize([1, 2, 'spark', 'rdd']).saveAsSequenceFile(hdfs_dir+"msequence_api.data")
     #except:
     #    print "Count not write using sequenceFile also"   
     
