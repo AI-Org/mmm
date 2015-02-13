@@ -9,6 +9,7 @@ import glob
 import gibbs_transformations as gtr
 import time
 import timeit
+from pyspark import SparkContext
 
 
 def m1_summary_geweke_conv_diag_detailed(sc, hdfs_dir, hierarchy_level1, hierarchy_level2, raw_iters, burn_in):
@@ -29,7 +30,7 @@ def m1_summary_geweke_conv_diag_detailed(sc, hdfs_dir, hierarchy_level1, hierarc
     # read data
     
     # reading from local dir itself.
-    path = '/home/ssoni/mmm_t/Code/result/*.data'  
+    path = '/home/ssoni/mmm_t/Code/result/m1_beta_i_draw_*.data'  
     files=glob.glob(path)  
     #m1_dict_10_percent = {}
     #m1_dict_40_percent = {}
@@ -94,10 +95,11 @@ def m1_summary_geweke_conv_diag_detailed(sc, hdfs_dir, hierarchy_level1, hierarc
     #print "m1_summary_geweke_conv_diag_detailed ", m1_summary_geweke_conv_diag_detailed.take(10)
 
     stop = timeit.default_timer()
+    ## for 100 iterations Finished Computing Geweke Convergence Diagnostic (CD) in time 0.445631027222
     print "Finished Computing Geweke Convergence Diagnostic (CD) in time", str(stop - start)
     # Write via the driver program itself
     l = m1_summary_geweke_conv_diag_detailed.collect()
-    output = open("/home/ssoni/mmm_t/Code/result/m1_summary_geweke_conv_diag_detailed.data",'ab+')
+    output = open("/home/ssoni/mmm_t/Code/result_diag/m1_summary_geweke_conv_diag_detailed.data",'ab+')
     pickle.dump(l, output) 
     output.close()    
     
@@ -109,10 +111,32 @@ def m1_summary_geweke_conv_diag_detailed(sc, hdfs_dir, hierarchy_level1, hierarc
 def m1_summary_geweke_conv_diag(m1_summary_geweke_conv_diag_detailed):
     cd_signif = m1_summary_geweke_conv_diag_detailed.filter(lambda (x, se_sa_i, avg_sa_i, se_sc_i, avg_sc_i, cd_beta_i): (abs(cd_beta_i)>1.96)).count()    
     denom = m1_summary_geweke_conv_diag_detailed.count()
-    cd_pct = cd_signif/denom
+    cd_pct = float(cd_signif)/float(denom)
     
-    output = open("/home/ssoni/mmm_t/Code/result/cd_pct.data",'ab+')
+    output = open("/home/ssoni/mmm_t/Code/result_diag/cd_pct.data",'ab+')
+    pickle.dump(cd_signif, output)
+    pickle.dump(denom, output)
     pickle.dump(cd_pct, output) 
     output.close()
     print "Summary Finished at ", time.strftime("%a, %d %b %Y %H:%M:%S")
     return cd_pct
+
+
+## run as
+##
+## spark-submit  --master yarn-client --num-executors 128 --executor-memory 2G --conf spark.executor.extraLibraryPath=/usr/local/lib --jars hadoop-common-2.2.0-gphd-3.0.1.0.jar --conf spark.shuffle.spill=true --conf spark.executor.extraJavaOptions=-XX:+UseCompressedOops   --py-files  gibbs_init.py,gibbs_udfs.py,wishart.py,nearPD.py,gibbs.py,gibbs_transformations.py,gibbs_partitions.py gibbs_summary.py 6    
+# Count number of coefficients where the CD falls outside of the 95% interval 0.999332443258
+#if __name__ == "__main__":
+#    print "hello"
+#    sc = SparkContext(appName="GibbsSamplerSummary")
+#    hdfs_dir = "hdfs://hdm1.gphd.local:8020/user/ssoni/data/result/" 
+#    hierarchy_level2 = 1
+#    hierarchy_level1 = 0
+#    raw_iters = 100
+#    burn_in = 0
+#    m1_summary_geweke_conv_diag_detailed = m1_summary_geweke_conv_diag_detailed(sc, hdfs_dir, hierarchy_level1, hierarchy_level2, raw_iters, burn_in)
+#    print "m1_summary_geweke_conv_diag_detailed count", m1_summary_geweke_conv_diag_detailed.count()
+#    #print "m1_summary_geweke_conv_diag_detailed take 1", m1_summary_geweke_conv_diag_detailed.take(1)
+#
+#    cd_pct = m1_summary_geweke_conv_diag(m1_summary_geweke_conv_diag_detailed)
+#    print "Count number of coefficients where the CD falls outside of the 95% interval", cd_pct  
