@@ -97,9 +97,9 @@ def m1_summary_geweke_conv_diag_detailed(sc, hdfs_dir, hierarchy_level1, hierarc
 
     end_time = datetime.now()
     print "End of Summary statistics"
-    print('Duration: {}'.format(end_time - start_time))
+    print 'Duration: ', (end_time - start_time)    
     ## for 100 iterations Finished Computing Geweke Convergence Diagnostic (CD) in time 0.445631027222
-    print "Finished Computing Geweke Convergence Diagnostic (CD) in time", str(stop - start)
+    #print "Finished Computing Geweke Convergence Diagnostic (CD) in time", str(stop - start)
     # Write via the driver program itself
     l = m1_summary_geweke_conv_diag_detailed.collect()
     output = open("/home/ssoni/mmm_t/Code/result_diag/m1_summary_geweke_conv_diag_detailed.data",'ab+')

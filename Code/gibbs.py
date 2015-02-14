@@ -486,8 +486,8 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         print "end iteration", s    
     
     end_time = datetime.now()
-    print "End of Summary statistics"
-    print('Duration: {}'.format(end_time - start_time))    
+    print "End of Iteration statistics"
+    print 'Duration: ', (end_time - start_time)    
     #    stop = timeit.default_timer()
     #    print "Finished Gibbs Iteration in ", str(start - stop)    
     print gibbs_iteration_text()
