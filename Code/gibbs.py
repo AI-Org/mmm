@@ -7,7 +7,6 @@ import gibbs_udfs as gu
 import gibbs_transformations as gtr
 from pyspark.storagelevel import StorageLevel
 import gibbs_partitions as gp
-import timeit
 import time
 def gibbs_iteration_text():
     text_output = 'Done: All requested Gibbs Sampler updates are complete.  All objects associated with this model are named with a m1 prefix.'   
@@ -224,7 +223,8 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         #m1_beta_mu_j_draw has tuples : iteri, key, gu.beta_draw(beta_mu_j, Sigmabeta_j), Vbeta_inv_j_draw)
         m1_beta_mu_j_draw = m1_beta_mu_j_draw.keyBy(lambda (s_previous, hierarchy_level2, beta_mu_j_draw, Vbeta_inv_j_draw): hierarchy_level2)
         #JOINED_m1_beta_i_draw_next_key_by_h2_WITH_m1_beta_mu_j_draw_by_previous_iteration = m1_beta_i_draw_key_by_h2.cogroup(m1_beta_mu_j_draw).map(lambda (x,y): (x, list(y[0]), list(y[1])[0][2])).groupBy(lambda x : gp.partitionByh2(x), h2_partitions)
-        JOINED_m1_beta_i_draw_next_key_by_h2_WITH_m1_beta_mu_j_draw_by_previous_iteration = m1_beta_i_draw_key_by_h2.cogroup(m1_beta_mu_j_draw).map(lambda (x,y): (x, list(y[0]), list(y[1])[0][2])).keyBy(lambda (h2, l1, l2) : h2).groupByKey()
+        JOINED_m1_beta_i_draw_next_key_by_h2_WITH_m1_beta_mu_j_draw_by_previous_iteration = m1_beta_i_draw_key_by_h2.cogroup(m1_beta_mu_j_draw).map(lambda (x,y): (x, list(y[0]), list(y[1])[0][2])).groupBy(lambda x : gp.partitionByh2(x), h2_partitions)
+        #.keyBy(lambda (h2, l1, l2) : h2).groupByKey()
         ## OPTIMIZATION onf JOINED to get it grouped by the GroupedBy clause to build upon further iterations on top of it, which have the same partitioning
         ## .map(lambda (x,y): (x, list(y[0]), list(y[1])[0][1])).groupBy(lambda x : gp.partitionByh2(x[0]), h2_partitions).persist(storagelevel)
         #if s == 2 or s % 11 == 0:
@@ -238,7 +238,7 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
             print "Unpersist m1_Vbeta_j_mu"
         ## NOP : changing s and h2_int's position and making it look like suitable for parttionByCaluse => then persisting in mem? only if required => only if reducing shuffle.
         #m1_Vbeta_j_mu = JOINED_m1_beta_i_draw_next_key_by_h2_WITH_m1_beta_mu_j_draw_by_previous_iteration.map(lambda (h2_int, y): (s, gtr.get_Vbeta_j_mu_next(y, s)), preservesPartitioning = True).persist(storagelevel)
-        m1_Vbeta_j_mu = JOINED_m1_beta_i_draw_next_key_by_h2_WITH_m1_beta_mu_j_draw_by_previous_iteration.map(lambda (h2_int, y): (h2_int, (s, gtr.get_Vbeta_j_mu_next(y, s)))).partitionBy(5).persist(storagelevel)
+        m1_Vbeta_j_mu = JOINED_m1_beta_i_draw_next_key_by_h2_WITH_m1_beta_mu_j_draw_by_previous_iteration.map(lambda (h2_int, y): (h2_int, (s, gtr.get_Vbeta_j_mu_next(y, s))), preservesPartitioning = True).persist(storagelevel)
                 
         ## OPTIMIZATION no need for unions m1_Vbeta_j_mu = m1_Vbeta_j_mu.union(m1_Vbeta_j_mu_next)
         #print "count  m1_Vbeta_j_mu   ", m1_Vbeta_j_mu.count()
