@@ -9,8 +9,14 @@ def partitionByh2(h2):
     return int(str(h2)[0]) % 5
     #return int(str(h2)[3]) % 5
 
+def partitionByh2_new(h2):
+    return int(str(h2)[0]) % 5
+    
 def group_partitionByh2(obj):
-    return int(str(obj[2])[0]) % 5    
+    return int(str(obj[2])[0]) % 5  
+    
+def group_partitionByh2_new(obj):
+    return int(str(obj[2])[0]) % 5 
 
 # here the obj is key h2 h1, we assume this partitioning will be used 
 # where keyby is already applied on the data set
