@@ -174,9 +174,11 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         # OPTIMIZATION After Key FOR m1_beta_i_draw_long_next
         ## lists of tuples : s, h2, h1, beta_i_draw[:,i][0], driver_x_array[i], hierarchy_level2_hierarchy_level1_driver
         try:
-            if s % 10 == 0 : 
-                #m1_beta_i_draw_p.map(gtr.get_beta_i_draw_long).keyBy(lambda (x, lst): x).saveAsTextFile(hdfs_dir+ "m1_beta_i_draw_long_tx_"+str(s)+".data")
-                m1_beta_i_draw_p.map(gtr.get_beta_i_draw_long).keyBy(lambda (x, lst): x).saveAsPickleFile(hdfs_dir+ "m1_beta_i_draw_long_"+str(s)+".data")
+            #if s % 10 == 0 : 
+                #m1_beta_i_draw_p.map(gtr.get_beta_i_draw_long).saveAsTextFile(hdfs_dir+ "m1_beta_i_draw_long_tx_"+str(s)+".data")
+                #m1_beta_i_draw_p.map(gtr.get_beta_i_draw_long).saveAsPickleFile(hdfs_dir+ "m1_beta_i_draw_long_"+str(s)+".data")
+            m1_beta_i_draw.map(gtr.get_beta_i_draw_long).saveAsPickleFile(hdfs_dir+ "m1_beta_i_draw_long_"+str(s)+".data")
+                               
                 #m1_beta_i_draw_p.unpersist()    
         except:
             
