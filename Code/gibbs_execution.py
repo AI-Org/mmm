@@ -56,7 +56,6 @@ def load_key_h1_h2(source):
 ## NEW FILE
 # new data doesnt have an index column 
 # its like (hierarchy_level1_h2_key, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13)
-# d.map(lambda data: re.split(",",data)).map(lambda (hierarchy_level1_h2_key, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): (hierarchy_level1_h2_key, hierarchy_level2))
 def parseData_newData(data):
     rows = re.split(",", data)
     # h2 keys replaced T4 -> 5 T3 -> 4 T2 -> 3, T1 -> 2, F1 -> 1
@@ -147,8 +146,8 @@ if __name__ == "__main__":
     storageLevel = sys.argv[1] if len(sys.argv) > 1 else 6
     #sourcefile = sys.argv[2] if len(sys.argv) > 2 else "hdfs://sandbox:9000/user/ssoni/data/d.csv"  
     #hdfs_dir = "hdfs:///user/ssoni/data/" 
-    sourcefile = sys.argv[2] if len(sys.argv) > 2 else "hdfs://hdm1.gphd.local:8020/user/ssoni/data/d.csv"
-    hdfs_dir = "hdfs://hdm1.gphd.local:8020/user/ssoni/data/result/" 
+    sourcefile = sys.argv[2] if len(sys.argv) > 2 else "hdfs://rdu-w1.dh.greenplum.com:8020/user/ssoni/data/d.csv"
+    hdfs_dir = "hdfs://rdu-w1.dh.greenplum.com:8020/user/ssoni/data/result/" 
     
     # compute partions from Hierarchy levels    
     h2_partitions = load_key_h2_new(sourcefile).groupByKey().keys().count()
@@ -188,8 +187,8 @@ if __name__ == "__main__":
     #except:
     #    print "Count not write using pickle file too"
     #try:
-    #    d.saveAsSequenceFile(hdfs_dir+"sequence_api.data")
-    #    sc.parallelize([1, 2, 'spark', 'rdd']).saveAsSequenceFile(hdfs_dir+"msequence_api.data")
+    #    d.saveAsPickleFile(hdfs_dir+"sequence_api.data")
+    #    sc.parallelize([1, 2, 'spark', 'rdd']).saveAsPickleFile(hdfs_dir+"msequence_api.data")
     #except:
     #    print "Count not write using sequenceFile also"   
     

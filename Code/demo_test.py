@@ -345,14 +345,3 @@ m1_Vbeta_j_mu = joined_i_j_rdd.map(lambda (x, y): (1, get_Vbeta_j_mu(y)), preser
 m1_Vbeta_j_mu.take(1) 
 
 m1_Vbeta_j_mu.map(lambda (x,y): int(str(y[0])[0])).take(1)  # [h2 in int form] 
-
-m1_dict = {}
-for file in files:     
-    f=open(file, 'rb')  
-    #f.readlines() 
-    obj_dict = pickle.load(f) 
-    #print obj_dict.keys()
-    if obj_dict.keys()[0] 
-    m1_dict[obj_dict.keys()] = obj_dict.value()
-    #print "aachuu"
-    f.close()
