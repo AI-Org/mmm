@@ -267,7 +267,7 @@ if __name__ == "__main__":
 
     if previous_iter_value > 0:  
         (m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount, m1_d_count_grpby_level2) = get_constants(d)
-        begin_iter = previous_iter_value
+        begin_iter = previous_iter_value + 1
         (m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_h_draw ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_inv_Sigmabeta_j_draw_collection, m1_Vbeta_j_mu) = load_previous_values(sc, str(previous_iter_value), hdfs_dir)
     
     # Calling the iterative gibbs algorithm 
