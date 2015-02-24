@@ -91,17 +91,17 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         #print "count  m1_Vbeta_i_unified   ", m1_Vbeta_i_unified.count()
         #print "take 1 m1_Vbeta_i_unified ", m1_Vbeta_i_unified.take(1)
         ## OPTIMIZATION SAVED m1_Vbeta_i_keyby_h2_h1 = m1_Vbeta_i.keyBy(lambda (i, hierarchy_level2, hierarchy_level1, Vbeta_i): (hierarchy_level2, hierarchy_level1))
-        #try:
-        #    if s % 10 == 0 :            
-        #        m1_Vbeta_i_p.saveAsPickleFile(hdfs_dir+ "m1_Vbeta_i_"+str(s)+".data")  
-        #        m1_Vbeta_i_p.unpersist()
-        #except:
-        #    print "OOps missed that"
+        try:
+            if s % 500 == 0 :            
+                m1_Vbeta_i.saveAsPickleFile(hdfs_dir+ "m1_Vbeta_i_"+str(s)+".data")  
+                #m1_Vbeta_i.unpersist()
+        except:
+            print "Could not save m1_Vbeta_i to hdfs"
         #finally:
-        #    try:
-        #        m1_Vbeta_i_p.unpersist()
-        #    except:
-        #        print "Exception while unpersisting m1_Vbeta_i_p"
+            #try:
+            #    m1_Vbeta_i.unpersist()
+            #except:
+            #    print "Exception while unpersisting m1_Vbeta_i_p"
                 
         
         ### Inserting into beta_i_mean
@@ -131,13 +131,12 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         m1_beta_i_mean = m1_Vbeta_i.map(lambda (sequence, h2, h1, Vbeta_i, xty): (s, h2, h1, gu.beta_i_mean(Vbeta_i, m1_Vbeta_inv_Sigmabeta_j_draw_collection[h2][5], xty,  m1_beta_mu_j_draw_collection[h2][4], m1_beta_mu_j_draw_collection[h2][3]), Vbeta_i), preservesPartitioning = True).persist(storagelevel)
         
                     
-        #try:
-        #    if s % 10 == 0 :            
-        #        m1_beta_i_mean_p.saveAsPickleFile(hdfs_dir+ "m1_beta_i_mean_"+str(s)+".data")
-        #        m1_beta_i_mean_p.unpersist()
-        #except:
-        #    
-        #    print "OOps missed that"
+        try:
+            if s % 500 == 0 :            
+                m1_beta_i_mean.saveAsPickleFile(hdfs_dir+ "m1_beta_i_mean_"+str(s)+".data")
+                #m1_beta_i_mean_p.unpersist()
+        except:            
+            print "Could not save m1_beta_i_mean to hdfs"
         #finally:
         #    try:
         #        m1_beta_i_mean_p.unpersist()
@@ -156,11 +155,11 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         # structure : s, h2, h1, beta_draw 
         # m1_beta_i_draw_long_next is required for computing the Gewke estimations
         
-        if s == 2 or s % 11 == 0:
-            m1_beta_i_draw_p = m1_beta_i_draw
-        else:
-            ## unify with the previous one
-            m1_beta_i_draw_p.union(m1_beta_i_draw).persist(storagelevel)
+        #if s == 2 or s % 11 == 0:
+        #    m1_beta_i_draw_p = m1_beta_i_draw
+        #else:
+        #    ## unify with the previous one
+        #    m1_beta_i_draw_p.union(m1_beta_i_draw).persist(storagelevel)
         
         ## USING THE OPTIMIZATION OF PREVIOUS init functions where only m1_beta_i_mean_by_current_iteration was used. 
         ##>>m1_beta_i_draw = m1_beta_i_mean_by_current_iteration.cogroup(m1_Vbeta_i_keyby_h2_h1_current_iteration).map(lambda (x,y): (s, x[0], x[1], gu.beta_draw(list(y[0])[0][3], list(y[1])[0][3])), preservesPartitioning = True).persist(storagelevel)
@@ -174,20 +173,17 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         # OPTIMIZATION After Key FOR m1_beta_i_draw_long_next
         ## lists of tuples : s, h2, h1, beta_i_draw[:,i][0], driver_x_array[i], hierarchy_level2_hierarchy_level1_driver
         try:
-            #if s % 10 == 0 : 
+            if s % 500 == 0 : 
                 #m1_beta_i_draw_p.map(gtr.get_beta_i_draw_long).saveAsTextFile(hdfs_dir+ "m1_beta_i_draw_long_tx_"+str(s)+".data")
-                #m1_beta_i_draw_p.map(gtr.get_beta_i_draw_long).saveAsPickleFile(hdfs_dir+ "m1_beta_i_draw_long_"+str(s)+".data")
-            m1_beta_i_draw.map(gtr.get_beta_i_draw_long).saveAsPickleFile(hdfs_dir+ "m1_beta_i_draw_long_"+str(s)+".data")
-                               
-                #m1_beta_i_draw_p.unpersist()    
-        except:
-            
-            print "OOps missed that"    
-        finally:
-            try:
-                m1_beta_i_draw_p.unpersist()  
-            except:
-                print "Exception while unpersisting m1_beta_i_draw_p"
+                m1_beta_i_draw.saveAsPickleFile(hdfs_dir+ "m1_beta_i_draw_"+str(s)+".data")            
+            m1_beta_i_draw.map(gtr.get_beta_i_draw_long).saveAsPickleFile(hdfs_dir+ "m1_beta_i_draw_long_"+str(s)+".data") 
+        except:           
+            print "Could not save m1_beta_i_draw to hdfs "    
+        #finally:
+        #    try:
+        #        m1_beta_i_draw_p.unpersist()  
+        #    except:
+        #        print "Exception while unpersisting m1_beta_i_draw_p"
         #print "m1_beta_i_draw take ", m1_beta_i_draw.take(1) 
         #print "m1_beta_i_draw count ", m1_beta_i_draw.count()        
         
@@ -219,13 +215,12 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         ## OPTIMIZATION no need for unions m1_Vbeta_j_mu = m1_Vbeta_j_mu.union(m1_Vbeta_j_mu_next)
         #print "count  m1_Vbeta_j_mu   ", m1_Vbeta_j_mu.count()
         #print "take 1 m1_Vbeta_j_mu, s ", m1_Vbeta_j_mu.collect(), "WITH S ", s
-        #try:            
-        #    if s % 10 == 0 :            
-        #        m1_Vbeta_j_mu_p.saveAsPickleFile(hdfs_dir+ "m1_Vbeta_j_mu_"+str(s)+".data")
-        #        m1_Vbeta_j_mu_p.unpersist()
-        #except:
-        #    
-        #    print "OOps missed that"
+        try:            
+            if s % 500 == 0 :            
+                m1_Vbeta_j_mu.saveAsPickleFile(hdfs_dir+ "m1_Vbeta_j_mu_"+str(s)+".data")
+                #m1_Vbeta_j_mu_p.unpersist()
+        except: 
+            print "Could not save m1_Vbeta_j_mu to hdfs "
         #finally:
         #    try:
         #        m1_Vbeta_j_mu_p.unpersist()  
@@ -261,13 +256,12 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
             
         m1_Vbeta_inv_Sigmabeta_j_draw.unpersist()
         m1_Vbeta_inv_Sigmabeta_j_draw = m1_Vbeta_j_mu_pinv.map(lambda (seq, hierarchy_level2, Vbeta_inv_j_draw): (s, hierarchy_level2, m1_d_childcount.value[hierarchy_level2][1], Vbeta_inv_j_draw, gtr.pinv_Vbeta_inv_Sigmabeta_j_draw(Vbeta_inv_j_draw, m1_d_childcount.value[hierarchy_level2][1], coef_precision_prior_array)), preservesPartitioning = True).persist(storagelevel)
-        #try:            
-        #    if s % 10 == 0 :            
-        #        m1_Vbeta_inv_Sigmabeta_j_draw_p.saveAsPickleFile(hdfs_dir+ "m1_Vbeta_inv_Sigmabeta_j_draw_"+str(s)+".data")
-        #        m1_Vbeta_inv_Sigmabeta_j_draw_p.unpersist()
-        #except:                
-        #    
-        #    print "OOps missed that"
+        try:            
+            if s % 500 == 0 :            
+                m1_Vbeta_inv_Sigmabeta_j_draw.saveAsPickleFile(hdfs_dir+ "m1_Vbeta_inv_Sigmabeta_j_draw_"+str(s)+".data")
+                #m1_Vbeta_inv_Sigmabeta_j_draw_p.unpersist()
+        except:                
+            print "Could not save m1_Vbeta_inv_Sigmabeta_j_draw to hdfs"
         #finally:
         #    try:
         #        m1_Vbeta_inv_Sigmabeta_j_draw_p.unpersist()  
@@ -315,13 +309,13 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         # h2 -> s, h2, beta_mu_j
         # Beta_mu_j keyed by h2
         # m1_beta_mu_j_keyBy_h2 = m1_beta_mu_j.keyBy(lambda (iter, hierarchy_level2, beta_mu_j): hierarchy_level2)
-        #try:
-        #    if s % 10 == 0 :            
-        #        m1_beta_mu_j_p.saveAsPickleFile(hdfs_dir+ "m1_beta_mu_j_"+str(s)+".data")
-        #        m1_beta_mu_j_p.unpersist()
-        #except:
-        #    
-        #    print "OOps missed that"
+        try:
+            if s % 500 == 0 :            
+                m1_beta_mu_j.saveAsPickleFile(hdfs_dir+ "m1_beta_mu_j_"+str(s)+".data")
+                #m1_beta_mu_j_p.unpersist()
+        except:
+            
+            print "Could not save m1_beta_mu_j to hdfs"
         #finally:
         #    try:
         #        m1_beta_mu_j_p.unpersist()  
@@ -354,13 +348,12 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         #OPTIMIZATION : NO NEED for unions m1_beta_mu_j_draw = m1_beta_mu_j_draw.union(m1_beta_mu_j_draw_next)
         # beta_mu_j_draw keyed by h2
         #m1_beta_mu_j_draw = m1_beta_mu_j_draw_next.keyBy(lambda (iter, hierarchy_level2, beta_mu_j_draw, Vbeta_inv_j_draw): hierarchy_level2)
-        #try:
-        #    if s % 10 == 0 :            
-        #        m1_beta_mu_j_draw_p.saveAsPickleFile(hdfs_dir+ "m1_beta_mu_j_draw_"+str(s)+".data")
-        #        m1_beta_mu_j_draw_p.unpersist()
-        #except:
-        #    
-        #    print "OOps missed that"
+        try:
+            if s % 500 == 0 :            
+                m1_beta_mu_j_draw.saveAsPickleFile(hdfs_dir+ "m1_beta_mu_j_draw_"+str(s)+".data")
+                #m1_beta_mu_j_draw_p.unpersist()
+        except:  
+            print "Could not save m1_beta_mu_j_draw to hdfs"
         #finally:
         #    try:
         #        m1_beta_mu_j_draw_p.unpersist()  
@@ -416,13 +409,12 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         # OPTIMIZATION : SAVED over unions , only next values used in iterations m1_h_draw = m1_h_draw.union(m1_h_draw_next)
         # iteri, h2, h_draw
         print "m1_h_draw : ", m1_h_draw.take(1)
-        #try:
-        #    if s % 10 == 0 :            
-        #        m1_h_draw_p.saveAsPickleFile(hdfs_dir+ "m1_h_draw_"+str(s)+".data")
-        #        m1_h_draw_p.unpersist()
-        #except:
-        #    
-        #   print "OOps missed that"
+        try:
+            if s % 500 == 0 :            
+                m1_h_draw.saveAsPickleFile(hdfs_dir+ "m1_h_draw_"+str(s)+".data")
+                #m1_h_draw_p.unpersist()
+        except:
+           print "Could not save m1_h_draw to hdfs"
         #finally:
         #    try:
         #        m1_h_draw_p.unpersist()  
@@ -447,6 +439,8 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         #print "reduce count ", len(m1_beta_i_draw_long_next)
         #print "reduce ", m1_beta_i_draw_long_next[0]
         #m1_beta_i_draw_long = m1_beta_i_draw_long + m1_beta_i_draw_long_next
+        if s % 500 == 0:
+            sc.parallelize(list([s],)).saveAsPickleFile(hdfs_dir+"previous_iter")
         print "end iteration", s    
     
         
