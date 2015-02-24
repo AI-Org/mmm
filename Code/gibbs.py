@@ -440,7 +440,7 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         #print "reduce ", m1_beta_i_draw_long_next[0]
         #m1_beta_i_draw_long = m1_beta_i_draw_long + m1_beta_i_draw_long_next
         if s % 500 == 0:
-            sc.parallelize(list([s],)).saveAsPickleFile(hdfs_dir+"previous_iter")
+            sc.parallelize(list([s],)).saveAsPickleFile(hdfs_dir+"previous_iter_"+str(s))
         print "end iteration", s    
     
         

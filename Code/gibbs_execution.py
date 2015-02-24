@@ -226,7 +226,7 @@ if __name__ == "__main__":
     
     previous_iter_value = 0 
     try:
-        previous_iter_value = sc.pickleFile(hdfs_dir+"previous_iter").collect()[0]
+        previous_iter_value = sc.pickleFile(hdfs_dir+"previous_iter*").collect()[-1]
     except:
         print "First iteration assumed. No previous runs founds."
     
