@@ -148,7 +148,7 @@ def h_draw(m, v):
 # np.random.uniform(low=0.0, high=1.0, size=None)     
 def initial_vals_random(p):
     
-    return np.random.uniform(-1,1,p)
+    return np.array([np.random.uniform(-1,1,p).tolist()])
     
 
 
