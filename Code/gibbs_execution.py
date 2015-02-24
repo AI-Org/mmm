@@ -230,30 +230,32 @@ if __name__ == "__main__":
     except:
         print "First iteration assumed. No previous runs founds."
     
+    hierarchy_level1 = sys.argv[3] if len(sys.argv) > 3 else 1
+    hierarchy_level2 = sys.argv[4] if len(sys.argv) > 4 else 2
+    
+    # 'p' = Number of explanatory variables in the model, including the intercept term.
+    p = sys.argv[5] if len(sys.argv) > 5 else 14  # todo convert sysarhs to int
+    # df1 = defree of freedom 
+    df1 = sys.argv[6] if len(sys.argv) > 6 else 15    
+    # the response variable
+    y_var_index = sys.argv[7] if len(sys.argv) > 7 else 4
+    # the explanatory variables
+    x_var_indexes = sys.argv[8] if len(sys.argv) > 8 else [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+    
+    # coef_means_prior_array' = Priors for coefficient means at the upper-most level of the hierarchy. 
+    # coef_means_prior_array=sys.argv[5] if len(sys.argv) > 5 else [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    coef_means_prior_array = sys.argv[9] if len(sys.argv) > 9 else [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    
+    # coef_precision_prior_array = Priors for coefficient covariances at the upper-most level of the hierarchy. 
+    # coef_precision_prior_array=sys.argv[5] if len(sys.argv) > 5 else [1,1,1,1,1,1,1,1,1,1,1,1,1]
+    coef_precision_prior_array = sys.argv[10] if len(sys.argv) > 10 else [1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+    
+    sample_size_deflator = sys.argv[11] if len(sys.argv) > 11 else 1
+    
+    initial_vals = sys.argv[12] if len(sys.argv) > 12 else "ols" 
+
     if previous_iter_value == 0:
-        hierarchy_level1 = sys.argv[3] if len(sys.argv) > 3 else 1
-        hierarchy_level2 = sys.argv[4] if len(sys.argv) > 4 else 2
         
-        # 'p' = Number of explanatory variables in the model, including the intercept term.
-        p = sys.argv[5] if len(sys.argv) > 5 else 14  # todo convert sysarhs to int
-        # df1 = defree of freedom 
-        df1 = sys.argv[6] if len(sys.argv) > 6 else 15    
-        # the response variable
-        y_var_index = sys.argv[7] if len(sys.argv) > 7 else 4
-        # the explanatory variables
-        x_var_indexes = sys.argv[8] if len(sys.argv) > 8 else [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
-        
-        # coef_means_prior_array' = Priors for coefficient means at the upper-most level of the hierarchy. 
-        # coef_means_prior_array=sys.argv[5] if len(sys.argv) > 5 else [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-        coef_means_prior_array = sys.argv[9] if len(sys.argv) > 9 else [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-        
-        # coef_precision_prior_array = Priors for coefficient covariances at the upper-most level of the hierarchy. 
-        # coef_precision_prior_array=sys.argv[5] if len(sys.argv) > 5 else [1,1,1,1,1,1,1,1,1,1,1,1,1]
-        coef_precision_prior_array = sys.argv[10] if len(sys.argv) > 10 else [1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-        
-        sample_size_deflator = sys.argv[11] if len(sys.argv) > 11 else 1
-        
-        initial_vals = sys.argv[12] if len(sys.argv) > 12 else "ols" 
     
         # First initialize the gibbs sampler
         #(m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw , m1_ols_beta_i ,m1_ols_beta_j ,m1_s2 ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_j_mu) = gi.gibbs_initializer(sc, d, h1_h2_partitions, h2_partitions, d_key_h2, d_key_h2_h1, hierarchy_level1, hierarchy_level2, p, df1, y_var_index, x_var_indexes, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals)
