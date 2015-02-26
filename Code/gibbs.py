@@ -483,6 +483,13 @@ def gibbs_iter(sc, sl, hdfs_dir, begin_iter, end_iter, coef_precision_prior_arra
         #print "reduce count ", len(m1_beta_i_draw_long_next)
         #print "reduce ", m1_beta_i_draw_long_next[0]
         #m1_beta_i_draw_long = m1_beta_i_draw_long + m1_beta_i_draw_long_next
+        if s % 500 == 0 : 
+                import pickle
+                #d = dict([(k, v) for k,v in zip (l[0][::2], l[0][1::2])])
+                #print "M!_d_long d >>>", d
+                output = open("/home/ssoni/mmm_t/Code/result/previous_iter_"+str(s),'ab+')
+                pickle.dump(s, output) 
+                output.close()
         print "end iteration", s    
     
     end_time = datetime.now()

@@ -3,10 +3,12 @@ import re
 
 from pyspark import SparkContext
 import gibbs_init as gi
-import gibbs
 import gibbs_summary as gis
 import gibbs_partitions as gp
 from pyspark.storagelevel import StorageLevel
+import gibbs_transformations as gtr
+import glob
+import pickle
 
 # Following the bug that states as of 1/19/2015: "Calling cache() after RDDs are pipelined has no effect in PySpark"
 ## https://issues.apache.org/jira/browse/SPARK-3105
@@ -16,39 +18,72 @@ from pyspark.storagelevel import StorageLevel
 # Importance has been given to laying out the data structures in most optimal way,
 # So as to minimize the network traffic in order to improve performance
 
-# parse the entire dataset into tuples of values,
-# where each tuple is of the type (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13)
-def parseData(data):
-    rows = re.split(",", data)
-    # h2 keys
-    rows[2] = int(str(rows[2])[0]) % 5
-    # h1_h2 keys
-    rows[1] = gp.getCode(rows[2],str(rows[1]))
-    # now return (hierarchy_level1_h2_key, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13)
-    return rows[1:18] 
-    #previous return (index, hierarchy_level1, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13)
-
-def load(source):
-    return sc.textFile(source).map(lambda datapoint: parseData(datapoint)).persist(StorageLevel.MEMORY_AND_DISK_SER_2)
+def load_previous_values(sc, previous_iter_value, hdfs_dir):
+    m1_beta_i_draw = sc.pickleFile(hdfs_dir+"m1_beta_i_draw_"+previous_iter_value+".data")
+    m1_beta_i_mean = sc.pickleFile(hdfs_dir+"m1_beta_i_mean_"+previous_iter_value+".data")
+    m1_beta_mu_j = sc.pickleFile(hdfs_dir+"m1_beta_mu_j_"+previous_iter_value+".data")
+    m1_beta_mu_j_draw = sc.pickleFile(hdfs_dir+"m1_beta_mu_j_draw_"+previous_iter_value+".data")
+    m1_h_draw = sc.pickleFile(hdfs_dir+"m1_h_draw_"+previous_iter_value+".data")
+    m1_Vbeta_i = sc.pickleFile(hdfs_dir+"m1_Vbeta_i_"+previous_iter_value+".data")
+    m1_Vbeta_inv_Sigmabeta_j_draw = sc.pickleFile(hdfs_dir+"m1_Vbeta_inv_Sigmabeta_j_draw_"+previous_iter_value+".data")
+    m1_Vbeta_j_mu = sc.pickleFile(hdfs_dir+"m1_Vbeta_j_mu_"+previous_iter_value+".data")
+    m1_Vbeta_inv_Sigmabeta_j_draw_h_draws = m1_Vbeta_inv_Sigmabeta_j_draw.keyBy(lambda (sequence, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): h2).join(m1_h_draw).map(lambda (h2, y): (y[0][0], h2, y[0][2], y[0][3], y[0][4], y[1][2]))
+        
+    m1_Vbeta_inv_Sigmabeta_j_draw_collection = m1_Vbeta_inv_Sigmabeta_j_draw_h_draws.map(lambda (sequence, hierarchy_level2, n1, Vbeta_inv_j_draw, Sigmabeta_j, h_draw): (hierarchy_level2, Vbeta_inv_j_draw, sequence, n1,  Sigmabeta_j, h_draw)).collect()
+    # (1,<objc>)(2,<objc>)...
+    #m1_Vbeta_inv_Sigmabeta_j_draw_collection = sorted(map(lambda (sequence, h2, n1, Vbeta_inv_j_draw, Sigmabeta_j): (int(str(hierarchy_level2)[0]), Vbeta_inv_j_draw.all(), sequence, n1,  Sigmabeta_j.all()), m1_Vbeta_inv_Sigmabeta_j_draw_collection))
+    m1_Vbeta_inv_Sigmabeta_j_draw_collection = sorted(m1_Vbeta_inv_Sigmabeta_j_draw_collection)
     
-## get the number of partitions desired for h2 keyword
-def geth2(data):
-    columns = re.split(",", data)[2]
-    return columns
+    return (m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_h_draw ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_inv_Sigmabeta_j_draw_collection, m1_Vbeta_j_mu)
+    
+def get_constants(d):
+    d_groupedBy_h1_h2 = d.keyBy(lambda (hierarchy_level1_h2_key, hierarchy_level2, week, y1, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13): hierarchy_level1_h2_key).groupByKey()
+    m1_d_array_agg = d_groupedBy_h1_h2.map(gtr.create_x_matrix_y_array, preservesPartitioning = True).persist(StorageLevel.MEMORY_ONLY_2)
+    
+    #  Compute constants of X'X and X'y for computing 
+    #  m1_Vbeta_i & beta_i_mean
+    #  m1_d_array_agg_constants : list of tuples of (h2, h1, xtx, xty)
+    # OPTIMIZATION preserving the values on partitions
+    m1_d_array_agg_constants = m1_d_array_agg.map(gtr.create_xtx_matrix_xty, preservesPartitioning = True).persist(StorageLevel.MEMORY_ONLY_2)
+    # print "m1_d_array_agg_constants take ",m1_d_array_agg_constants.take(1)
+    # print "m1_d_array_agg_constants count",m1_d_array_agg_constants.count()
+    
+    # Compute the childcount at each hierarchy level
+    # Compute the number of children at the brand level (# of children is equal to the number of genders per brand), 
+    # Compute the number of children at the brand-gender level (# of children is equal to the number of departments per brand-gender), and 
+    # Compute the number of children at the department_name level (# of children is equal to the number tiers within each department_name).
+    # In Short the following Computs the number of hierarchy_level1 values for each of the hierarchy_level2 values
+    # for Example : Considering h2 as departments and h1 as the stores get_d_childcount computes the number of stores for each department
+    # OPTIMIZATION using broadcast variable instead of the RDD so as to not compute it ever again
+    # this saves us one more scan of the table everytime we compute the childrens of key h2
+    # [(u'1', 30), (u'3', 30), (u'5', 30), (u'2', 30), (u'4', 30)]
+    # after sorted and new mod function we have [(1, 30), (2, 30), (3, 30), (4, 30), (5, 30)]    
+    #OPTIMIZATION  boradcasting it like m1_d_count_grpby_level2_b [(0, 30), (1, 30), (2, 30), (3, 30), (4, 30)]  
+    m1_d_childcount_b = sc.broadcast(sorted(gtr.get_d_childcount(d).collect()))
+    #print "m1_d_childcount_b ", m1_d_childcount_b.value[0]
+    #print "m1_d_childcount_b ", m1_d_childcount_b.value[1]
+    #print "m1_d_childcount_b ", m1_d_childcount_b.value[2]
+    #print "m1_d_childcount_b ", m1_d_childcount_b.value[3]
+    #print "m1_d_childcount_b ", m1_d_childcount_b.value[4]
+    #m1_d_childcount_b = sc.broadcast(m1_d_childcount.collect())
+    #m1_d_childcount = d_groupedBy_h1_h2.map(lambda (x,iter): (x, sum(1 for _ in set(iter))), preservesPartitioning=True).cache()
+    # print "d_child_counts take : ", m1_d_childcount.take(1)
+    # print "d_child_counts count : ", m1_d_childcount.count()
+     
+    # Not all department_name-tiers have the same number of weeks of available data (i.e. the number of data points for each department_name-tier is not the same for all department_name-tiers).  
+    # We pre-compute this quantity for each department_name-tier
+    # m1_d_count_grpby_level2 = gtr.get_d_count_grpby_level2(d).cache()
+    # print "m1_d_count_grpby_level2 take : ", m1_d_count_grpby_level2.take(1)
+    # print "m1_d_count_grpby_level2 count : ", m1_d_count_grpby_level2.count()
+    # print "Available data for each department_name-tiers", m1_d_count_grpby_level2.countByKey()
+    # m1_d_count_grpby_level2.countByKey() becomes defaultdict of type int As
+    # defaultdict(<type 'int'>, {u'"5"': 1569, u'"1"': 3143, u'"2"': 3150, u'"3"': 3150, u'"4"': 3150})
+    #m1_d_count_grpby_level2 = gtr.get_d_count_grpby_level2(d).countByKey()
+    # for multinode setup we need to broadcast these values across all the nodes
+    # KEYS OPTIMIZATION defaultdict(<type 'int'>, {0: 3022, 1: 3143, 2: 3150, 3: 3150, 4: 3150})
+    m1_d_count_grpby_level2_b = sc.broadcast(gtr.get_d_count_grpby_level2(d).countByKey())
+    return (m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount_b, m1_d_count_grpby_level2_b)
 
-def load_key_h2(source):
-    return sc.textFile(source).map(lambda datapoint: geth2(datapoint)).keyBy(lambda (hierarchy_level2): (hierarchy_level2))
-
-## get the number of partitions desired for h2,h1 keyword
-def geth1h2(data):
-    rows = re.split(",", data)[1:3]
-    #h1 = rows[0]
-    #h2 = rows[1]
-    #r = [geth1(h1), int(str(h2)[1])]
-    return rows
-
-def load_key_h1_h2(source):
-     return sc.textFile(source).map(lambda datapoint: geth1h2(datapoint)).keyBy(lambda (hierarchy_level1, hierarchy_level2): (hierarchy_level2, hierarchy_level1))
 
 ## NEW FILE
 ## NEW FILE
@@ -195,6 +230,19 @@ if __name__ == "__main__":
     
     # hierarchy_level1 = tier, 
     # hierarchy_level2 = brand_department_number
+    previous_iter_value = 0 
+    try:
+        #previous_iter_value = sc.pickleFile(hdfs_dir+"previous_iter*").collect()[-1]
+        path = '/home/ssoni/mmm_t/Code/result/previous_iter*.data'  
+        files=glob.glob(path)  
+        #for file in files:     
+        f=open(files[-1], 'rb')  
+        #f.readlines() 
+        previous_iter_value = pickle.load(f) 
+        f.lcose()
+    except:
+        print "First iteration assumed. No previous runs founds."
+        
     hierarchy_level1 = sys.argv[3] if len(sys.argv) > 3 else 1
     hierarchy_level2 = sys.argv[4] if len(sys.argv) > 4 else 2
     
@@ -219,17 +267,20 @@ if __name__ == "__main__":
     
     initial_vals = sys.argv[12] if len(sys.argv) > 12 else "ols" 
 
+    if previous_iter_value == 0:
     # First initialize the gibbs sampler
     #(m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw , m1_ols_beta_i ,m1_ols_beta_j ,m1_s2 ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_j_mu) = gi.gibbs_initializer(sc, d, h1_h2_partitions, h2_partitions, d_key_h2, d_key_h2_h1, hierarchy_level1, hierarchy_level2, p, df1, y_var_index, x_var_indexes, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals)
-    (m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw , m1_ols_beta_i ,m1_ols_beta_j ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_inv_Sigmabeta_j_draw_collection, m1_Vbeta_j_mu) = gi.gibbs_initializer(sc, d, h1_h2_partitions, h2_partitions, hierarchy_level1, hierarchy_level2, p, df1, y_var_index, x_var_indexes, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals)
+        (m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw , m1_ols_beta_i ,m1_ols_beta_j ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_inv_Sigmabeta_j_draw_collection, m1_Vbeta_j_mu) = gi.gibbs_initializer(sc, d, h1_h2_partitions, h2_partitions, hierarchy_level1, hierarchy_level2, p, df1, y_var_index, x_var_indexes, coef_means_prior_array, coef_precision_prior_array, sample_size_deflator, initial_vals)
         
     
     begin_iter = sys.argv[13] if len(sys.argv) > 13 else 2
     end_iter = sys.argv[14] if len(sys.argv) > 14 else 100    
     
-    # Calling the iterative gibbs algorithm 
-    (m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_j_mu) = gibbs.gibbs_iter(sc,storageLevel, hdfs_dir, begin_iter, end_iter, coef_precision_prior_array, h2_partitions, m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount,m1_d_count_grpby_level2 ,m1_h_draw ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_inv_Sigmabeta_j_draw_collection, m1_Vbeta_j_mu)
-    
+    if previous_iter_value > 0:  
+        (m1_d_array_agg ,m1_d_array_agg_constants ,m1_d_childcount, m1_d_count_grpby_level2) = get_constants(d)
+        begin_iter = previous_iter_value + 1
+        (m1_beta_i_draw ,m1_beta_i_mean ,m1_beta_mu_j ,m1_beta_mu_j_draw ,m1_h_draw ,m1_Vbeta_i ,m1_Vbeta_inv_Sigmabeta_j_draw ,m1_Vbeta_inv_Sigmabeta_j_draw_collection, m1_Vbeta_j_mu) = load_previous_values(sc, str(previous_iter_value), hdfs_dir)
+        
     raw_iters = sys.argv[15] if len(sys.argv) > 15 else 100
     
     burn_in = sys.argv[16] if len(sys.argv) > 16 else 0     
